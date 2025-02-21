@@ -64,6 +64,12 @@ cp .env.example .env
 nano .env
 ```
 
+Important environment variables to configure:
+- `DEBUG`: Must be set to `false` in production
+- `EXTERNAL_LLM_API_KEY`: Your Mistral API key (data stored in Sweden)
+- `SECRET_KEY`: Generate a secure random key
+- `DATABASE_URL`: Your production database URL
+
 4. **Initialize Database**
 ```bash
 # Run migrations
@@ -116,11 +122,14 @@ sudo certbot --nginx -d api.peerdigital.se
 
 1. **View Logs**
 ```bash
-# Application logs
+# Application logs (includes LLM API interactions)
 sudo journalctl -u peerai -f
 
 # Nginx access logs
 sudo tail -f /var/log/nginx/access.log
+
+# Application specific logs (includes redacted sensitive data)
+sudo tail -f /var/log/peerai/app.log
 ```
 
 2. **Backup Database**
@@ -142,23 +151,33 @@ sudo systemctl restart peerai
 
 ## Security Considerations
 
-1. **Firewall Configuration**
-```bash
-# Allow only necessary ports
-sudo ufw allow ssh
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
+1. **Environment Variables**
+- Never commit `.env` file to version control
+- Use secure, randomly generated values for `SECRET_KEY`
+- Rotate API keys regularly
+- Keep `DEBUG=false` in production
 
-2. **API Key Rotation**
-- Implement regular API key rotation
-- Monitor for suspicious activity
-- Set appropriate rate limits
+2. **API Security**
+- Monitor rate limits in production
+- Implement API key rotation policy
+- Use HTTPS for all endpoints
+- Set appropriate CORS headers
 
-3. **Data Privacy**
-- All data remains within Bahnhof's Swedish infrastructure
-- Regular security audits
+3. **Data Privacy & Logging**
+- All data processing remains within Sweden
+- Sensitive data is redacted from logs
+- Regular log rotation
 - GDPR compliance monitoring
+
+4. **LLM Configuration**
+- Primary: Bahnhof-hosted LLM (optional)
+- Fallback: Mistral (confirmed Swedish data storage)
+- Both ensure data residency requirements
+
+5. **Beta Features**
+- Vision API: Currently in BETA (mock mode only)
+- Audio API: Currently in BETA (mock mode only)
+- Clear error messages for non-mock requests
 
 ## Troubleshooting
 
@@ -166,6 +185,7 @@ sudo ufw enable
 - Check logs: `sudo journalctl -u peerai -n 100`
 - Verify environment variables
 - Check database connectivity
+- Ensure API keys are valid
 
 2. **Database Issues**
 - Verify connection string
@@ -176,6 +196,13 @@ sudo ufw enable
 - Monitor resource usage
 - Check connection pool settings
 - Analyze slow queries
+- Consider Redis for rate limiting at scale
+
+4. **LLM Issues**
+- Check both primary and fallback LLM connectivity
+- Verify API keys and rate limits
+- Monitor fallback frequency
+- Check error logs for specific failure reasons
 
 ## Contact
 

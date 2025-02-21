@@ -10,13 +10,13 @@ import secrets
 
 from ..models.auth import User, APIKey
 from ..database import get_db
-from ..main import settings
+from ..config import settings
 
 router = APIRouter()
 
 # Security configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/token")
 
 # JWT configuration from settings
 SECRET_KEY = settings.SECRET_KEY
@@ -39,11 +39,13 @@ class APIKeyCreate(BaseModel):
     name: str
     expires_in_days: Optional[int] = None
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
 def get_password_hash(password: str) -> str:
+    """Hash a password"""
     return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash"""
+    return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()

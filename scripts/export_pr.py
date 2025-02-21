@@ -20,6 +20,12 @@ EXCLUDED_PATHS = {
     ".pytest_cache",
     ".coverage",
     "*.log",
+    "server.log",
+    
+    # Version control
+    ".git",
+    ".gitignore",
+    "pr_review_*.txt",
     
     # Virtual environment
     "venv",
@@ -64,10 +70,18 @@ def should_include_file(path: str) -> bool:
     if os.path.basename(path) in FORCE_INCLUDE:
         return True
         
+    # Get the basename for pattern matching
+    basename = os.path.basename(path)
+    
     # Check against exclusion patterns
     path_parts = Path(path).parts
     for excluded in EXCLUDED_PATHS:
-        if any(part.startswith(excluded.replace("*", "")) for part in path_parts):
+        # Handle wildcard patterns for files
+        if excluded.startswith("*"):
+            if basename.endswith(excluded[1:]):
+                return False
+        # Handle exact file matches
+        elif excluded in path_parts or excluded == basename:
             return False
     
     return True

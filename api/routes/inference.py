@@ -9,10 +9,16 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import time
 import random
+import httpx
+import json
+import logging
 
 from ..models.auth import APIKey, UsageRecord
 from ..database import get_db
-from ..main import settings
+from ..config import settings
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -86,12 +92,57 @@ async def get_api_key(
             daily_limit=1000,
             minute_limit=60
         )
-    raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # Check database for valid API key
+    db_key = db.query(APIKey).filter(
+        APIKey.key == api_key,
+        APIKey.is_active == True
+    ).first()
+    
+    if not db_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+        
+    # Check if key has expired
+    if db_key.expires_at and db_key.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="API key has expired")
+    
+    # Update last used timestamp
+    db_key.last_used_at = datetime.utcnow()
+    db.commit()
+    
+    return db_key
 
 async def check_rate_limits(api_key: APIKey, db: Session):
     """Check if the API key has exceeded its rate limits"""
-    # For testing, we'll skip actual DB checks
-    pass
+    # Skip rate limiting for test key
+    if api_key.key == "test_key_123":
+        return
+        
+    # Check daily limit
+    today = datetime.utcnow().date()
+    daily_usage = db.query(UsageRecord).filter(
+        UsageRecord.api_key_id == api_key.id,
+        UsageRecord.created_at >= today
+    ).count()
+    
+    if daily_usage >= api_key.daily_limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily API limit exceeded"
+        )
+    
+    # Check minute limit
+    one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+    minute_usage = db.query(UsageRecord).filter(
+        UsageRecord.api_key_id == api_key.id,
+        UsageRecord.created_at >= one_minute_ago
+    ).count()
+    
+    if minute_usage >= api_key.minute_limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please wait a minute."
+        )
 
 def create_realistic_mock_response(response_type: str, task: Optional[str] = None) -> CompletionResponse:
     """Generate a realistic mock response based on type"""
@@ -130,19 +181,162 @@ def create_realistic_mock_response(response_type: str, task: Optional[str] = Non
             additional_data={"language": "en", "speakers": 1}
         )
 
+def record_usage(
+    db: Session,
+    api_key: APIKey,
+    endpoint: str,
+    tokens: int,
+    latency_ms: int,
+    status_code: int,
+    error_message: Optional[str] = None
+):
+    """Record API usage"""
+    if api_key.key == "test_key_123":
+        return
+        
+    usage = UsageRecord(
+        user_id=api_key.user_id,
+        api_key_id=api_key.id,
+        endpoint=endpoint,
+        tokens_used=tokens,
+        latency_ms=latency_ms,
+        status_code=status_code,
+        error_message=error_message
+    )
+    db.add(usage)
+    db.commit()
+
+async def call_hosted_llm(client: httpx.AsyncClient, request: TextCompletionRequest) -> CompletionResponse:
+    """Call the hosted LLM service"""
+    try:
+        response = await client.post(
+            settings.HOSTED_LLM_URL,
+            headers={"Authorization": f"Bearer {settings.HOSTED_LLM_API_KEY}"},
+            json={
+                "prompt": request.prompt,
+                "max_tokens": request.max_tokens,
+                "temperature": request.temperature
+            },
+            timeout=30.0
+        )
+        response.raise_for_status()
+        result = response.json()
+        
+        return CompletionResponse(
+            text=result["text"],
+            provider="hosted-llm",
+            tokens_used=result.get("usage", {}).get("total_tokens", 0),
+            latency_ms=int(response.elapsed.total_seconds() * 1000),
+            confidence=result.get("confidence", None)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Hosted LLM error: {str(e)}"
+        )
+
+async def call_mistral(client: httpx.AsyncClient, request: TextCompletionRequest) -> CompletionResponse:
+    """Call Mistral's API as fallback"""
+    try:
+        logger.debug("Calling Mistral API endpoint")
+        
+        # Prepare request payload according to Mistral's API format
+        payload = {
+            "model": settings.EXTERNAL_MODEL,
+            "messages": [
+                {"role": "user", "content": "[REDACTED PROMPT]"}  # Don't log actual prompt
+            ],
+            "temperature": request.temperature,
+            "max_tokens": request.max_tokens
+        }
+        logger.debug("Prepared Mistral API request with model: %s", settings.EXTERNAL_MODEL)
+        
+        response = await client.post(
+            settings.EXTERNAL_LLM_URL,
+            headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
+            json={
+                "model": settings.EXTERNAL_MODEL,
+                "messages": [
+                    {"role": "user", "content": request.prompt}
+                ],
+                "temperature": request.temperature,
+                "max_tokens": request.max_tokens
+            },
+            timeout=30.0
+        )
+        response.raise_for_status()
+        result = response.json()
+        
+        logger.info("Successfully called Mistral API")
+        return CompletionResponse(
+            text=result["choices"][0]["message"]["content"],
+            provider="mistral",
+            tokens_used=result.get("usage", {}).get("total_tokens", 0),
+            latency_ms=int(response.elapsed.total_seconds() * 1000),
+            confidence=result.get("confidence", None)
+        )
+    except httpx.HTTPError as e:
+        logger.error("HTTP error when calling Mistral API: %s", str(e))
+        raise HTTPException(
+            status_code=e.response.status_code if hasattr(e, 'response') else 502,
+            detail=f"Mistral API error: {str(e)}"
+        )
+    except Exception as e:
+        logger.error("Unexpected error when calling Mistral API: %s", str(e))
+        raise HTTPException(
+            status_code=502,
+            detail=f"Mistral API error: {str(e)}"
+        )
+
 @router.post("/completions", response_model=CompletionResponse)
 async def create_completion(
     request: TextCompletionRequest,
     api_key: APIKey = Depends(get_api_key),
     db: Session = Depends(get_db)
 ):
-    """Generate text completion"""
+    """Create a completion for the given prompt"""
+    # Record start time for latency tracking
+    start_time = time.time()
+    
+    # Handle mock mode
+    if request.mock_mode or settings.MOCK_MODE:
+        response = create_realistic_mock_response("text")
+        record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+        return response
+    
+    # Check rate limits
     await check_rate_limits(api_key, db)
     
-    if settings.MOCK_MODE or request.mock_mode:
-        return create_realistic_mock_response("text")
-    
-    raise HTTPException(status_code=501, detail="Not implemented")
+    async with httpx.AsyncClient() as client:
+        try:
+            # Try hosted LLM first if configured
+            if settings.HOSTED_LLM_URL and settings.HOSTED_LLM_API_KEY:
+                try:
+                    response = await call_hosted_llm(client, request)
+                    record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+                    return response
+                except HTTPException as e:
+                    # Fallback to Mistral on:
+                    # - Any 5xx server error
+                    # - Connection timeouts
+                    # - Connection errors
+                    should_fallback = (
+                        (500 <= e.status_code < 600) or  # Any 5xx error
+                        str(e.detail).startswith(("Connection refused", "Connection timed out"))
+                    )
+                    if not should_fallback:
+                        raise
+                    logger.warning("Hosted LLM failed, falling back to Mistral: %s", str(e))
+            
+            # Use Mistral as fallback or primary if no hosted LLM
+            response = await call_mistral(client, request)
+            record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+            return response
+            
+        except Exception as e:
+            error_latency = int((time.time() - start_time) * 1000)
+            record_usage(db, api_key, "/completions", 0, error_latency, getattr(e, "status_code", 500), str(e))
+            raise
 
 @router.post("/vision", response_model=CompletionResponse)
 async def analyze_image(
@@ -150,13 +344,22 @@ async def analyze_image(
     api_key: APIKey = Depends(get_api_key),
     db: Session = Depends(get_db)
 ):
-    """Analyze image content"""
-    await check_rate_limits(api_key, db)
+    """Analyze an image using vision models (BETA)"""
+    # Record start time for latency tracking
+    start_time = time.time()
     
-    if settings.MOCK_MODE or request.mock_mode:
-        return create_realistic_mock_response("vision")
+    # Only mock mode is currently supported
+    if not (request.mock_mode or settings.MOCK_MODE):
+        error_latency = int((time.time() - start_time) * 1000)
+        record_usage(db, api_key, "/vision", 0, error_latency, 501)
+        raise HTTPException(
+            status_code=501,
+            detail="Vision endpoint is currently in BETA. Only mock mode is supported. Set mock_mode=true to test the API interface."
+        )
     
-    raise HTTPException(status_code=501, detail="Not implemented")
+    response = create_realistic_mock_response("vision")
+    record_usage(db, api_key, "/vision", response.tokens_used, response.latency_ms, 200)
+    return response
 
 @router.post("/audio", response_model=CompletionResponse)
 async def process_audio(
@@ -164,10 +367,19 @@ async def process_audio(
     api_key: APIKey = Depends(get_api_key),
     db: Session = Depends(get_db)
 ):
-    """Process audio content"""
-    await check_rate_limits(api_key, db)
+    """Process audio for transcription or analysis (BETA)"""
+    # Record start time for latency tracking
+    start_time = time.time()
     
-    if settings.MOCK_MODE or request.mock_mode:
-        return create_realistic_mock_response("audio", request.task)
+    # Only mock mode is currently supported
+    if not (request.mock_mode or settings.MOCK_MODE):
+        error_latency = int((time.time() - start_time) * 1000)
+        record_usage(db, api_key, "/audio", 0, error_latency, 501)
+        raise HTTPException(
+            status_code=501,
+            detail="Audio endpoint is currently in BETA. Only mock mode is supported. Set mock_mode=true to test the API interface."
+        )
     
-    raise HTTPException(status_code=501, detail="Not implemented") 
+    response = create_realistic_mock_response("audio", request.task)
+    record_usage(db, api_key, "/audio", response.tokens_used, response.latency_ms, 200)
+    return response 
