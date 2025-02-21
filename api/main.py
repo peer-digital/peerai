@@ -4,11 +4,12 @@ from fastapi.responses import JSONResponse
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # API Configuration
+    """Application settings"""
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "PeerAI"
     VERSION: str = "0.1.0"
     DEBUG: bool = False
+    MOCK_MODE: bool = False
     
     # Database URLs - Required to be in Sweden (Bahnhof)
     # url: postgresql://user:password@host:5432/dbname
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        extra = "allow"  # Allow extra fields from environment variables
 
 settings = Settings()
 
@@ -46,10 +48,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
+@app.get("/health")
+async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "version": settings.VERSION}
+    return {"status": "ok"}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

@@ -3,45 +3,24 @@ from typing import Optional
 from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime
 from sqlalchemy.orm import relationship
 from .base import Base
+from pydantic import BaseModel
 
-class User(Base):
-    """User model for authentication and authorization"""
-    
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
-    
-    # Relationships
-    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    usage_records = relationship("UsageRecord", back_populates="user", cascade="all, delete-orphan")
+class User(BaseModel):
+    """User model"""
+    id: int
+    email: str
+    hashed_password: str
+    is_active: bool = True
 
-class APIKey(Base):
-    """API key model for authentication"""
-    
-    key = Column(String, unique=True, index=True, nullable=False)
-    name = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    is_active = Column(Boolean, default=True)
-    expires_at = Column(DateTime, nullable=True)
-    last_used_at = Column(DateTime, nullable=True)
-    
-    # Rate limiting
-    daily_limit = Column(Integer, default=1000)
-    minute_limit = Column(Integer, default=60)
-    
-    # Relationships
-    user = relationship("User", back_populates="api_keys")
-    usage_records = relationship("UsageRecord", back_populates="api_key", cascade="all, delete-orphan")
-    
-    def is_valid(self) -> bool:
-        """Check if API key is valid and not expired"""
-        if not self.is_active:
-            return False
-        if self.expires_at and self.expires_at < datetime.utcnow():
-            return False
-        return True
+class APIKey(BaseModel):
+    """API Key model"""
+    id: int
+    key: str
+    name: str
+    user_id: int
+    is_active: bool = True
+    daily_limit: int = 1000
+    minute_limit: int = 60
 
 class UsageRecord(Base):
     """Model for tracking API usage"""
