@@ -1,0 +1,28 @@
+[Unit]
+Description=PeerAI API Service
+After=network.target postgresql.service
+
+[Service]
+User=peerai
+Group=peerai
+WorkingDirectory=/opt/peerai
+Environment=PYTHONPATH=/opt/peerai
+Environment=DATABASE_URL=postgresql://peerai:password@localhost/peerai
+Environment=HOSTED_LLM_URL=https://llm-api.bahnhof.se/v1/completions
+Environment=EXTERNAL_LLM_URL=https://fallback-llm.se/v1/completions
+Environment=HOSTED_LLM_API_KEY=your-hosted-api-key
+Environment=EXTERNAL_LLM_API_KEY=your-external-api-key
+Environment=SECRET_KEY=your-secret-key
+Environment=LOG_LEVEL=INFO
+
+ExecStart=/opt/peerai/venv/bin/uvicorn api.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target 
