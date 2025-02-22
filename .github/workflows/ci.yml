@@ -1,11 +1,11 @@
 name: CI
 
-# Trigger workflow on pull requests and direct pushes to main/develop
+# Trigger workflow on pull requests and direct pushes to main/dev
 on:
   pull_request:  # Run on pull requests
-    branches: [ "main", "develop" ]
+    branches: [ "main", "dev" ]
   push:
-    branches: [ "main", "develop" ]  # Also run on direct pushes to main/develop
+    branches: [ "main", "dev" ]  # Also run on direct pushes to main/dev
 
 jobs:
   backend-tests:  # Renamed from build-and-test to be more specific
