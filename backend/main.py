@@ -21,21 +21,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok"}
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 
 # Import and include routers
 from .routes import inference, auth, admin
+
 app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
@@ -46,8 +47,9 @@ app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 # - Usage analytics
 # - System configuration
 # from routes import admin
-# app.include_router(admin.router, prefix=settings.API_V1_PREFIX) 
+# app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Peer AI API"} 
+    return {"message": "Welcome to Peer AI API"}

@@ -3,9 +3,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import os
 
-from backend.database import Base, engine, get_db
+from backend.database import Base, engine
 from backend.models.auth import User
 from backend.models.auth import APIKey
 from backend.core.security import get_password_hash
@@ -13,6 +12,7 @@ from backend.config import settings
 
 # Use the configured test database URL
 TEST_DATABASE_URL = settings.TEST_DATABASE_URL
+
 
 @pytest.fixture(scope="function")
 def engine():
@@ -26,6 +26,7 @@ def engine():
     yield engine
     Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
 def db_session(engine):
     """Create a test database session"""
@@ -34,6 +35,7 @@ def db_session(engine):
     yield session
     session.close()
 
+
 @pytest.fixture(scope="function")
 def test_user(db_session):
     """Create a test user"""
@@ -41,12 +43,13 @@ def test_user(db_session):
         email="test@peerai.se",
         hashed_password=get_password_hash("testpass123"),
         full_name="Test User",
-        is_active=True
+        is_active=True,
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
     return user
+
 
 @pytest.fixture(scope="function")
 def test_api_key(db_session, test_user):
@@ -56,12 +59,13 @@ def test_api_key(db_session, test_user):
         name="Test Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(api_key)
     db_session.commit()
     db_session.refresh(api_key)
     return api_key
+
 
 def test_create_user(db_session):
     """Test user creation"""
@@ -69,7 +73,7 @@ def test_create_user(db_session):
         email="new@peerai.se",
         hashed_password=get_password_hash("newpass123"),
         full_name="New User",
-        is_active=True
+        is_active=True,
     )
     db_session.add(user)
     db_session.commit()
@@ -79,6 +83,7 @@ def test_create_user(db_session):
     assert user.email == "new@peerai.se"
     assert user.full_name == "New User"
     assert user.is_active is True
+
 
 def test_update_user(db_session, test_user):
     """Test user update"""
@@ -90,6 +95,7 @@ def test_update_user(db_session, test_user):
     assert test_user.full_name == "Updated Name"
     assert test_user.is_active is False
 
+
 def test_delete_user(db_session, test_user):
     """Test user deletion"""
     user_id = test_user.id
@@ -99,6 +105,7 @@ def test_delete_user(db_session, test_user):
     deleted_user = db_session.query(User).filter(User.id == user_id).first()
     assert deleted_user is None
 
+
 def test_create_api_key(db_session, test_user):
     """Test API key creation"""
     api_key = APIKey(
@@ -106,7 +113,7 @@ def test_create_api_key(db_session, test_user):
         name="New Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(api_key)
     db_session.commit()
@@ -117,6 +124,7 @@ def test_create_api_key(db_session, test_user):
     assert api_key.user_id == test_user.id
     assert api_key.is_active is True
 
+
 def test_deactivate_api_key(db_session, test_api_key):
     """Test API key deactivation"""
     test_api_key.is_active = False
@@ -124,6 +132,7 @@ def test_deactivate_api_key(db_session, test_api_key):
     db_session.refresh(test_api_key)
 
     assert test_api_key.is_active is False
+
 
 def test_cascade_delete_api_keys(db_session, test_user, test_api_key):
     """Test that API keys are deleted when user is deleted"""
@@ -141,6 +150,7 @@ def test_cascade_delete_api_keys(db_session, test_user, test_api_key):
     assert deleted_user is None
     assert deleted_key is None
 
+
 def test_user_relationships(db_session, test_user, test_api_key):
     """Test user relationships"""
     # Test user.api_keys relationship
@@ -153,13 +163,14 @@ def test_user_relationships(db_session, test_user, test_api_key):
         name="Another Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(new_key)
     db_session.commit()
     db_session.refresh(test_user)
 
     assert len(test_user.api_keys) == 2
+
 
 def test_api_key_expiration(db_session, test_user):
     """Test API key expiration"""
@@ -169,7 +180,7 @@ def test_api_key_expiration(db_session, test_user):
         name="Expired Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() - timedelta(days=1)
+        expires_at=datetime.utcnow() - timedelta(days=1),
     )
     db_session.add(expired_key)
     db_session.commit()
@@ -180,20 +191,25 @@ def test_api_key_expiration(db_session, test_user):
         name="Active Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(active_key)
     db_session.commit()
 
     # Query active keys
-    active_keys = db_session.query(APIKey).filter(
-        APIKey.user_id == test_user.id,
-        APIKey.is_active == True,
-        APIKey.expires_at > datetime.utcnow()
-    ).all()
+    active_keys = (
+        db_session.query(APIKey)
+        .filter(
+            APIKey.user_id == test_user.id,
+            APIKey.is_active == True,
+            APIKey.expires_at > datetime.utcnow(),
+        )
+        .all()
+    )
 
     assert len(active_keys) == 1
     assert active_keys[0].key == "active_key_111"
+
 
 def test_unique_constraints(db_session, test_user):
     """Test unique constraints"""
@@ -207,11 +223,13 @@ def test_unique_constraints(db_session, test_user):
         email=test_user.email,  # Same as test_user
         hashed_password=get_password_hash("pass123"),
         full_name="Duplicate User",
-        is_active=True
+        is_active=True,
     )
     db_session.add(duplicate_user)
 
-    with pytest.raises(IntegrityError, match="duplicate key value violates unique constraint"):
+    with pytest.raises(
+        IntegrityError, match="duplicate key value violates unique constraint"
+    ):
         db_session.flush()
     db_session.rollback()
 
@@ -221,7 +239,7 @@ def test_unique_constraints(db_session, test_user):
         name="Test Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(api_key)
     db_session.flush()
@@ -231,13 +249,16 @@ def test_unique_constraints(db_session, test_user):
         name="Duplicate Key",
         user_id=test_user.id,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.utcnow() + timedelta(days=30),
     )
     db_session.add(duplicate_key)
 
-    with pytest.raises(IntegrityError, match="duplicate key value violates unique constraint"):
+    with pytest.raises(
+        IntegrityError, match="duplicate key value violates unique constraint"
+    ):
         db_session.flush()
     db_session.rollback()
+
 
 def test_bulk_operations(db_session):
     """Test bulk database operations"""
@@ -247,7 +268,7 @@ def test_bulk_operations(db_session):
             email=f"user{i}@peerai.se",
             hashed_password=get_password_hash(f"pass{i}"),
             full_name=f"User {i}",
-            is_active=True
+            is_active=True,
         )
         for i in range(5)
     ]
@@ -272,4 +293,4 @@ def test_bulk_operations(db_session):
 
     # Verify deletion
     final_count = db_session.query(User).count()
-    assert final_count == 0 
+    assert final_count == 0

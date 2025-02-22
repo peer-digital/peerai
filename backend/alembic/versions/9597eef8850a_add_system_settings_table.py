@@ -10,28 +10,30 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 # revision identifiers, used by Alembic.
-revision = '9597eef8850a'
-down_revision = '20250222_004903'
+revision = "9597eef8850a"
+down_revision = "20250222_004903"
 branch_labels = None
 depends_on = None
+
 
 def upgrade():
     # Create system_settings table
     op.create_table(
-        'system_settings',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('rate_limit', JSON, nullable=False),
-        sa.Column('security', JSON, nullable=False),
-        sa.Column('models', JSON, nullable=False),
-        sa.Column('monitoring', JSON, nullable=False),
-        sa.Column('beta_features', JSON, nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        "system_settings",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("rate_limit", JSON, nullable=False),
+        sa.Column("security", JSON, nullable=False),
+        sa.Column("models", JSON, nullable=False),
+        sa.Column("monitoring", JSON, nullable=False),
+        sa.Column("beta_features", JSON, nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    
+
     # Insert default settings
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO system_settings (
             rate_limit,
             security,
@@ -49,7 +51,9 @@ def upgrade():
             NOW(),
             NOW()
         )
-    """)
+    """
+    )
+
 
 def downgrade():
-    op.drop_table('system_settings')
+    op.drop_table("system_settings")

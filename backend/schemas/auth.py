@@ -4,12 +4,15 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
+
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
 
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+
 
 class User(UserBase):
     id: int
@@ -20,18 +23,22 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     email: Optional[str] = None
+
 
 class APIKeyCreate(BaseModel):
     name: str
     expires_at: Optional[datetime] = None
     daily_limit: Optional[int] = 1000
     minute_limit: Optional[int] = 60
+
 
 class APIKeyResponse(BaseModel):
     id: int
@@ -46,4 +53,4 @@ class APIKeyResponse(BaseModel):
     last_used_at: Optional[datetime]
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

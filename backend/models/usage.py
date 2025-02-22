@@ -6,8 +6,10 @@ from sqlalchemy.orm import relationship
 
 from .base import Base
 
+
 class UsageRecord(Base):
     """Model for tracking API usage."""
+
     __tablename__ = "usage_records"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -21,8 +23,10 @@ class UsageRecord(Base):
     error = Column(Boolean, default=False)
     error_type = Column(String, nullable=True)
     error_message = Column(String, nullable=True)  # @note: Stores error details
-    status_code = Column(Integer, nullable=True)  # @note: HTTP status code of the request
-    
+    status_code = Column(
+        Integer, nullable=True
+    )  # @note: HTTP status code of the request
+
     # Relationships
     user = relationship("User", back_populates="usage_records")
-    api_key = relationship("APIKey", back_populates="usage_records") 
+    api_key = relationship("APIKey", back_populates="usage_records")

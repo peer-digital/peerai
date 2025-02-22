@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataGrid } from '../DataGrid';
 import { ThemeProvider } from '@mui/material/styles';
-import { theme } from '@/theme';
+import theme from '@/theme/theme';
 
 // Mock data for testing
 const testData = [
@@ -103,12 +103,16 @@ describe('DataGrid Component', () => {
       />
     );
 
-    // Click checkbox in first row
+    // Test select all functionality
+    const selectAllCheckbox = screen.getByRole('checkbox', { name: /select all/i });
+    await userEvent.click(selectAllCheckbox);
+    expect(onSelectionChange).toHaveBeenCalledWith(testData.map(row => row.id));
+
+    // Test individual row selection
+    await userEvent.click(selectAllCheckbox); // Deselect all first
     const firstRow = screen.getByRole('row', { name: new RegExp(testData[0].name) });
     const checkbox = within(firstRow).getByRole('checkbox');
     await userEvent.click(checkbox);
-
-    // Check if selection callback was called
     expect(onSelectionChange).toHaveBeenCalledWith([testData[0].id]);
   });
 
@@ -129,6 +133,31 @@ describe('DataGrid Component', () => {
     // Check if rows are sorted alphabetically
     const rows = screen.getAllByRole('row');
     const firstCell = within(rows[1]).getByRole('cell', { name: /Bob Wilson/i });
+    expect(firstCell).toBeInTheDocument();
+  });
+
+  it('handles sorting with multiple clicks', async () => {
+    renderWithProviders(
+      <DataGrid
+        data={testData}
+        columns={columns}
+        loading={false}
+        sortable
+      />
+    );
+
+    const nameHeader = screen.getByText('Name');
+    
+    // First click - ascending order
+    await userEvent.click(nameHeader);
+    let rows = screen.getAllByRole('row');
+    let firstCell = within(rows[1]).getByRole('cell', { name: /Bob Wilson/i });
+    expect(firstCell).toBeInTheDocument();
+
+    // Second click - descending order
+    await userEvent.click(nameHeader);
+    rows = screen.getAllByRole('row');
+    firstCell = within(rows[1]).getByRole('cell', { name: /John Doe/i });
     expect(firstCell).toBeInTheDocument();
   });
 
@@ -159,6 +188,48 @@ describe('DataGrid Component', () => {
     expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument();
   });
 
+  it('handles filtering with field selection', async () => {
+    renderWithProviders(
+      <DataGrid
+        data={testData}
+        columns={columns}
+        loading={false}
+        filterable
+      />
+    );
+
+    // Open filter menu
+    const filterButton = screen.getByRole('button', { name: /filter/i });
+    await userEvent.click(filterButton);
+
+    // Select field to filter
+    const fieldSelect = screen.getByLabelText(/field/i);
+    await userEvent.click(fieldSelect);
+    const nameOption = screen.getByText('Name');
+    await userEvent.click(nameOption);
+
+    // Enter filter value
+    const filterInput = screen.getByPlaceholderText('Filter value');
+    await userEvent.type(filterInput, 'john');
+
+    // Apply filter
+    const applyButton = screen.getByRole('button', { name: /apply/i });
+    await userEvent.click(applyButton);
+
+    // Check if only filtered data is shown
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument();
+
+    // Clear filter
+    await userEvent.click(filterButton);
+    await userEvent.clear(filterInput);
+    await userEvent.click(applyButton);
+
+    // Check if all data is shown again
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
   it('handles pagination', async () => {
     const manyRows = Array.from({ length: 25 }, (_, i) => ({
       id: i + 1,
@@ -178,7 +249,8 @@ describe('DataGrid Component', () => {
     );
 
     // Check if pagination controls are shown
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    const paginationToolbar = screen.getByRole('toolbar');
+    expect(paginationToolbar).toBeInTheDocument();
 
     // Go to next page
     const nextButton = screen.getByRole('button', { name: /next/i });
@@ -187,6 +259,46 @@ describe('DataGrid Component', () => {
     // Check if page 2 data is shown
     expect(screen.getByText('User 11')).toBeInTheDocument();
     expect(screen.queryByText('User 1')).not.toBeInTheDocument();
+  });
+
+  it('handles pagination with row count display', async () => {
+    const manyRows = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      name: `User ${i + 1}`,
+      email: `user${i + 1}@example.com`,
+      role: 'user'
+    }));
+
+    renderWithProviders(
+      <DataGrid
+        data={manyRows}
+        columns={columns}
+        loading={false}
+        pagination
+        pageSize={10}
+      />
+    );
+
+    // Check if pagination info is shown
+    expect(screen.getByText(/1-10 of 25/i)).toBeInTheDocument();
+
+    // Go to next page
+    const nextButton = screen.getByRole('button', { name: /next/i });
+    await userEvent.click(nextButton);
+
+    // Check if page 2 data and info is shown
+    expect(screen.getByText(/11-20 of 25/i)).toBeInTheDocument();
+    expect(screen.getByText('User 11')).toBeInTheDocument();
+    expect(screen.queryByText('User 1')).not.toBeInTheDocument();
+
+    // Go to last page
+    await userEvent.click(nextButton);
+    expect(screen.getByText(/21-25 of 25/i)).toBeInTheDocument();
+
+    // Check if previous page button works
+    const prevButton = screen.getByRole('button', { name: /previous/i });
+    await userEvent.click(prevButton);
+    expect(screen.getByText(/11-20 of 25/i)).toBeInTheDocument();
   });
 
   it('handles row actions', async () => {
@@ -206,15 +318,63 @@ describe('DataGrid Component', () => {
     );
 
     // Open actions menu for first row
-    const actionButton = screen.getAllByRole('button', { name: /actions/i })[0];
-    await userEvent.click(actionButton);
+    const actionButtons = screen.getAllByRole('button', { name: /more/i });
+    await userEvent.click(actionButtons[0]);
 
     // Click edit action
-    const editButton = screen.getByRole('menuitem', { name: /edit/i });
-    await userEvent.click(editButton);
+    const editMenuItem = screen.getByRole('menuitem', { name: /edit/i });
+    await userEvent.click(editMenuItem);
 
-    // Check if edit callback was called with correct row
+    // Check if edit callback was called
     expect(onEdit).toHaveBeenCalledWith(testData[0]);
+
+    // Open actions menu again
+    await userEvent.click(actionButtons[0]);
+
+    // Click delete action
+    const deleteMenuItem = screen.getByRole('menuitem', { name: /delete/i });
+    await userEvent.click(deleteMenuItem);
+
+    // Check if delete callback was called
+    expect(onDelete).toHaveBeenCalledWith(testData[0]);
+  });
+
+  it('handles row actions with keyboard navigation', async () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+
+    renderWithProviders(
+      <DataGrid
+        data={testData}
+        columns={columns}
+        loading={false}
+        actions={[
+          { label: 'Edit', onClick: onEdit },
+          { label: 'Delete', onClick: onDelete }
+        ]}
+      />
+    );
+
+    // Open actions menu for first row using keyboard
+    const actionButton = screen.getAllByRole('button', { name: /more/i })[0];
+    actionButton.focus();
+    await userEvent.keyboard('{Enter}');
+
+    // Navigate to edit action using keyboard
+    await userEvent.keyboard('{ArrowDown}');
+    await userEvent.keyboard('{Enter}');
+
+    // Check if edit callback was called
+    expect(onEdit).toHaveBeenCalledWith(testData[0]);
+
+    // Open menu again and test delete action
+    await userEvent.click(actionButton);
+    await userEvent.keyboard('{ArrowDown}');
+    await userEvent.keyboard('{ArrowDown}');
+    await userEvent.keyboard('{Enter}');
+
+    // Check if delete callback was called
+    expect(onDelete).toHaveBeenCalledWith(testData[0]);
   });
 
   it('handles custom cell rendering', () => {

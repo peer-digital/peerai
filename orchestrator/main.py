@@ -8,10 +8,12 @@ from enum import Enum
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class ModelProvider(str, Enum):
     HOSTED = "hosted"  # Bahnhof-hosted model
     EXTERNAL = "external"  # Swedish external provider
     MOCK = "mock"  # For testing
+
 
 class InferenceRequest(BaseModel):
     prompt: str
@@ -19,11 +21,13 @@ class InferenceRequest(BaseModel):
     temperature: float = Field(default=0.7, ge=0, le=1)
     provider: Optional[ModelProvider] = Field(default=ModelProvider.HOSTED)
 
+
 class InferenceResponse(BaseModel):
     text: str
     provider: ModelProvider
     tokens_used: int
     latency_ms: float
+
 
 class Orchestrator:
     def __init__(
@@ -32,7 +36,7 @@ class Orchestrator:
         external_url: str,
         hosted_api_key: str,
         external_api_key: str,
-        mock_mode: bool = False
+        mock_mode: bool = False,
     ):
         self.hosted_url = hosted_url
         self.external_url = external_url
@@ -47,7 +51,7 @@ class Orchestrator:
             response = await self.http_client.post(
                 self.hosted_url,
                 headers={"Authorization": f"Bearer {self.hosted_api_key}"},
-                json=request.model_dump()
+                json=request.model_dump(),
             )
             response.raise_for_status()
             return response.json()
@@ -61,7 +65,7 @@ class Orchestrator:
             response = await self.http_client.post(
                 self.external_url,
                 headers={"Authorization": f"Bearer {self.external_api_key}"},
-                json=request.model_dump()
+                json=request.model_dump(),
             )
             response.raise_for_status()
             return response.json()
@@ -75,7 +79,7 @@ class Orchestrator:
             "text": f"Mock response for prompt: {request.prompt[:50]}...",
             "provider": ModelProvider.MOCK,
             "tokens_used": len(request.prompt.split()),
-            "latency_ms": 100.0
+            "latency_ms": 100.0,
         }
 
     async def generate(self, request: InferenceRequest) -> InferenceResponse:
@@ -88,7 +92,7 @@ class Orchestrator:
             if request.provider == ModelProvider.HOSTED:
                 response = await self._call_hosted_model(request)
                 return InferenceResponse(**response)
-            
+
             # Try external provider
             if request.provider == ModelProvider.EXTERNAL:
                 response = await self._call_external_model(request)
@@ -102,4 +106,4 @@ class Orchestrator:
                 return InferenceResponse(**response)
             except Exception as fallback_error:
                 logger.error(f"Fallback also failed: {str(fallback_error)}")
-                raise Exception("All providers failed") 
+                raise Exception("All providers failed")

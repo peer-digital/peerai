@@ -13,6 +13,7 @@ engine = create_engine(settings.DATABASE_URL)
 # Create sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def get_db() -> Session:
     """Get database session"""
     db = SessionLocal()
@@ -21,4 +22,5 @@ def get_db() -> Session:
     finally:
         db.close()
 
-__all__ = ['Base', 'engine', 'get_db'] 
+
+__all__ = ["Base", "engine", "get_db"]

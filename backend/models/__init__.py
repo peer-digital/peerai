@@ -6,9 +6,9 @@ from .usage import UsageRecord
 from .settings import DBSystemSettings
 
 __all__ = [
-    'Base',
-    'User',
-    'APIKey',
-    'UsageRecord',
-    'DBSystemSettings',
-] 
+    "Base",
+    "User",
+    "APIKey",
+    "UsageRecord",
+    "DBSystemSettings",
+]

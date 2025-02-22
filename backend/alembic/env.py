@@ -12,12 +12,11 @@ from alembic import context
 
 from backend.config import settings
 from backend.models.base import Base
-from backend.models.auth import User, APIKey, DBSystemSettings
-from backend.models.usage import UsageRecord
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
 
 # Set the SQLAlchemy URL based on environment
 def get_url():
@@ -25,6 +24,7 @@ def get_url():
     if os.getenv("ENVIRONMENT") == "test" or "pytest" in sys.modules:
         return settings.TEST_DATABASE_URL
     return settings.DATABASE_URL
+
 
 config.set_main_option("sqlalchemy.url", get_url())
 
@@ -41,6 +41,7 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -75,7 +76,7 @@ def run_migrations_online() -> None:
     """
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -83,9 +84,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
