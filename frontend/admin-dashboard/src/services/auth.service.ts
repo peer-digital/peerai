@@ -22,12 +22,10 @@ class AuthService {
     try {
       // Create form data for OAuth2 token request
       const formData = new URLSearchParams();
-      // @ts-ignore - Backend expects 'username' for OAuth2 form
       formData.append('username', credentials.email);
       formData.append('password', credentials.password);
 
       const response = await api.post<{access_token: string, token_type: string}>(
-        // @ts-ignore - URL is correct, matches FastAPI OAuth2 endpoint
         '/api/v1/token',
         formData,
         {
@@ -40,23 +38,21 @@ class AuthService {
       // Store the access token
       localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
 
-      // Create user object from successful login
-      const user = {
-        id: '1', // Will be replaced with real ID from validateToken
-        email: credentials.email,
-        name: '',
-        role: 'admin' as const
-      };
+      // Get user data from validation endpoint
+      const userData = await this.validateToken();
 
-      // Store user data in memory
-      this.currentUser = user;
-      this.setUser(user);
+      // Store user data in memory and storage
+      this.currentUser = userData;
+      this.setUser(userData);
 
       return {
         token: response.data.access_token,
-        user
+        user: userData
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Incorrect email or password');
+      }
       throw this.handleError(error);
     }
   }
@@ -82,6 +78,10 @@ class AuthService {
     });
   }
 
+  getToken(): string | null {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  }
+
   getUser(): User | null {
     return this.currentUser || this.getUserFromStorage();
   }
@@ -96,15 +96,15 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.currentUser;
+    return !!this.getToken() && !!this.currentUser;
   }
 
   private handleError(error: any): Error {
     if (error.response) {
-      const message = error.response.data?.message || 'Authentication failed';
+      const message = error.response.data?.detail || error.response.data?.message || 'Authentication failed';
       return new Error(message);
     }
-    return error;
+    return error instanceof Error ? error : new Error('An unexpected error occurred');
   }
 }
 

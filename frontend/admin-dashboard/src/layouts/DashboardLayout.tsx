@@ -13,6 +13,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
+  Avatar,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -23,8 +26,10 @@ import {
   Settings as SettingsIcon,
   Assessment as AssessmentIcon,
   Code as CodeIcon,
+  AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -87,8 +92,10 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [open, setOpen] = useState(true);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -96,6 +103,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const handleDrawerClose = () => {
     setOpen(false);
+  };
+
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleUserMenuClose();
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -111,9 +132,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             PeerAI Admin
           </Typography>
+          <IconButton
+            onClick={handleUserMenuOpen}
+            size="small"
+            sx={{ ml: 2 }}
+            data-testid="user-menu"
+          >
+            {user?.name ? (
+              <Avatar sx={{ width: 32, height: 32 }}>
+                {user.name.charAt(0).toUpperCase()}
+              </Avatar>
+            ) : (
+              <AccountCircleIcon />
+            )}
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleUserMenuClose}
+            onClick={handleUserMenuClose}
+          >
+            <MenuItem disabled>
+              <Typography variant="body2" color="textSecondary">
+                Signed in as {user?.email}
+              </Typography>
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </Menu>
         </Toolbar>
       </StyledAppBar>
       <Drawer

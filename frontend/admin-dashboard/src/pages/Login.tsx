@@ -80,6 +80,7 @@ const Login: React.FC = () => {
           <Box
             component="form"
             onSubmit={handleSubmit(onSubmit)}
+            noValidate
             sx={{ mt: 1, width: '100%' }}
           >
             <TextField
@@ -90,6 +91,8 @@ const Login: React.FC = () => {
               label="Email Address"
               autoComplete="email"
               autoFocus
+              error={!!errors.email}
+              helperText={errors.email?.message}
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -97,8 +100,9 @@ const Login: React.FC = () => {
                   message: 'Invalid email address',
                 },
               })}
-              error={!!errors.email}
-              helperText={errors.email?.message}
+              inputProps={{
+                'aria-invalid': !!errors.email,
+              }}
             />
             <TextField
               margin="normal"
@@ -108,6 +112,8 @@ const Login: React.FC = () => {
               type="password"
               id="password"
               autoComplete="current-password"
+              error={!!errors.password}
+              helperText={errors.password?.message}
               {...register('password', {
                 required: 'Password is required',
                 minLength: {
@@ -115,8 +121,9 @@ const Login: React.FC = () => {
                   message: 'Password must be at least 6 characters',
                 },
               })}
-              error={!!errors.password}
-              helperText={errors.password?.message}
+              inputProps={{
+                'aria-invalid': !!errors.password,
+              }}
             />
             <Button
               type="submit"

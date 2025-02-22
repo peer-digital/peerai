@@ -8,7 +8,7 @@ on:
     branches: [ "main", "develop" ]  # Also run on direct pushes to main/develop
 
 jobs:
-  build-and-test:
+  backend-tests:  # Renamed from build-and-test to be more specific
     runs-on: ubuntu-latest
     
     steps:
@@ -49,11 +49,71 @@ jobs:
           coverage report --fail-under=80
           coverage xml  # Generate coverage report for potential future integrations
 
-      # Step 7: Cache dependencies for faster future runs
+      # Step 7: Cache pip packages
       - name: Cache pip packages
         uses: actions/cache@v3  # @note: GitHub's official caching action - do not change URL
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip- 
+            ${{ runner.os }}-pip-
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/admin-dashboard  # Set default working directory for all run steps
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3  # @note: GitHub's official Node.js setup action - do not change URL
+        with:
+          node-version: '18'  # Match your development Node.js version
+          cache: 'npm'
+          cache-dependency-path: frontend/admin-dashboard/package-lock.json
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci  # Clean install for CI environments
+
+      # Step 4: Run ESLint
+      - name: Run ESLint
+        run: npm run lint
+
+      # Step 5: Build the application
+      - name: Build
+        run: npm run build
+
+      # Step 6: Start the application and run Cypress tests
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6  # @note: Official Cypress GitHub action - do not change URL
+        with:
+          working-directory: frontend/admin-dashboard
+          start: npm run dev
+          wait-on: 'http://localhost:3000'  # Wait for dev server to be ready
+          wait-on-timeout: 120  # Give it up to 2 minutes
+          browser: chrome
+          record: false  # Set to true if you have Cypress Cloud configured
+          config-file: cypress.config.ts
+
+      # Step 7: Upload test artifacts
+      - name: Upload Cypress screenshots
+        uses: actions/upload-artifact@v3  # @note: GitHub's official artifact upload action - do not change URL
+        if: failure()  # Only upload on test failure
+        with:
+          name: cypress-screenshots
+          path: frontend/admin-dashboard/cypress/screenshots
+          retention-days: 5
+
+      - name: Upload Cypress videos
+        uses: actions/upload-artifact@v3
+        if: always()  # Always upload test videos
+        with:
+          name: cypress-videos
+          path: frontend/admin-dashboard/cypress/videos
+          retention-days: 5 
