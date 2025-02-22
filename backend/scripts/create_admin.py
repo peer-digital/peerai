@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
 
 from config import settings
-from models.user import User
+from models.auth import User
 
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
