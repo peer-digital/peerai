@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, JSON
+from sqlalchemy import Column, Integer, DateTime, JSON, ForeignKey
 from sqlalchemy.sql import func
 
 from .base import Base
@@ -14,4 +14,5 @@ class SystemSettings(Base):
     monitoring = Column(JSON, nullable=False)
     beta_features = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False) 
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True) 
