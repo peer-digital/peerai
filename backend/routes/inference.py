@@ -19,7 +19,8 @@ import random
 import httpx
 import logging
 
-from models import APIKey, UsageRecord
+from models.auth import APIKey
+from models import UsageRecord
 from database import get_db
 from config import settings
 

@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import get_db
-from models import User, APIKey, UsageRecord
+from models.auth import User, APIKey
+from models import UsageRecord
 from core.security import get_current_user
 from schemas.admin import SystemSettings, UserResponse
 from services.analytics import (

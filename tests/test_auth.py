@@ -5,7 +5,7 @@ from jose import jwt
 
 from backend.main import app
 from backend.database import get_db
-from backend.models import User, APIKey
+from backend.models.auth import User, APIKey
 from backend.core.security import get_password_hash
 from sqlalchemy.orm import Session
 

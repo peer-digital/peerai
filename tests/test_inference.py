@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 from backend.main import app, settings
 from backend.database import get_db
-from backend.models import APIKey, UsageRecord
+from backend.models.auth import APIKey
+from backend.models import UsageRecord
 from backend.routes.inference import MOCK_TEXT_RESPONSES, websocket_endpoint
 
 # Test client setup
