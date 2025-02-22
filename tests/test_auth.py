@@ -3,10 +3,14 @@ from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 from jose import jwt
+from backend.main import app
+from backend.database import get_db
+from backend.models.user import User
+from backend.core.security import get_password_hash
+from sqlalchemy.orm import Session
 
-from api.main import app, settings
-from api.database import get_db
-from api.models.auth import User, APIKey
+from api.main import settings
+from api.models.auth import APIKey
 from api.routes.auth import ALGORITHM, SECRET_KEY
 
 # Test client setup
@@ -49,6 +53,25 @@ def test_api_key():
         is_active=True
     )
 
+@pytest.fixture
+def test_db(session: Session):
+    """Fixture for test database session"""
+    # Create test user
+    hashed_password = get_password_hash("testpass123")
+    test_user = User(
+        email="test@peerdigital.se",
+        hashed_password=hashed_password,
+        is_active=True
+    )
+    session.add(test_user)
+    session.commit()
+    
+    yield session
+    
+    # Cleanup
+    session.query(User).filter(User.email == "test@peerdigital.se").delete()
+    session.commit()
+
 def test_register_user_success(db_session):
     """Test successful user registration"""
     # Mock database to return None (user doesn't exist)
@@ -89,37 +112,59 @@ def test_register_user_duplicate_email(db_session, test_user):
     assert response.status_code == 400
     assert response.json()["detail"] == "Email already registered"
 
-def test_login_success(db_session, test_user):
+def test_login_success(test_db):
     """Test successful login"""
-    db_session.query.return_value.filter.return_value.first.return_value = test_user
-    
     response = client.post(
-        f"{settings.API_V1_PREFIX}/token",
-        data={
-            "username": "test@example.com",
-            "password": "test123"
-        }
+        "/api/v1/auth/login",
+        json={"email": "test@peerdigital.se", "password": "testpass123"}
     )
-    
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert "access_token" in response.json()
+    assert "token_type" in response.json()
+    assert response.json()["token_type"] == "bearer"
 
-def test_login_invalid_credentials(db_session):
+def test_login_invalid_credentials(test_db):
     """Test login with invalid credentials"""
-    db_session.query.return_value.filter.return_value.first.return_value = None
-    
     response = client.post(
-        f"{settings.API_V1_PREFIX}/token",
-        data={
-            "username": "wrong@example.com",
-            "password": "wrongpass"
-        }
+        "/api/v1/auth/login",
+        json={"email": "test@peerdigital.se", "password": "wrongpass"}
     )
-    
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect email or password"
+
+def test_validate_token(test_db):
+    """Test token validation"""
+    # First login to get token
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "test@peerdigital.se", "password": "testpass123"}
+    )
+    token = login_response.json()["access_token"]
+    
+    # Test token validation
+    response = client.get(
+        "/api/v1/auth/validate",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["email"] == "test@peerdigital.se"
+
+def test_logout(test_db):
+    """Test logout endpoint"""
+    # First login to get token
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "test@peerdigital.se", "password": "testpass123"}
+    )
+    token = login_response.json()["access_token"]
+    
+    # Test logout
+    response = client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Successfully logged out"
 
 def test_create_api_key_success(db_session, test_user):
     """Test successful API key creation"""

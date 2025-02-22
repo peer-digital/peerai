@@ -1,6 +1,55 @@
-# PeerAI
+# Peer AI
 
-PeerAI is a Swedish-based LLM inference service that ensures all customer data remains within Sweden while providing developer-friendly APIs and tools.
+This repository is organized into two main components:
+
+## Project Structure
+
+```
+.
+├── backend/               # Backend services and API
+│   ├── alembic/          # Database migrations
+│   ├── models/           # Database models
+│   ├── routes/           # API endpoints
+│   ├── scripts/          # Backend utility scripts
+│   ├── main.py          # Main FastAPI application
+│   └── config.py        # Backend configuration
+│
+├── frontend/             # Frontend applications
+│   └── admin-dashboard/  # Admin dashboard React application
+│
+├── deployment/           # Deployment configurations
+├── docs/                 # Project documentation
+├── orchestrator/         # Service orchestration
+├── scripts/             # Project-wide utility scripts
+└── tests/               # Test suites
+```
+
+## Backend
+
+The backend is built with FastAPI and provides the REST API endpoints. It's located in the `backend/` directory.
+
+### Setup
+1. Create and activate a virtual environment
+2. Install dependencies: `pip install -r backend/requirements.txt`
+3. Copy `.env.example` to `.env` and configure
+4. Run migrations: `alembic upgrade head`
+5. Start the server: `uvicorn backend.main:app --reload`
+
+## Frontend
+
+The frontend is built with React and is located in the `frontend/` directory. It contains:
+- Admin Dashboard: A React application for managing the platform
+
+### Setup
+1. Navigate to the specific frontend application directory
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+
+## Development
+
+- Backend API runs on: http://localhost:8000
+- Frontend development server runs on: http://localhost:3000
+- API documentation available at: http://localhost:8000/docs
 
 ## Features
 
@@ -59,18 +108,6 @@ The API will be available at `http://localhost:8000`
 
 ```bash
 pytest
-```
-
-## Project Structure
-
-```
-peerai/
-├── api/                  # FastAPI application
-├── orchestrator/         # LLM inference orchestrator
-├── sdk/                  # Client SDKs
-├── admin-dashboard/      # Internal admin interface
-├── customer-dashboard/   # Customer management interface
-└── docs/                # Documentation
 ```
 
 ## Documentation

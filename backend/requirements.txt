@@ -1,0 +1,37 @@
+# FastAPI and ASGI server
+# @url: https://fastapi.tiangolo.com/
+fastapi==0.109.2
+# @url: https://www.uvicorn.org/
+uvicorn==0.27.1
+
+# Database
+# @url: https://www.sqlalchemy.org/
+sqlalchemy==2.0.27
+# @url: https://alembic.sqlalchemy.org/
+alembic==1.13.1
+# @url: https://www.psycopg.org/
+psycopg2-binary==2.9.9
+
+# Environment variables
+# @url: https://python-dotenv.readthedocs.io/
+python-dotenv==1.0.1
+
+# Authentication
+# @url: https://python-jose.readthedocs.io/
+python-jose==3.3.0
+# @url: https://passlib.readthedocs.io/
+passlib==1.7.4
+# @url: https://python-bcrypt.readthedocs.io/
+bcrypt==4.1.2
+
+# Testing
+# @url: https://docs.pytest.org/
+pytest==8.0.1
+# @url: https://coverage.readthedocs.io/
+coverage==7.4.1
+
+# Utilities
+# @url: https://pydantic-docs.helpmanual.io/
+pydantic==2.6.1
+# @url: https://requests.readthedocs.io/
+requests==2.31.0 
