@@ -19,13 +19,35 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add created_at column back to usage_records
-    op.add_column('usage_records', sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False))
-    # Add model column to usage_records
-    op.add_column('usage_records', sa.Column('model', sa.String(), nullable=True))
+    # Add all potentially missing columns to usage_records
+    # Add created_at if it doesn't exist
+    try:
+        op.add_column('usage_records', sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False))
+    except Exception:
+        pass  # Column might already exist
+
+    # Add model if it doesn't exist
+    try:
+        op.add_column('usage_records', sa.Column('model', sa.String(), nullable=True))
+    except Exception:
+        pass  # Column might already exist
+
+    # Add error if it doesn't exist
+    try:
+        op.add_column('usage_records', sa.Column('error', sa.Boolean(), server_default=sa.text('false'), nullable=False))
+    except Exception:
+        pass  # Column might already exist
+
+    # Add error_type if it doesn't exist
+    try:
+        op.add_column('usage_records', sa.Column('error_type', sa.String(), nullable=True))
+    except Exception:
+        pass  # Column might already exist
 
 
 def downgrade() -> None:
-    # Remove created_at and model columns from usage_records
+    # Remove columns from usage_records
     op.drop_column('usage_records', 'created_at')
     op.drop_column('usage_records', 'model')
+    op.drop_column('usage_records', 'error')
+    op.drop_column('usage_records', 'error_type')
