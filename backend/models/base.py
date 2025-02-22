@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, DateTime, Integer, MetaData
 
 # Configure SQLAlchemy metadata with naming convention
@@ -15,6 +14,7 @@ convention = {
 
 metadata = MetaData(naming_convention=convention)
 
+Base = declarative_base()
 
 class Base(DeclarativeBase):
     """Base class for all database models"""
