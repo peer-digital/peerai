@@ -21,6 +21,19 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // @ts-expect-error - allowedHosts is valid but not typed
+    allowedHosts: [
+      // Allow both frontend and backend Render domains
+      'peerai-fe.onrender.com',
+      'peerai-be.onrender.com'
+    ],
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
+    }
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
