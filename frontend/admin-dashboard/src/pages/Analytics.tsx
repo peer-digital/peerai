@@ -31,6 +31,20 @@ interface AnalyticsData {
   avg_latency: number[];
 }
 
+const formatDateTime = (date: Date) => {
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date);
+  const ms = date.getMilliseconds().toString().padStart(3, '0');
+  return `${formatted}.${ms}`;
+};
+
 const Analytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | '90d'>('7d');
 
@@ -101,12 +115,12 @@ const Analytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    tickFormatter={(value) => formatDateTime(new Date(value))}
                   />
                   <YAxis yAxisId="left" />
                   <YAxis yAxisId="right" orientation="right" />
                   <Tooltip
-                    labelFormatter={(value) => new Date(value).toLocaleString()}
+                    labelFormatter={(value) => formatDateTime(new Date(value))}
                   />
                   <Legend />
                   <Line
@@ -141,14 +155,14 @@ const Analytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    tickFormatter={(value) => formatDateTime(new Date(value))}
                   />
                   <YAxis
                     domain={[0, 100]}
                     tickFormatter={(value) => `${value}%`}
                   />
                   <Tooltip
-                    labelFormatter={(value) => new Date(value).toLocaleString()}
+                    labelFormatter={(value) => formatDateTime(new Date(value))}
                     formatter={(value: number) => [`${value.toFixed(2)}%`, 'Success Rate']}
                   />
                   <Legend />
@@ -176,13 +190,13 @@ const Analytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    tickFormatter={(value) => formatDateTime(new Date(value))}
                   />
                   <YAxis
                     tickFormatter={(value) => `${value}ms`}
                   />
                   <Tooltip
-                    labelFormatter={(value) => new Date(value).toLocaleString()}
+                    labelFormatter={(value) => formatDateTime(new Date(value))}
                     formatter={(value: number) => [`${value.toFixed(2)}ms`, 'Latency']}
                   />
                   <Legend />
