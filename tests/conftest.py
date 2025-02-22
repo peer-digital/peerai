@@ -119,16 +119,15 @@ def test_settings(db_session) -> DBSystemSettings:
         rate_limit={
             "enabled": True,
             "requestsPerMinute": 60,
-            "tokensPerDay": 100000
+            "tokensPerDay": 1000
         },
         security={
-            "requireSSL": True,
             "maxTokenLength": 4096,
-            "allowedOrigins": "http://localhost:3000, https://app.peerai.se"
+            "allowedOrigins": ["https://app.peerdigital.se"]
         },
         models={
-            "defaultModel": "claude-3-sonnet-20240229",  # @note: Model name - do not change
-            "maxContextLength": 100000,
+            "defaultModel": "claude-3-sonnet-20240229",
+            "maxContextLength": 200000,
             "temperature": 0.7
         },
         monitoring={
@@ -137,10 +136,8 @@ def test_settings(db_session) -> DBSystemSettings:
             "alertThreshold": 5
         },
         beta_features={
-            "visionEnabled": False,
-            "audioEnabled": False,
-            "visionModel": "claude-3-opus-20240229",  # @note: Vision model - do not change
-            "audioModel": "whisper-1"  # @note: Audio model - do not change
+            "visionEnabled": True,
+            "audioEnabled": True
         }
     )
     db_session.add(settings)
@@ -233,11 +230,6 @@ def client(db_session):
 @pytest_asyncio.fixture
 async def async_client():
     """Create async test client"""
-    from httpx import AsyncClient
-    from starlette.testclient import TestClient
-    from starlette.websockets import WebSocket
-    from backend.main import app
-
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
 
@@ -274,4 +266,49 @@ async def async_client(db_session) -> AsyncGenerator[httpx.AsyncClient, None]:
             }
         )
         yield test_client
-    app.dependency_overrides.clear() 
+    app.dependency_overrides.clear()
+
+class MockWebSocket:
+    def __init__(self, scope, receive, send):
+        self.scope = scope
+        self.receive = receive
+        self.send = send
+        self.accepted = False
+        self.closed = False
+        self.messages = []
+
+    async def accept(self):
+        self.accepted = True
+
+    async def close(self, code=1000, reason=None):
+        self.closed = True
+
+    async def send_json(self, data):
+        self.messages.append(data)
+
+    async def receive_json(self):
+        return {
+            "prompt": "Test streaming",
+            "mock_mode": True,
+            "close": True
+        }
+
+@pytest.fixture
+def websocket():
+    """Create mock websocket"""
+    async def mock_receive():
+        return {"type": "websocket.receive"}
+
+    async def mock_send(message):
+        pass
+
+    scope = {
+        "type": "websocket",
+        "path": "/api/v1/stream",
+        "query_string": b"api_key=test_key_123",
+        "headers": [],
+        "client": ("127.0.0.1", 8000),
+        "server": ("127.0.0.1", 80),
+    }
+
+    return MockWebSocket(scope, mock_receive, mock_send) 

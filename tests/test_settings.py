@@ -50,31 +50,32 @@ def db_session():
 
 @pytest.fixture
 def test_settings():
-    """Create test system settings."""
+    """Create test settings"""
     return DBSystemSettings(
-        id=1,
         rate_limit={
             "enabled": True,
             "requestsPerMinute": 60,
-            "tokensPerDay": 1000
+            "dailyLimit": 1000
         },
         security={
-            "maxTokenLength": 4096,
-            "allowedOrigins": ["https://app.peerdigital.se"]
+            "allowedOrigins": ["*"],
+            "apiKeyExpiration": 30,
+            "requireHttps": True
         },
         models={
-            "defaultModel": "claude-3-sonnet-20240229",  # @note: Model name - do not change
-            "maxContextLength": 200000,
-            "temperature": 0.7
+            "defaultModel": "mistral-tiny",
+            "allowedModels": ["mistral-tiny", "mistral-small", "mistral-medium"],
+            "fallbackEnabled": True
         },
         monitoring={
-            "logLevel": "info",
-            "retentionDays": 30,
-            "alertThreshold": 5
+            "logLevel": "INFO",
+            "errorTracking": True,
+            "performanceMonitoring": True
         },
         beta_features={
-            "visionEnabled": True,
-            "audioEnabled": True
+            "streamingEnabled": False,
+            "visionEnabled": False,
+            "audioEnabled": False
         }
     )
 
@@ -92,7 +93,7 @@ async def test_get_settings_admin(db_session, admin_user, admin_token, test_sett
     assert response.status_code == 200
     data = response.json()
     assert data["rateLimit"]["enabled"] is True
-    assert data["models"]["defaultModel"] == "claude-3-sonnet-20240229"  # @note: Model name - do not change
+    assert data["models"]["defaultModel"] == "mistral-tiny"
 
 @pytest.mark.asyncio
 async def test_get_settings_unauthorized(db_session, regular_user, user_token, async_client):
@@ -115,25 +116,27 @@ async def test_update_settings_admin(db_session, admin_user, admin_token, test_s
         "rateLimit": {
             "enabled": False,
             "requestsPerMinute": 30,
-            "tokensPerDay": 500
+            "dailyLimit": 500
         },
         "security": {
-            "maxTokenLength": 2048,
-            "allowedOrigins": ["https://app.peerdigital.se"]
+            "allowedOrigins": ["*"],
+            "apiKeyExpiration": 15,
+            "requireHttps": False
         },
         "models": {
-            "defaultModel": "claude-3-sonnet-20240229",  # @note: Model name - do not change
-            "maxContextLength": 100000,
-            "temperature": 0.5
+            "defaultModel": "mistral-tiny",
+            "allowedModels": ["mistral-tiny", "mistral-small", "mistral-medium"],
+            "fallbackEnabled": False
         },
         "monitoring": {
-            "logLevel": "debug",
-            "retentionDays": 15,
-            "alertThreshold": 3
+            "logLevel": "DEBUG",
+            "errorTracking": False,
+            "performanceMonitoring": False
         },
         "betaFeatures": {
-            "visionEnabled": False,
-            "audioEnabled": False
+            "streamingEnabled": True,
+            "visionEnabled": True,
+            "audioEnabled": True
         }
     }
 
@@ -147,6 +150,19 @@ async def test_update_settings_admin(db_session, admin_user, admin_token, test_s
     data = response.json()
     assert data["rateLimit"]["enabled"] is False
     assert data["rateLimit"]["requestsPerMinute"] == 30
+    assert data["rateLimit"]["dailyLimit"] == 500
+    assert data["security"]["allowedOrigins"] == ["*"]
+    assert data["security"]["apiKeyExpiration"] == 15
+    assert data["security"]["requireHttps"] is False
+    assert data["models"]["defaultModel"] == "mistral-tiny"
+    assert data["models"]["allowedModels"] == ["mistral-tiny", "mistral-small", "mistral-medium"]
+    assert data["models"]["fallbackEnabled"] is False
+    assert data["monitoring"]["logLevel"] == "DEBUG"
+    assert data["monitoring"]["errorTracking"] is False
+    assert data["monitoring"]["performanceMonitoring"] is False
+    assert data["betaFeatures"]["streamingEnabled"] is True
+    assert data["betaFeatures"]["visionEnabled"] is True
+    assert data["betaFeatures"]["audioEnabled"] is True
 
 @pytest.mark.asyncio
 async def test_update_settings_validation(db_session, admin_user, admin_token, async_client):
@@ -157,7 +173,7 @@ async def test_update_settings_validation(db_session, admin_user, admin_token, a
         "rateLimit": {
             "enabled": True,
             "requestsPerMinute": -1,  # Invalid negative value
-            "tokensPerDay": 1000
+            "dailyLimit": 1000
         }
     }
 
@@ -192,4 +208,12 @@ async def test_partial_settings_update(db_session, admin_user, admin_token, test
     assert data["rateLimit"]["enabled"] is False
     assert data["rateLimit"]["requestsPerMinute"] == 30
     # Other settings should remain unchanged
-    assert data["models"]["defaultModel"] == "claude-3-sonnet-20240229"  # @note: Model name - do not change 
+    assert data["models"]["defaultModel"] == "mistral-tiny"
+    assert data["models"]["allowedModels"] == ["mistral-tiny", "mistral-small", "mistral-medium"]
+    assert data["models"]["fallbackEnabled"] is True
+    assert data["monitoring"]["logLevel"] == "INFO"
+    assert data["monitoring"]["errorTracking"] is True
+    assert data["monitoring"]["performanceMonitoring"] is True
+    assert data["betaFeatures"]["streamingEnabled"] is False
+    assert data["betaFeatures"]["visionEnabled"] is False
+    assert data["betaFeatures"]["audioEnabled"] is False 

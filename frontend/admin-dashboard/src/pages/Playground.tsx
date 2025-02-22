@@ -32,6 +32,31 @@ interface EndpointConfig {
   supportedModels?: string[];
 }
 
+interface CompletionResponse {
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  provider: string;
+  model: string;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  latency_ms: number;
+  additional_data?: {
+    confidence?: number;
+    detected_objects?: string[];
+    language?: string;
+    speakers?: number;
+  };
+}
+
 const ENDPOINTS: Record<string, EndpointConfig> = {
   health: {
     method: 'GET',
@@ -84,6 +109,36 @@ function Playground() {
   const [loading, setLoading] = useState(false);
   const [showCurlCommand, setShowCurlCommand] = useState(true);
   const [mockMode, setMockMode] = useState(false);
+
+  const formatResponse = (data: any) => {
+    // For health check and error responses, just return as is
+    if (data.status === 'ok' || data.detail) {
+      return JSON.stringify(data, null, 2);
+    }
+
+    // For completion responses, format nicely
+    const response = data as CompletionResponse;
+    const content = response.choices[0]?.message?.content || '';
+    const usage = response.usage;
+    const confidence = response.additional_data?.confidence;
+    const detectedObjects = response.additional_data?.detected_objects;
+    const language = response.additional_data?.language;
+    const speakers = response.additional_data?.speakers;
+
+    const formattedResponse = {
+      content,
+      model: response.model,
+      provider: response.provider,
+      usage,
+      latency_ms: response.latency_ms,
+      ...(confidence !== undefined && { confidence }),
+      ...(detectedObjects && { detected_objects: detectedObjects }),
+      ...(language && { language }),
+      ...(speakers !== undefined && { speakers })
+    };
+
+    return JSON.stringify(formattedResponse, null, 2);
+  };
 
   const updateRequestBody = (model: string, mock: boolean) => {
     if (selectedEndpoint === 'completions') {
@@ -167,7 +222,7 @@ function Playground() {
       });
 
       const data = await response.json();
-      setResponse(JSON.stringify(data, null, 2));
+      setResponse(formatResponse(data));
       
       if (!response.ok) {
         throw new Error(data.detail || 'Request failed');

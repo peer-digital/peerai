@@ -28,20 +28,42 @@ def test_user(db_session):
     db_session.refresh(user)
     return user
 
-@pytest.fixture(scope="function")
-def test_api_key(db_session, test_user):
+@pytest.fixture
+def db_session():
+    """Create a mock database session"""
+    session = MagicMock()
+    
+    # Configure the mock to handle chained calls
+    query_mock = MagicMock()
+    filter_mock = MagicMock()
+    first_mock = MagicMock()
+    
+    session.query = MagicMock(return_value=query_mock)
+    query_mock.filter = MagicMock(return_value=filter_mock)
+    filter_mock.first = MagicMock(return_value=first_mock)
+    
+    def get_test_db():
+        try:
+            yield session
+        finally:
+            session.close()
+    
+    app.dependency_overrides[get_db] = get_test_db
+    return session
+
+@pytest.fixture
+def test_api_key():
     """Create a test API key"""
-    api_key = APIKey(
+    return APIKey(
+        id=1,
         key="test_key_123",
         name="Test Key",
-        user_id=test_user.id,
+        user_id=1,
         is_active=True,
+        daily_limit=1000,
+        minute_limit=60,
         expires_at=datetime.utcnow() + timedelta(days=30)
     )
-    db_session.add(api_key)
-    db_session.commit()
-    db_session.refresh(api_key)
-    return api_key
 
 @pytest.fixture(scope="function")
 async def auth_headers(test_user, async_client):
@@ -98,33 +120,40 @@ async def test_complete_auth_flow(async_client):
 @pytest.mark.asyncio
 async def test_api_key_management(db_session, test_user, user_token, async_client):
     """Test API key management"""
+    # Configure mock to return test_user for authentication
     db_session.query.return_value.filter.return_value.first.return_value = test_user
-
+    
     # Create API key
-    create_response = await async_client.post(
+    response = await async_client.post(
         "/api/v1/auth/api-keys",
         headers={"Authorization": f"Bearer {user_token}"},
         json={"name": "Test Key"}
     )
-    assert create_response.status_code == 200
-    create_data = create_response.json()
-    assert "key" in create_data
-
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "key" in data
+    assert data["name"] == "Test Key"
+    
     # List API keys
-    list_response = await async_client.get(
+    response = await async_client.get(
         "/api/v1/auth/api-keys",
         headers={"Authorization": f"Bearer {user_token}"}
     )
-    assert list_response.status_code == 200
-    list_data = list_response.json()
-    assert len(list_data) > 0
-
-    # Delete API key
-    delete_response = await async_client.delete(
-        f"/api/v1/auth/api-keys/{create_data['id']}",
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    
+    # Revoke API key
+    key_id = data[0]["id"]
+    response = await async_client.delete(
+        f"/api/v1/auth/api-keys/{key_id}",
         headers={"Authorization": f"Bearer {user_token}"}
     )
-    assert delete_response.status_code == 200
+    
+    assert response.status_code == 200
 
 @pytest.mark.asyncio
 async def test_error_handling(db_session, test_api_key, async_client):

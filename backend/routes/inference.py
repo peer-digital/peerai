@@ -3,7 +3,7 @@ Inference routes for PeerAI API
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, UploadFile, File, WebSocket, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -45,11 +45,11 @@ class AudioRequest(BaseModel):
 
 class CompletionResponse(BaseModel):
     """Response model for completion endpoint"""
-    text: str
+    choices: List[dict]  # Matches Mistral's response format
     provider: str
-    tokens_used: int
+    model: Optional[str] = None  # Added to support model name
+    usage: dict  # Matches Mistral's usage format
     latency_ms: int
-    confidence: Optional[float] = None
     additional_data: Optional[dict] = None
 
 # Mock response templates
@@ -152,41 +152,83 @@ def create_realistic_mock_response(response_type: str, task: Optional[str] = Non
         response = random.choice(MOCK_TEXT_RESPONSES)
         tokens = len(response.split())
         return CompletionResponse(
-            text=response,
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response
+                },
+                "finish_reason": "stop"
+            }],
             provider="mock-gpt4",
-            tokens_used=tokens,
+            model="mock-gpt4",
+            usage={
+                "prompt_tokens": tokens,
+                "completion_tokens": tokens,
+                "total_tokens": tokens * 2
+            },
             latency_ms=int((time.time() - start_time) * 1000),
-            confidence=0.92
+            additional_data={"confidence": 0.92}
         )
     
     elif response_type == "vision":
         response = random.choice(MOCK_VISION_RESPONSES)
+        tokens = len(response.split())
         return CompletionResponse(
-            text=response,
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response
+                },
+                "finish_reason": "stop"
+            }],
             provider="mock-gpt4v",
-            tokens_used=len(response.split()),
+            model="mock-gpt4v",
+            usage={
+                "prompt_tokens": tokens,
+                "completion_tokens": tokens,
+                "total_tokens": tokens * 2
+            },
             latency_ms=int((time.time() - start_time) * 1000),
-            confidence=0.89,
-            additional_data={"detected_objects": ["monitor", "desk", "whiteboard"]}
+            additional_data={
+                "confidence": 0.89,
+                "detected_objects": ["monitor", "desk", "whiteboard"]
+            }
         )
     
     elif response_type == "audio":
         response = random.choice(MOCK_AUDIO_RESPONSES[task])
+        tokens = len(response["text"].split())
         return CompletionResponse(
-            text=response["text"],
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response["text"]
+                },
+                "finish_reason": "stop"
+            }],
             provider="mock-whisper",
-            tokens_used=len(response["text"].split()),
+            model="mock-whisper",
+            usage={
+                "prompt_tokens": tokens,
+                "completion_tokens": tokens,
+                "total_tokens": tokens * 2
+            },
             latency_ms=int((time.time() - start_time) * 1000),
-            confidence=response["confidence"],
-            additional_data={"language": "en", "speakers": 1}
+            additional_data={
+                "confidence": response["confidence"],
+                "language": "en",
+                "speakers": 1
+            }
         )
 
 def record_usage(
     db: Session,
     api_key: APIKey,
     endpoint: str,
-    tokens: int,
-    latency_ms: int,
+    response: CompletionResponse,
     status_code: int,
     error_message: Optional[str] = None
 ):
@@ -198,8 +240,8 @@ def record_usage(
         user_id=api_key.user_id,
         api_key_id=api_key.id,
         endpoint=endpoint,
-        tokens_used=tokens,
-        latency_ms=latency_ms,
+        tokens_used=response.usage.get("total_tokens", 0),
+        latency_ms=response.latency_ms,
         status_code=status_code,
         error_message=error_message
     )
@@ -223,11 +265,23 @@ async def call_hosted_llm(client: httpx.AsyncClient, request: TextCompletionRequ
         result = response.json()
         
         return CompletionResponse(
-            text=result["text"],
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": result["text"]
+                },
+                "finish_reason": "stop"
+            }],
             provider="hosted-llm",
-            tokens_used=result.get("usage", {}).get("total_tokens", 0),
+            model=result.get("model", "hosted-llm"),
+            usage={
+                "prompt_tokens": result.get("usage", {}).get("prompt_tokens", 0),
+                "completion_tokens": result.get("usage", {}).get("completion_tokens", 0),
+                "total_tokens": result.get("usage", {}).get("total_tokens", 0)
+            },
             latency_ms=int(response.elapsed.total_seconds() * 1000),
-            confidence=result.get("confidence", None)
+            additional_data={"confidence": result.get("confidence")} if result.get("confidence") else None
         )
     except Exception as e:
         raise HTTPException(
@@ -269,11 +323,11 @@ async def call_mistral(client: httpx.AsyncClient, request: TextCompletionRequest
         
         logger.info("Successfully called Mistral API")
         return CompletionResponse(
-            text=result["choices"][0]["message"]["content"],
+            choices=result["choices"],
             provider="mistral",
-            tokens_used=result.get("usage", {}).get("total_tokens", 0),
-            latency_ms=int(response.elapsed.total_seconds() * 1000),
-            confidence=result.get("confidence", None)
+            model=settings.EXTERNAL_MODEL,
+            usage=result["usage"],
+            latency_ms=int(response.elapsed.total_seconds() * 1000)
         )
     except httpx.HTTPError as e:
         logger.error("HTTP error when calling Mistral API: %s", str(e))
@@ -301,7 +355,7 @@ async def create_completion(
     # Handle mock mode
     if request.mock_mode or settings.MOCK_MODE:
         response = create_realistic_mock_response("text")
-        record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+        record_usage(db, api_key, "/completions", response, 200)
         return response
     
     # Check rate limits
@@ -313,7 +367,7 @@ async def create_completion(
             if settings.HOSTED_LLM_URL and settings.HOSTED_LLM_API_KEY:
                 try:
                     response = await call_hosted_llm(client, request)
-                    record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+                    record_usage(db, api_key, "/completions", response, 200)
                     return response
                 except HTTPException as e:
                     # Fallback to Mistral on:
@@ -330,12 +384,18 @@ async def create_completion(
             
             # Use Mistral as fallback or primary if no hosted LLM
             response = await call_mistral(client, request)
-            record_usage(db, api_key, "/completions", response.tokens_used, response.latency_ms, 200)
+            record_usage(db, api_key, "/completions", response, 200)
             return response
             
         except Exception as e:
             error_latency = int((time.time() - start_time) * 1000)
-            record_usage(db, api_key, "/completions", 0, error_latency, getattr(e, "status_code", 500), str(e))
+            error_response = CompletionResponse(
+                choices=[],
+                provider="error",
+                usage={"total_tokens": 0},
+                latency_ms=error_latency
+            )
+            record_usage(db, api_key, "/completions", error_response, getattr(e, "status_code", 500), str(e))
             raise
 
 @router.post("/vision", response_model=CompletionResponse)
@@ -350,15 +410,20 @@ async def analyze_image(
     
     # Only mock mode is currently supported
     if not (request.mock_mode or settings.MOCK_MODE):
-        error_latency = int((time.time() - start_time) * 1000)
-        record_usage(db, api_key, "/vision", 0, error_latency, 501)
+        error_response = CompletionResponse(
+            choices=[],
+            provider="error",
+            usage={"total_tokens": 0},
+            latency_ms=int((time.time() - start_time) * 1000)
+        )
+        record_usage(db, api_key, "/vision", error_response, 501)
         raise HTTPException(
             status_code=501,
             detail="Vision endpoint is currently in BETA. Only mock mode is supported. Set mock_mode=true to test the API interface."
         )
     
     response = create_realistic_mock_response("vision")
-    record_usage(db, api_key, "/vision", response.tokens_used, response.latency_ms, 200)
+    record_usage(db, api_key, "/vision", response, 200)
     return response
 
 @router.post("/audio", response_model=CompletionResponse)
@@ -373,15 +438,20 @@ async def process_audio(
     
     # Only mock mode is currently supported
     if not (request.mock_mode or settings.MOCK_MODE):
-        error_latency = int((time.time() - start_time) * 1000)
-        record_usage(db, api_key, "/audio", 0, error_latency, 501)
+        error_response = CompletionResponse(
+            choices=[],
+            provider="error",
+            usage={"total_tokens": 0},
+            latency_ms=int((time.time() - start_time) * 1000)
+        )
+        record_usage(db, api_key, "/audio", error_response, 501)
         raise HTTPException(
             status_code=501,
             detail="Audio endpoint is currently in BETA. Only mock mode is supported. Set mock_mode=true to test the API interface."
         )
     
     response = create_realistic_mock_response("audio", request.task)
-    record_usage(db, api_key, "/audio", response.tokens_used, response.latency_ms, 200)
+    record_usage(db, api_key, "/audio", response, 200)
     return response
 
 @router.websocket("/stream")
@@ -409,12 +479,29 @@ async def websocket_endpoint(
             if "mock_mode" in data and data["mock_mode"]:
                 response = random.choice(MOCK_TEXT_RESPONSES)
                 await websocket.send_json({
-                    "text": response,
+                    "choices": [{
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": response
+                        },
+                        "finish_reason": "stop"
+                    }],
                     "provider": "mock-gpt4",
-                    "tokens_used": len(response.split()),
+                    "model": "mock-gpt4",
+                    "usage": {
+                        "prompt_tokens": len(data.get("prompt", "").split()),
+                        "completion_tokens": len(response.split()),
+                        "total_tokens": len(data.get("prompt", "").split()) + len(response.split())
+                    },
                     "latency_ms": 0,
-                    "confidence": 0.92
+                    "additional_data": {"confidence": 0.92}
                 })
+                
+                # Close connection if requested
+                if data.get("close"):
+                    await websocket.close()
+                    break
             else:
                 # Implement actual streaming logic here
                 pass

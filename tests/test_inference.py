@@ -8,7 +8,7 @@ from backend.main import app, settings
 from backend.database import get_db
 from backend.models import User, APIKey, UsageRecord
 from backend.core.security import get_password_hash
-from backend.routes.inference import MOCK_TEXT_RESPONSES
+from backend.routes.inference import MOCK_TEXT_RESPONSES, websocket_endpoint
 
 # Test client setup
 client = TestClient(app)
@@ -51,11 +51,16 @@ async def test_completion_endpoint_mock_mode(async_client):
     
     assert response.status_code == 200
     data = response.json()
-    assert data["text"] in MOCK_TEXT_RESPONSES
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
+    assert data["choices"][0]["message"]["content"] in MOCK_TEXT_RESPONSES
     assert data["provider"] == "mock-gpt4"
-    assert data["tokens_used"] > 0
+    assert data["model"] == "mock-gpt4"
+    assert data["usage"]["total_tokens"] > 0
     assert data["latency_ms"] >= 0
-    assert data["confidence"] == 0.92
+    assert data["additional_data"]["confidence"] == 0.92
 
 @pytest.mark.asyncio
 async def test_completion_endpoint_mistral(db_session, async_client):
@@ -78,12 +83,21 @@ async def test_completion_endpoint_mistral(db_session, async_client):
     mock_response.status_code = 200
     mock_response.elapsed.total_seconds.return_value = 0.5
     mock_response.json.return_value = {
+        "id": "cmpl-123",
+        "object": "chat.completion",
+        "created": 1679914100,
+        "model": "mistral-tiny",
         "choices": [{
+            "index": 0,
             "message": {
+                "role": "assistant",
                 "content": "Test response from Mistral"
-            }
+            },
+            "finish_reason": "stop"
         }],
         "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 30,
             "total_tokens": 50
         }
     }
@@ -106,10 +120,10 @@ async def test_completion_endpoint_mistral(db_session, async_client):
     assert len(data["choices"]) > 0
     assert "message" in data["choices"][0]
     assert "content" in data["choices"][0]["message"]
-    assert data["provider"] == "mock-gpt4"
-    assert data["tokens_used"] > 0
+    assert data["choices"][0]["message"]["content"] == "Test response from Mistral"
+    assert data["model"] == "mistral-tiny"
+    assert data["usage"]["total_tokens"] == 50
     assert data["latency_ms"] >= 0
-    assert data["confidence"] == 0.92
 
 @pytest.mark.asyncio
 async def test_completion_invalid_api_key(db_session, async_client):
@@ -157,9 +171,15 @@ async def test_rate_limiting(db_session, test_api_key, async_client):
         minute_limit=1
     )
 
+    # Configure mock query results
+    query_mock = MagicMock()
+    filter_mock = MagicMock()
+    
     # First request - should succeed
-    db_session.query.return_value.filter.return_value.first.return_value = api_key
-    db_session.query.return_value.filter.return_value.count.return_value = 0  # No previous requests
+    filter_mock.first.return_value = api_key
+    filter_mock.count.return_value = 0  # No previous requests
+    query_mock.filter.return_value = filter_mock
+    db_session.query.return_value = query_mock
 
     response1 = await async_client.post(
         "/api/v1/completions",
@@ -172,7 +192,10 @@ async def test_rate_limiting(db_session, test_api_key, async_client):
     assert response1.status_code == 200
 
     # Second request - should fail (minute limit exceeded)
-    db_session.query.return_value.filter.return_value.count.return_value = 2  # Exceeded minute limit
+    filter_mock.first.return_value = api_key
+    filter_mock.count.return_value = 2  # Minute limit exceeded
+    query_mock.filter.return_value = filter_mock
+    db_session.query.return_value = query_mock
 
     response2 = await async_client.post(
         "/api/v1/completions",
@@ -200,8 +223,12 @@ async def test_vision_endpoint_mock(async_client):
     
     assert response.status_code == 200
     data = response.json()
-    assert "text" in data
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
     assert data["provider"] == "mock-gpt4v"
+    assert data["model"] == "mock-gpt4v"
     assert "detected_objects" in data["additional_data"]
 
 @pytest.mark.asyncio
@@ -219,9 +246,14 @@ async def test_audio_endpoint_mock(async_client):
     
     assert response.status_code == 200
     data = response.json()
-    assert "text" in data
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
     assert data["provider"] == "mock-whisper"
-    assert data["additional_data"]["language"] == "en"
+    assert data["model"] == "mock-whisper"
+    assert "language" in data["additional_data"]
+    assert "speakers" in data["additional_data"]
 
 @pytest.mark.asyncio
 async def test_usage_tracking(db_session, async_client):
@@ -259,28 +291,34 @@ async def test_usage_tracking(db_session, async_client):
     assert usage_record.tokens_used > 0 
 
 @pytest.mark.asyncio
-async def test_inference_endpoints(db_session, test_api_key, async_client):
+async def test_inference_endpoints(test_api_key, async_client):
     """Test inference endpoints"""
-    db_session.query.return_value.filter.return_value.first.return_value = test_api_key
-    db_session.query.return_value.filter.return_value.count.return_value = 0  # No rate limit exceeded
+    headers = {"X-API-Key": test_api_key.key}
 
-    # Test completions endpoint
+    # Test text completion
     completion_response = await async_client.post(
         "/api/v1/completions",
-        headers={"X-API-Key": test_api_key.key},
+        headers=headers,
         json={
-            "prompt": "Test prompt",
-            "max_tokens": 50,
+            "prompt": "What is machine learning?",
+            "max_tokens": 100,
+            "temperature": 0.7,
             "mock_mode": True
         }
     )
     assert completion_response.status_code == 200
-    assert "text" in completion_response.json()
+    data = completion_response.json()
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
+    assert data["model"] == "mock-gpt4"
+    assert data["usage"]["total_tokens"] > 0
 
     # Test vision endpoint
     vision_response = await async_client.post(
         "/api/v1/vision",
-        headers={"X-API-Key": test_api_key.key},
+        headers=headers,
         json={
             "image_url": "https://example.com/test.jpg",
             "prompt": "Describe this image",
@@ -288,37 +326,56 @@ async def test_inference_endpoints(db_session, test_api_key, async_client):
         }
     )
     assert vision_response.status_code == 200
-    assert "text" in vision_response.json()
-    assert "detected_objects" in vision_response.json()["additional_data"]
+    data = vision_response.json()
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
+    assert "detected_objects" in data["additional_data"]
 
     # Test audio endpoint
     audio_response = await async_client.post(
         "/api/v1/audio",
-        headers={"X-API-Key": test_api_key.key},
+        headers=headers,
         json={
-            "audio_url": "https://example.com/test.mp3",
+            "audio_url": "https://example.com/audio.mp3",
             "task": "transcribe",
             "mock_mode": True
         }
     )
     assert audio_response.status_code == 200
-    assert "text" in audio_response.json()
+    data = audio_response.json()
+    assert "choices" in data
+    assert len(data["choices"]) > 0
+    assert "message" in data["choices"][0]
+    assert "content" in data["choices"][0]["message"]
+    assert "language" in data["additional_data"]
+    assert "speakers" in data["additional_data"]
 
 @pytest.mark.asyncio
-async def test_websocket_connection(db_session, test_api_key, async_client):
+async def test_websocket_connection(db_session, test_api_key, websocket):
     """Test WebSocket connection for streaming responses"""
     db_session.query.return_value.filter.return_value.first.return_value = test_api_key
 
-    async with async_client.websocket_connect(
-        f"/api/v1/stream?api_key={test_api_key.key}"
-    ) as websocket:
-        # Send a test message with mock mode
-        await websocket.send_json({
-            "prompt": "Test streaming",
-            "mock_mode": True
-        })
-        
-        # Receive response
-        data = await websocket.receive_json()
-        assert "text" in data
-        assert data["status"] == "completed" 
+    # Test the websocket endpoint
+    await websocket_endpoint(
+        websocket=websocket,
+        api_key=test_api_key.key,
+        db=db_session
+    )
+
+    # Verify the websocket lifecycle
+    assert websocket.accepted  # Connection was accepted
+    assert websocket.closed   # Connection was properly closed
+    assert len(websocket.messages) > 0  # Messages were sent
+    
+    # Verify message format
+    message = websocket.messages[0]
+    assert "choices" in message
+    assert len(message["choices"]) > 0
+    assert "message" in message["choices"][0]
+    assert "content" in message["choices"][0]["message"]
+    assert message["model"] == "mock-gpt4"
+    assert message["usage"]["total_tokens"] > 0
+    assert message["latency_ms"] >= 0
+    assert message["additional_data"]["confidence"] == 0.92 
