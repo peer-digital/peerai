@@ -15,7 +15,7 @@ class UsageRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     api_key_id = Column(Integer, ForeignKey("api_keys.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
     model = Column(String)  # @note: Model name - do not change
     endpoint = Column(String)
     tokens_used = Column(Integer)

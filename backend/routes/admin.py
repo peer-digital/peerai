@@ -77,7 +77,7 @@ async def get_admin_stats(
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     active_users = (
         db.query(func.count(func.distinct(UsageRecord.user_id)))
-        .filter(UsageRecord.timestamp >= thirty_days_ago)
+        .filter(UsageRecord.created_at >= thirty_days_ago)
         .scalar()
     )
 
@@ -85,13 +85,13 @@ async def get_admin_stats(
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     daily_stats = (
         db.query(
-            func.date(UsageRecord.timestamp).label("date"),
+            func.date(UsageRecord.created_at).label("date"),
             func.count(UsageRecord.id).label("requests"),
             func.sum(UsageRecord.tokens_used).label("tokens"),
         )
-        .filter(UsageRecord.timestamp >= seven_days_ago)
-        .group_by(func.date(UsageRecord.timestamp))
-        .order_by(func.date(UsageRecord.timestamp))
+        .filter(UsageRecord.created_at >= seven_days_ago)
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
         .all()
     )
 
@@ -172,7 +172,7 @@ async def get_analytics(
     # Get daily analytics
     daily_stats = (
         db.query(
-            func.date(UsageRecord.timestamp).label("date"),
+            func.date(UsageRecord.created_at).label("date"),
             func.count(UsageRecord.id).label("requests"),
             func.sum(UsageRecord.tokens_used).label("tokens"),
             func.avg(UsageRecord.latency_ms).label("avg_latency"),
@@ -181,9 +181,9 @@ async def get_analytics(
             ),
             func.count(UsageRecord.id).label("total"),
         )
-        .filter(UsageRecord.timestamp >= start_date)
-        .group_by(func.date(UsageRecord.timestamp))
-        .order_by(func.date(UsageRecord.timestamp))
+        .filter(UsageRecord.created_at >= start_date)
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
         .all()
     )
 
