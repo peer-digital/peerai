@@ -15,6 +15,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "https://app.peerdigital.se",
+        "https://peerai-fe.onrender.com",  # Frontend on Render
+        "https://peerai-be.onrender.com",  # Backend on Render
     ]
 
     # @important: JWT settings for authentication
