@@ -47,7 +47,7 @@ const ApiKeys: React.FC = () => {
   const { data: apiKeys, isLoading } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/admin/api-keys');
+      const response = await api.get('/api/v1/auth/api-keys');
       return response.data;
     },
   });
@@ -55,7 +55,7 @@ const ApiKeys: React.FC = () => {
   // Create new API key
   const createKeyMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await api.post('/api/v1/admin/api-keys', { name });
+      const response = await api.post('/api/v1/auth/api-keys', { name });
       return response.data;
     },
     onSuccess: (data) => {

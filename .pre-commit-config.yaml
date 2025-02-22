@@ -23,7 +23,7 @@ repos:
         entry: bash scripts/pre_commit_tests.sh
         language: system
         pass_filenames: false
-        stages: [commit]  # Changed from pre-commit to commit
+        stages: [pre-commit]  # Changed from pre-commit to commit
         verbose: true
         
       # Run frontend linting
@@ -33,7 +33,7 @@ repos:
         language: system
         files: ^frontend/admin-dashboard/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
-        stages: [commit]  # Changed from pre-commit to commit
+        stages: [pre-commit]  # Changed from pre-commit to commit
         verbose: true
         
       # Run frontend tests
@@ -43,5 +43,5 @@ repos:
         language: system
         files: ^frontend/admin-dashboard/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
-        stages: [commit]  # Changed from pre-commit to commit
+        stages: [pre-commit]  # Changed from pre-commit to commit
         verbose: true 
