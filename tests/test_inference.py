@@ -133,22 +133,12 @@ def test_rate_limiting(db_session):
         minute_limit=1
     )
     
-    # Mock usage records
-    usage_records = [
-        UsageRecord(
-            user_id=1,
-            api_key_id=2,
-            endpoint="/completions",
-            tokens_used=10,
-            created_at=datetime.utcnow()
-        )
-    ]
-    
+    # Set up the mock to return our API key
     db_session.query.return_value.filter.return_value.first.return_value = api_key
-    db_session.query.return_value.filter.return_value.count.return_value = len(usage_records)
     
-    # First request should succeed
-    response = client.post(
+    # First request - should succeed (no previous usage)
+    db_session.query.return_value.filter.return_value.count.return_value = 0
+    response1 = client.post(
         f"{settings.API_V1_PREFIX}/completions",
         headers={"X-API-Key": "limited_key"},
         json={
@@ -156,8 +146,20 @@ def test_rate_limiting(db_session):
             "mock_mode": True
         }
     )
-    assert response.status_code == 429
-    assert "Rate limit exceeded" in response.json()["detail"]
+    assert response1.status_code == 200
+    
+    # Second request - should fail (minute limit = 1)
+    db_session.query.return_value.filter.return_value.count.return_value = 1
+    response2 = client.post(
+        f"{settings.API_V1_PREFIX}/completions",
+        headers={"X-API-Key": "limited_key"},
+        json={
+            "prompt": "Test prompt",
+            "mock_mode": True
+        }
+    )
+    assert response2.status_code == 429
+    assert "Rate limit exceeded" in response2.json()["detail"]
 
 def test_vision_endpoint_mock():
     """Test vision endpoint with mock mode"""

@@ -1,4 +1,6 @@
 from pydantic_settings import BaseSettings
+import os
+from typing import Optional
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -8,9 +10,20 @@ class Settings(BaseSettings):
     DEBUG: bool = False  # Controlled via environment variable
     MOCK_MODE: bool = False  # Disable mock mode to use real LLM
     
-    # Database URLs - Required to be in Sweden (Bahnhof)
-    # url: postgresql://user:password@host:5432/dbname
-    DATABASE_URL: str = "postgresql://oskarahlman@localhost/peerai"
+    # @important: Default database URL for development
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/peerai"
+    
+    # @important: CORS origins configuration
+    ALLOWED_ORIGINS: str = "http://localhost:3000,https://app.peerai.se"
+    
+    # @important: JWT configuration
+    SECRET_KEY: str = "your-secret-key-here"  # Override in production
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # @important: Rate limiting defaults
+    DEFAULT_DAILY_LIMIT: int = 1000
+    DEFAULT_MINUTE_LIMIT: int = 60
     
     # LLM Configuration
     # url: https://llm-api.bahnhof.se/v1/completions - do not change this comment
@@ -25,12 +38,9 @@ class Settings(BaseSettings):
     # Mistral's base model - do not change this comment
     EXTERNAL_MODEL: str = "mistral-tiny"  
     
-    # Security
-    SECRET_KEY: str = "YOUR_SECRET_KEY"  # Load from environment
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
     class Config:
         env_file = ".env"
         extra = "allow"  # Allow extra fields from environment variables
+        case_sensitive = True
 
 settings = Settings() 

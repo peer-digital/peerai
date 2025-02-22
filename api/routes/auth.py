@@ -170,4 +170,28 @@ async def delete_api_key(
         
     db.delete(api_key)
     db.commit()
-    return {"status": "success"} 
+    return {"status": "success"}
+
+@router.post("/auth/logout", status_code=200)
+async def logout():
+    """
+    Logout endpoint - clears session cookie
+    Returns 200 to indicate successful logout
+    Frontend should clear local storage/cookies
+    """
+    response = {"message": "Successfully logged out"}
+    return response 
+
+@router.get("/auth/validate")
+async def validate_token(current_user: User = Depends(get_current_user)):
+    """
+    Validates the current token and returns user info
+    Requires valid JWT token in Authorization header
+    """
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "is_superuser": current_user.is_superuser
+    } 

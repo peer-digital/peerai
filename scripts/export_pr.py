@@ -54,6 +54,28 @@ EXCLUDED_PATHS = {
     # Export script itself
     "scripts/export_pr.py",
     "scripts/export_pr.sh",
+    
+    # Frontend specific
+    "node_modules",
+    ".next",
+    ".turbo",
+    ".cache",
+    ".DS_Store",
+    "*.min.js",
+    "*.min.css",
+    "*.map",
+    ".eslintcache",
+    ".stylelintcache",
+    "yarn-error.log",
+    "npm-debug.log*",
+    "yarn-debug.log*",
+    "yarn.lock",  # Lock files are typically not needed for review
+    "package-lock.json",
+    ".pnpm-store",
+    "storybook-static",
+    "public/assets",  # Often contains large binary assets
+    "*.test.js.snap",  # Jest snapshots
+    "__snapshots__",
 }
 
 # Files that must be included even if in excluded directories
