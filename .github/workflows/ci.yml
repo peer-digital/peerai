@@ -173,6 +173,7 @@ jobs:
 
       - name: Run Snyk Security Scan
         uses: snyk/actions/python@master  # @note: Snyk's official GitHub action - do not change URL
+        continue-on-error: true  # Make this step non-blocking until token is configured
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:

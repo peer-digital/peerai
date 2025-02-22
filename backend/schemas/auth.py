@@ -43,7 +43,7 @@ class APIKeyResponse(BaseModel):
     expires_at: Optional[datetime]
     daily_limit: int
     minute_limit: int
-    last_used: Optional[datetime]
+    last_used_at: Optional[datetime]
 
     class Config:
         from_attributes = True 

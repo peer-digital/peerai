@@ -20,9 +20,9 @@ python-dotenv==1.0.1
 # @url: https://python-jose.readthedocs.io/
 python-jose==3.3.0
 # @url: https://passlib.readthedocs.io/
-passlib==1.7.4
+passlib[bcrypt]==1.7.4
 # @url: https://python-bcrypt.readthedocs.io/
-bcrypt==4.1.2
+bcrypt==3.2.2
 
 # Testing
 # @url: https://docs.pytest.org/
@@ -32,6 +32,10 @@ coverage==7.4.1
 
 # Utilities
 # @url: https://pydantic-docs.helpmanual.io/
-pydantic==2.6.1
+pydantic[email]==2.6.1
+# @url: https://pydantic-settings.helpmanual.io/
+pydantic-settings==2.2.1
+# @url: https://email-validator.readthedocs.io/
+email-validator==2.2.0
 # @url: https://requests.readthedocs.io/
 requests==2.31.0 

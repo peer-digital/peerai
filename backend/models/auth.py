@@ -38,7 +38,7 @@ class APIKey(Base):
     expires_at = Column(DateTime, nullable=True)
     daily_limit = Column(Integer, default=1000)
     minute_limit = Column(Integer, default=60)
-    last_used = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="api_keys")

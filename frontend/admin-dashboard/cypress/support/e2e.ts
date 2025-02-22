@@ -28,7 +28,7 @@ declare global {
 // Mock API responses
 beforeEach(() => {
   // Mock successful login response
-  cy.intercept('POST', '/api/v1/token', (req: any) => {
+  cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
     const { username, password } = Object.fromEntries(new URLSearchParams(req.body));
     
     if (username === 'admin@peerai.se' && password === 'admin123') {
