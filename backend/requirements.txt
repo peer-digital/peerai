@@ -3,6 +3,8 @@
 fastapi==0.109.2
 # @url: https://www.uvicorn.org/
 uvicorn==0.27.1
+# @url: https://github.com/andrew-d/python-multipart
+python-multipart==0.0.9
 
 # Database
 # @url: https://www.sqlalchemy.org/
