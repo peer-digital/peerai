@@ -10,10 +10,11 @@ app = FastAPI(
     debug=settings.DEBUG,
 )
 
-# CORS configuration
+# @important: CORS configuration from environment
+origins = settings.ALLOWED_ORIGINS.split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure in production
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,14 +34,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Import and include routers
-from api.routes import inference, auth
+from .routes import inference, auth, admin
 app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 
 # TODO: Admin router is under development and will be enabled in a future PR
 # Features planned:
 # - User management
 # - Usage analytics
 # - System configuration
-# from api.routes import admin
+# from routes import admin
 # app.include_router(admin.router, prefix=settings.API_V1_PREFIX) 
