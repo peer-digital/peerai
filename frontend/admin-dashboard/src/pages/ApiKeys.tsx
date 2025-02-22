@@ -19,11 +19,18 @@ import {
   IconButton,
   Chip,
   Alert,
+  Stack,
+  Tooltip,
+  LinearProgress,
+  Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
+  Refresh as RefreshIcon,
+  Key as KeyIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/config';
@@ -37,6 +44,39 @@ interface ApiKey {
   status: 'active' | 'revoked';
 }
 
+const formatDate = (date: string | null): string => {
+  if (!date) return 'Never';
+  const d = new Date(date);
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+};
+
+interface EmptyStateProps {
+  onCreateClick: () => void;
+}
+
+const EmptyState = ({ onCreateClick }: EmptyStateProps) => (
+  <Stack alignItems="center" spacing={1} sx={{ py: 8 }}>
+    <KeyIcon sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.5 }} />
+    <Typography color="text.secondary">
+      No API keys found
+    </Typography>
+    <Button
+      variant="outlined"
+      startIcon={<AddIcon />}
+      onClick={onCreateClick}
+      sx={{ mt: 1 }}
+    >
+      Create your first API key
+    </Button>
+  </Stack>
+);
+
 const ApiKeys: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -44,7 +84,7 @@ const ApiKeys: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Fetch API keys
-  const { data: apiKeys, isLoading } = useQuery<ApiKey[]>({
+  const { data: apiKeys, isLoading, error, refetch } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
     queryFn: async () => {
       const response = await api.get('/api/v1/auth/api-keys');
@@ -68,17 +108,17 @@ const ApiKeys: React.FC = () => {
     },
   });
 
-  // Revoke API key
-  const revokeKeyMutation = useMutation({
+  // Delete API key
+  const deleteKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      await api.delete(`/api/v1/admin/api-keys/${keyId}`);
+      await api.delete(`/api/v1/auth/api-keys/${keyId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
-      toast.success('API key revoked successfully');
+      toast.success('API key deleted successfully');
     },
     onError: () => {
-      toast.error('Failed to revoke API key');
+      toast.error('Failed to delete API key');
     },
   });
 
@@ -101,119 +141,210 @@ const ApiKeys: React.FC = () => {
     setNewKey(null);
   };
 
+  const handleDeleteKey = (keyId: string, keyName: string) => {
+    if (window.confirm(`Are you sure you want to delete the API key "${keyName}"? This action cannot be undone.`)) {
+      deleteKeyMutation.mutate(keyId);
+    }
+  };
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">
+          Error loading API keys. Please try again later.
+        </Alert>
+      </Box>
+    );
+  }
+
+  const keys = apiKeys || [];
+
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">API Keys</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpen(true)}
-        >
-          Create New Key
-        </Button>
-      </Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            API Keys
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            {keys.length} {keys.length === 1 ? 'key' : 'keys'} total
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="Refresh API keys" arrow>
+            <IconButton onClick={() => refetch()}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpen(true)}
+          >
+            Create New Key
+          </Button>
+        </Stack>
+      </Stack>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Key</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell>Last Used</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {apiKeys?.map((key) => (
-              <TableRow key={key.id}>
-                <TableCell>{key.name}</TableCell>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    {key.key.slice(0, 10)}...
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCopyKey(key.key)}
-                    >
-                      <CopyIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-                <TableCell>{new Date(key.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  {key.lastUsed
-                    ? new Date(key.lastUsed).toLocaleDateString()
-                    : 'Never'}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={key.status}
-                    color={key.status === 'active' ? 'success' : 'error'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {key.status === 'active' && (
-                    <IconButton
-                      color="error"
-                      onClick={() => revokeKeyMutation.mutate(key.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {!isLoading && (!apiKeys || apiKeys.length === 0) && (
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        {isLoading && <LinearProgress />}
+        
+        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+          <Table stickyHeader>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No API keys found
-                </TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Key</TableCell>
+                <TableCell>Created</TableCell>
+                <TableCell>Last Used</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {!isLoading && keys.length > 0 ? (
+                keys.map((key) => (
+                  <TableRow key={key.id} hover>
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <KeyIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                        <Typography>{key.name}</Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography fontFamily="monospace" sx={{ opacity: 0.7 }}>
+                          {key.key.slice(0, 12)}...{key.key.slice(-4)}
+                        </Typography>
+                        <Tooltip title="Copy API key" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleCopyKey(key.key)}
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title={formatDate(key.createdAt)} arrow>
+                        <span>{formatDate(key.createdAt)}</span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title={key.lastUsed ? formatDate(key.lastUsed) : 'Never used'} arrow>
+                        <span>{key.lastUsed ? formatDate(key.lastUsed) : 'Never'}</span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={key.status ? key.status.toUpperCase() : 'UNKNOWN'}
+                        color={key.status === 'active' ? 'success' : 'error'}
+                        size="small"
+                        sx={{ fontWeight: 500 }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete API key" arrow>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteKey(key.id, key.name)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    {isLoading ? (
+                      <Box sx={{ py: 3 }}>
+                        <CircularProgress size={24} />
+                      </Box>
+                    ) : (
+                      <EmptyState onCreateClick={() => setOpen(true)} />
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-      <Dialog open={open} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={open} 
+        onClose={handleCloseDialog} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
         <DialogTitle>
           {newKey ? 'API Key Created' : 'Create New API Key'}
         </DialogTitle>
-        <DialogContent>
+        <Divider />
+        <DialogContent sx={{ mt: 2 }}>
           {newKey ? (
-            <Box mt={2}>
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Make sure to copy your API key now. You won't be able to see it again!
+            <Box>
+              <Alert 
+                severity="warning" 
+                sx={{ 
+                  mb: 3,
+                  '& .MuiAlert-message': {
+                    width: '100%'
+                  }
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Important: Copy your API key now
+                </Typography>
+                <Typography variant="body2">
+                  Make sure to copy your API key now. For security reasons, you won't be able to see it again!
+                </Typography>
               </Alert>
               <TextField
                 fullWidth
                 value={newKey}
+                size="small"
                 InputProps={{
                   readOnly: true,
+                  sx: { fontFamily: 'monospace' },
                   endAdornment: (
-                    <IconButton onClick={() => handleCopyKey(newKey)}>
-                      <CopyIcon />
-                    </IconButton>
+                    <Tooltip title="Copy API key" arrow>
+                      <IconButton onClick={() => handleCopyKey(newKey)}>
+                        <CopyIcon />
+                      </IconButton>
+                    </Tooltip>
                   ),
                 }}
               />
             </Box>
           ) : (
-            <Box mt={2}>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Create a new API key to authenticate your API requests. Give it a descriptive name to help you identify its use later.
+              </Typography>
               <TextField
                 fullWidth
                 label="Key Name"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
                 placeholder="e.g., Production API Key"
+                size="small"
               />
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button 
+            onClick={handleCloseDialog}
+            color="inherit"
+          >
             {newKey ? 'Close' : 'Cancel'}
           </Button>
           {!newKey && (
@@ -221,8 +352,9 @@ const ApiKeys: React.FC = () => {
               onClick={handleCreateKey}
               variant="contained"
               disabled={!newKeyName.trim()}
+              sx={{ px: 3 }}
             >
-              Create
+              Create Key
             </Button>
           )}
         </DialogActions>
