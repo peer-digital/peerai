@@ -38,4 +38,6 @@ pydantic-settings==2.2.1
 # @url: https://email-validator.readthedocs.io/
 email-validator==2.2.0
 # @url: https://requests.readthedocs.io/
-requests==2.31.0 
+requests==2.31.0
+# @url: https://www.python-httpx.org/
+httpx==0.26.0 
