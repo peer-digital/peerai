@@ -49,7 +49,7 @@ dev = [
     "ruff>=0.1.14",
     "mypy>=1.8.0",
     "locust>=2.24.0",  # Load testing
-    "trufflehog>=3.63.2",  # Secret scanning
+    "trufflehog3>=3.0.3",  # Secret scanning (using trufflehog3 package instead)
     "detect-secrets>=1.4.0",  # Additional secret detection
 ]
 

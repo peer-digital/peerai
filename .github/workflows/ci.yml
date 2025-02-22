@@ -103,7 +103,7 @@ jobs:
 
       # Step 7: Upload test artifacts
       - name: Upload Cypress screenshots
-        uses: actions/upload-artifact@v3  # @note: GitHub's official artifact upload action - do not change URL
+        uses: actions/upload-artifact@v4  # @note: GitHub's official artifact upload action - do not change URL
         if: failure()  # Only upload on test failure
         with:
           name: cypress-screenshots
@@ -111,7 +111,7 @@ jobs:
           retention-days: 5
 
       - name: Upload Cypress videos
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # @note: GitHub's official artifact upload action - do not change URL
         if: always()  # Always upload test videos
         with:
           name: cypress-videos
