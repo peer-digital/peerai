@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 from backend.main import app
 from backend.database import get_db
-from backend.models import User, DBSystemSettings
+from backend.models.auth import User
+from backend.models import DBSystemSettings
 from backend.core.security import get_password_hash
 
 

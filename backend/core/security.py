@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 
 from config import settings
 from database import get_db
-from models import User
+from models.auth import User
 
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

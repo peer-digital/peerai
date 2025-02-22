@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from backend.main import app
 from backend.database import get_db
-from backend.models import User
+from backend.models.auth import User
 from backend.core.security import get_password_hash
 from backend.models.auth import DBSystemSettings
 
