@@ -9,22 +9,29 @@ import {
   Paper,
   Alert,
   CircularProgress,
+  Divider,
+  Stack,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { LoginCredentials } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
+
+// Test users for development mode
+const TEST_USERS = [
+  { email: 'admin@peerai.se', password: 'admin123', role: 'Admin' },
+  { email: 'manager@peerai.se', password: 'manager123', role: 'Manager' },
+  { email: 'super.admin@peerai.se', password: 'superadmin123', role: 'Super Admin' },
+];
 
 const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials>();
 
   // Check if we're in development mode
   const isDevelopment = import.meta.env.VITE_DEV_MODE === 'true';
-  const testEmail = import.meta.env.VITE_TEST_EMAIL;
-  const testPassword = import.meta.env.VITE_TEST_PASSWORD;
 
   const onSubmit = async (credentials: LoginCredentials) => {
     try {
@@ -40,48 +47,92 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleQuickLogin = (email: string, password: string) => {
+    setValue('email', email);
+    setValue('password', password);
+  };
+
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+    <Container component="main" maxWidth="xs" sx={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      py: 4,
+      position: 'fixed',
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+    }}>
+      <Box sx={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}>
         <Paper
           elevation={3}
           sx={{
-            padding: 4,
+            p: 4,
+            width: '100%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            width: '100%',
+            borderRadius: 2,
           }}
         >
-          <Typography component="h1" variant="h5">
+          <Typography 
+            component="h1" 
+            variant="h5" 
+            sx={{ 
+              mb: 3,
+              fontWeight: 600,
+              color: 'primary.main',
+            }}
+          >
             PeerAI Admin Login
           </Typography>
+          
           {error && (
-            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            <Alert severity="error" sx={{ mb: 2, width: '100%' }}>
               {error}
             </Alert>
           )}
+
           {isDevelopment && (
-            <Alert severity="info" sx={{ mt: 2, width: '100%' }}>
-              Development mode is active. You can use the test credentials:
-              <br />
-              Email: {testEmail}
-              <br />
-              Password: {testPassword}
-            </Alert>
+            <>
+              <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
+                Development mode is active. Click on a test user to prefill credentials:
+              </Alert>
+              <Stack 
+                direction="column" 
+                spacing={1} 
+                sx={{ width: '100%', mb: 3 }}
+              >
+                {TEST_USERS.map((user) => (
+                  <Button
+                    key={user.email}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleQuickLogin(user.email, user.password)}
+                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <Typography variant="body2">{user.role}</Typography>
+                      <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+                    </Box>
+                  </Button>
+                ))}
+              </Stack>
+              <Divider sx={{ width: '100%', mb: 3 }} />
+            </>
           )}
+
           <Box
             component="form"
             onSubmit={handleSubmit(onSubmit)}
             noValidate
-            sx={{ mt: 1, width: '100%' }}
+            sx={{ width: '100%' }}
           >
             <TextField
               margin="normal"
@@ -129,7 +180,12 @@ const Login: React.FC = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ 
+                mt: 3,
+                mb: 2,
+                py: 1.5,
+                fontWeight: 600,
+              }}
               disabled={isLoading}
             >
               {isLoading ? <CircularProgress size={24} /> : 'Sign In'}

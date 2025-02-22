@@ -17,8 +17,17 @@ import {
   FormControlLabel,
   Switch,
   SelectChangeEvent,
+  Stack,
+  CircularProgress,
+  Divider,
+  Alert,
 } from '@mui/material';
-import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import {
+  ContentCopy as ContentCopyIcon,
+  Send as SendIcon,
+  Code as CodeIcon,
+  Api as ApiIcon,
+} from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useTheme } from '@mui/material/styles';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -109,6 +118,7 @@ function Playground() {
   const [loading, setLoading] = useState(false);
   const [showCurlCommand, setShowCurlCommand] = useState(true);
   const [mockMode, setMockMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -204,6 +214,8 @@ function Playground() {
 
   const handleSubmit = async () => {
     setLoading(true);
+    setError(null);
+    setResponse('');
     const endpoint = ENDPOINTS[selectedEndpoint];
     
     try {
@@ -222,34 +234,76 @@ function Playground() {
       });
 
       const data = await response.json();
-      setResponse(formatResponse(data));
       
       if (!response.ok) {
         throw new Error(data.detail || 'Request failed');
       }
+
+      setResponse(formatResponse(data));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred');
-      setResponse(error instanceof Error ? error.message : 'An error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        API Playground
-      </Typography>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Request
-              </Typography>
-              
-              <FormControl fullWidth sx={{ mb: 2 }}>
+    <Box sx={{ p: 3, height: 'calc(100vh - 88px)', display: 'flex', flexDirection: 'column' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            API Playground
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            Test and explore the PeerAI API endpoints
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'row', 
+        gap: 3,
+        flexGrow: 1,
+        minHeight: 0,
+        '@media (max-width: 900px)': {
+          flexDirection: 'column'
+        }
+      }}>
+        <Box sx={{ 
+          flex: '1 0 50%',
+          maxWidth: '50%',
+          '@media (max-width: 900px)': {
+            maxWidth: '100%'
+          }
+        }}>
+          <Card sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+          }}>
+            <CardContent sx={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 3,
+              width: '100%',
+              '&.MuiCardContent-root': {
+                padding: 3,
+              }
+            }}>
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ApiIcon fontSize="small" />
+                  Request
+                </Typography>
+                <Divider />
+              </Box>
+
+              <FormControl fullWidth size="small">
                 <InputLabel>Endpoint</InputLabel>
                 <Select
                   value={selectedEndpoint}
@@ -265,133 +319,238 @@ function Playground() {
               </FormControl>
 
               {selectedEndpoint === 'completions' && (
-                <FormControl fullWidth sx={{ mb: 2 }}>
+                <FormControl fullWidth size="small">
                   <InputLabel>Model</InputLabel>
                   <Select
                     value={selectedModel}
                     label="Model"
                     onChange={handleModelChange}
                   >
-                    <MenuItem value="hosted-llm">Hosted LLM (Primary)</MenuItem>
-                    <MenuItem value="mistral">Mistral (Fallback)</MenuItem>
+                    {ENDPOINTS.completions.supportedModels?.map((model) => (
+                      <MenuItem key={model} value={model}>{model}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               )}
 
               <TextField
                 fullWidth
+                size="small"
                 label="API Key"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                sx={{ mb: 2 }}
               />
 
               {ENDPOINTS[selectedEndpoint].requiresBody && (
-                <>
-                  <TextField
-                    fullWidth
-                    label="Request Body"
-                    multiline
-                    rows={8}
-                    value={requestBody}
-                    onChange={(e) => setRequestBody(e.target.value)}
-                    sx={{ mb: 2, fontFamily: 'monospace' }}
-                  />
-                  
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  maxRows={12}
+                  label="Request Body"
+                  value={requestBody}
+                  onChange={(e) => setRequestBody(e.target.value)}
+                  sx={{
+                    fontFamily: 'monospace',
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
+                    },
+                  }}
+                />
+              )}
+
+              <Box>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
+                  >
+                    {loading ? 'Sending...' : 'Send Request'}
+                  </Button>
+
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={mockMode}
-                        onChange={handleMockModeChange}
+                        checked={showCurlCommand}
+                        onChange={(e) => setShowCurlCommand(e.target.checked)}
                       />
                     }
-                    label="Mock Mode"
-                    sx={{ mb: 2 }}
+                    label="Show cURL"
                   />
-                </>
-              )}
 
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showCurlCommand}
-                    onChange={(e) => setShowCurlCommand(e.target.checked)}
-                  />
-                }
-                label="Show cURL command"
-              />
+                  {selectedEndpoint !== 'health' && (
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={mockMode}
+                          onChange={handleMockModeChange}
+                        />
+                      }
+                      label="Mock Mode"
+                    />
+                  )}
+                </Stack>
+              </Box>
 
               {showCurlCommand && (
-                <Paper sx={{ p: 2, mt: 2, bgcolor: theme.palette.grey[900] }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Typography variant="subtitle2" sx={{ color: theme.palette.grey[400], mb: 1 }}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2,
+                    bgcolor: theme.palette.grey[900],
+                    position: 'relative',
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <CodeIcon fontSize="small" />
                       cURL Command
                     </Typography>
-                    <Tooltip title="Copy command">
+                    <Tooltip title="Copy command" arrow>
                       <IconButton
                         size="small"
                         onClick={() => handleCopyClick(generateCurlCommand())}
-                        sx={{ color: theme.palette.grey[400] }}
+                        sx={{ color: 'text.secondary' }}
                       >
-                        <ContentCopyIcon />
+                        <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                  </Box>
+                  </Stack>
                   <SyntaxHighlighter
                     language="bash"
                     style={atomOneDark}
-                    customStyle={{ margin: 0 }}
+                    customStyle={{
+                      margin: 0,
+                      padding: theme.spacing(1),
+                      borderRadius: theme.shape.borderRadius,
+                      maxHeight: '200px',
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
+                    }}
+                    wrapLines={true}
+                    wrapLongLines={true}
                   >
                     {generateCurlCommand()}
                   </SyntaxHighlighter>
                 </Paper>
               )}
-
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={loading}
-                sx={{ mt: 2 }}
-                fullWidth
-              >
-                {loading ? 'Sending...' : 'Send Request'}
-              </Button>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
+        <Box sx={{ 
+          flex: '1 0 50%',
+          maxWidth: '50%',
+          '@media (max-width: 900px)': {
+            maxWidth: '100%'
+          }
+        }}>
+          <Card sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+          }}>
+            <CardContent sx={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              width: '100%',
+              '&.MuiCardContent-root': {
+                padding: 3,
+              }
+            }}>
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ApiIcon fontSize="small" />
                   Response
                 </Typography>
-                {response && (
-                  <Tooltip title="Copy response">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCopyClick(response)}
-                    >
-                      <ContentCopyIcon />
-                    </IconButton>
-                  </Tooltip>
-                )}
+                <Divider />
               </Box>
-              
-              <Paper sx={{ p: 2, bgcolor: theme.palette.grey[900] }}>
-                <SyntaxHighlighter
-                  language="json"
-                  style={atomOneDark}
-                  customStyle={{ margin: 0 }}
+
+              {error && (
+                <Alert severity="error" variant="outlined">
+                  {error}
+                </Alert>
+              )}
+
+              {loading && (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <CircularProgress />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    Waiting for response...
+                  </Typography>
+                </Box>
+              )}
+
+              {!loading && !error && response && (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    bgcolor: theme.palette.grey[900],
+                    position: 'relative',
+                    flex: 1,
+                    width: '100%',
+                    minWidth: 0,
+                  }}
                 >
-                  {response || 'No response yet'}
-                </SyntaxHighlighter>
-              </Paper>
+                  <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                    <Tooltip title="Copy response" arrow>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopyClick(response)}
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={atomOneDark}
+                    customStyle={{
+                      margin: 0,
+                      padding: theme.spacing(2),
+                      borderRadius: theme.shape.borderRadius,
+                      height: '100%',
+                      minHeight: '200px',
+                      maxHeight: 'calc(100vh - 300px)',
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
+                      width: '100%',
+                      minWidth: 0,
+                    }}
+                    wrapLines={true}
+                    wrapLongLines={true}
+                  >
+                    {response}
+                  </SyntaxHighlighter>
+                </Paper>
+              )}
+
+              {!loading && !error && !response && (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">
+                    Send a request to see the response
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

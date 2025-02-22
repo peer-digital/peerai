@@ -13,7 +13,20 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  Stack,
+  IconButton,
+  Tooltip,
+  LinearProgress,
 } from '@mui/material';
+import {
+  Save as SaveIcon,
+  Refresh as RefreshIcon,
+  Settings as SettingsIcon,
+  Security as SecurityIcon,
+  Speed as SpeedIcon,
+  ModelTraining as ModelTrainingIcon,
+  Science as ScienceIcon,
+} from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import api from '../api/config';
@@ -47,11 +60,68 @@ interface SystemSettings {
   };
 }
 
+const SettingSection: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  description?: string;
+}> = ({ title, icon, children, description }) => (
+  <Paper sx={{ p: 3 }}>
+    <Stack spacing={2}>
+      <Box>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          {icon}
+          <Typography variant="h6">{title}</Typography>
+        </Stack>
+        {description && (
+          <Typography variant="body2" color="text.secondary">
+            {description}
+          </Typography>
+        )}
+      </Box>
+      <Divider />
+      <Box>{children}</Box>
+    </Stack>
+  </Paper>
+);
+
 const Settings: React.FC = () => {
-  const { control, handleSubmit, reset } = useForm<SystemSettings>();
+  // Initialize form with default values
+  const defaultValues: SystemSettings = {
+    rateLimit: {
+      enabled: false,
+      requestsPerMinute: 60,
+      tokensPerDay: 1000,
+    },
+    security: {
+      requireSSL: true,
+      maxTokenLength: 4096,
+      allowedOrigins: '',
+    },
+    models: {
+      defaultModel: 'claude-3-sonnet-20240229', // @important: Default model
+      maxContextLength: 200000,
+      temperature: 0.7,
+    },
+    monitoring: {
+      logLevel: 'info',
+      retentionDays: 30,
+      alertThreshold: 90,
+    },
+    betaFeatures: {
+      visionEnabled: false,
+      audioEnabled: false,
+      visionModel: '',
+      audioModel: '',
+    },
+  };
+
+  const { control, handleSubmit, reset, formState: { isDirty } } = useForm<SystemSettings>({
+    defaultValues,
+  });
 
   // Fetch current settings
-  const { data: settings, isLoading } = useQuery<SystemSettings>({
+  const { data: settings, isLoading, error, refetch } = useQuery<SystemSettings>({
     queryKey: ['system-settings'],
     queryFn: async () => {
       const response = await api.get('/api/v1/admin/settings');
@@ -73,6 +143,7 @@ const Settings: React.FC = () => {
     },
     onSuccess: () => {
       toast.success('Settings updated successfully');
+      refetch();
     },
     onError: () => {
       toast.error('Failed to update settings');
@@ -85,325 +156,308 @@ const Settings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+      <Box p={3}>
+        <LinearProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+          Loading settings...
+        </Typography>
       </Box>
     );
   }
 
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">
+          Error loading settings. Please try again later.
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <Box p={3}>
+        <Alert severity="warning">
+          No settings data available
+        </Alert>
+      </Box>
+    );
+  }
+
+  const isSaving = updateSettingsMutation.isPending;
+
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        System Settings
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            System Settings
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            Configure system-wide settings and parameters
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="Refresh settings" arrow>
+            <IconButton onClick={() => refetch()} disabled={isSaving}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
+            onClick={handleSubmit(onSubmit)}
+            disabled={!isDirty || isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </Stack>
+      </Stack>
+
+      {updateSettingsMutation.isError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Failed to save settings. Please try again.
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container spacing={3}>
           {/* Rate Limiting */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Rate Limiting
-              </Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Controller
-                    name="rateLimit.enabled"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControlLabel
-                        control={<Switch checked={field.value} {...field} />}
-                        label="Enable Rate Limiting"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="rateLimit.requestsPerMinute"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Requests per Minute"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="rateLimit.tokensPerDay"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Tokens per Day"
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
+          <Grid item xs={12} lg={6}>
+            <SettingSection
+              title="Rate Limiting"
+              icon={<SpeedIcon color="primary" />}
+              description="Configure API rate limits and usage quotas"
+            >
+              <Stack spacing={3}>
+                <Controller
+                  name="rateLimit.enabled"
+                  control={control}
+                  defaultValue={false}
+                  render={({ field }) => (
+                    <FormControlLabel
+                      control={<Switch checked={field.value} {...field} />}
+                      label="Enable Rate Limiting"
+                    />
+                  )}
+                />
+                <Controller
+                  name="rateLimit.requestsPerMinute"
+                  control={control}
+                  defaultValue={60}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Requests per Minute"
+                      size="small"
+                    />
+                  )}
+                />
+                <Controller
+                  name="rateLimit.tokensPerDay"
+                  control={control}
+                  defaultValue={1000}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Tokens per Day"
+                      size="small"
+                    />
+                  )}
+                />
+              </Stack>
+            </SettingSection>
           </Grid>
 
           {/* Security Settings */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Security
-              </Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Controller
-                    name="security.requireSSL"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControlLabel
-                        control={<Switch checked={field.value} {...field} />}
-                        label="Require SSL"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="security.maxTokenLength"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Max Token Length"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Controller
-                    name="security.allowedOrigins"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="Allowed Origins"
-                        placeholder="Comma-separated list of domains"
-                        helperText="e.g., https://app.peerai.se, https://api.peerai.se"
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
+          <Grid item xs={12} lg={6}>
+            <SettingSection
+              title="Security"
+              icon={<SecurityIcon color="primary" />}
+              description="Configure security settings and access controls"
+            >
+              <Stack spacing={3}>
+                <Controller
+                  name="security.requireSSL"
+                  control={control}
+                  defaultValue={true}
+                  render={({ field }) => (
+                    <FormControlLabel
+                      control={<Switch checked={field.value} {...field} />}
+                      label="Require SSL"
+                    />
+                  )}
+                />
+                <Controller
+                  name="security.maxTokenLength"
+                  control={control}
+                  defaultValue={4096}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Max Token Length"
+                      size="small"
+                    />
+                  )}
+                />
+                <Controller
+                  name="security.allowedOrigins"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Allowed Origins"
+                      placeholder="Comma-separated list of domains"
+                      helperText="e.g., https://app.peerai.se, https://api.peerai.se"
+                      size="small"
+                    />
+                  )}
+                />
+              </Stack>
+            </SettingSection>
           </Grid>
 
           {/* Model Settings */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Model Configuration
-              </Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="models.defaultModel"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="Default Model"
-                        placeholder="e.g., claude-3-sonnet-20240229"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="models.maxContextLength"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Max Context Length"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="models.temperature"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0, max: 1 }}
-                        label="Default Temperature"
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
+          <Grid item xs={12} lg={6}>
+            <SettingSection
+              title="Model Configuration"
+              icon={<ModelTrainingIcon color="primary" />}
+              description="Configure default model settings and parameters"
+            >
+              <Stack spacing={3}>
+                <Controller
+                  name="models.defaultModel"
+                  control={control}
+                  defaultValue="claude-3-sonnet-20240229"
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Default Model"
+                      placeholder="e.g., claude-3-sonnet-20240229"
+                      size="small"
+                    />
+                  )}
+                />
+                <Controller
+                  name="models.maxContextLength"
+                  control={control}
+                  defaultValue={200000}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Max Context Length"
+                      size="small"
+                    />
+                  )}
+                />
+                <Controller
+                  name="models.temperature"
+                  control={control}
+                  defaultValue={0.7}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      inputProps={{ step: 0.1, min: 0, max: 1 }}
+                      label="Default Temperature"
+                      size="small"
+                    />
+                  )}
+                />
+              </Stack>
+            </SettingSection>
           </Grid>
 
           {/* Beta Features */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <Typography variant="h6">Beta Features</Typography>
-                <Chip label="BETA" color="warning" size="small" />
-              </Box>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                These features are in beta testing. Enable them only if you understand the limitations and potential issues.
-              </Alert>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
+          <Grid item xs={12} lg={6}>
+            <SettingSection
+              title="Beta Features"
+              icon={<ScienceIcon color="primary" />}
+              description="Enable and configure experimental features"
+            >
+              <Stack spacing={3}>
+                <Alert severity="info" variant="outlined">
+                  These features are in beta testing. Enable them only if you understand the limitations and potential issues.
+                </Alert>
+                <Stack spacing={2}>
                   <Controller
                     name="betaFeatures.visionEnabled"
                     control={control}
+                    defaultValue={false}
                     render={({ field }) => (
                       <FormControlLabel
                         control={<Switch checked={field.value} {...field} />}
-                        label="Enable Vision API (Beta)"
+                        label={
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <span>Enable Vision API</span>
+                            <Chip label="Beta" color="warning" size="small" />
+                          </Stack>
+                        }
                       />
                     )}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
                   <Controller
                     name="betaFeatures.visionModel"
                     control={control}
+                    defaultValue=""
                     render={({ field }) => (
                       <TextField
                         {...field}
                         fullWidth
                         label="Vision Model"
-                        placeholder="e.g., claude-3-opus-20240229"
+                        size="small"
                         disabled={!control._formValues.betaFeatures?.visionEnabled}
-                        helperText="Only Claude 3 Opus supports vision features"
                       />
                     )}
                   />
-                </Grid>
-                <Grid item xs={12}>
+                </Stack>
+                <Stack spacing={2}>
                   <Controller
                     name="betaFeatures.audioEnabled"
                     control={control}
+                    defaultValue={false}
                     render={({ field }) => (
                       <FormControlLabel
                         control={<Switch checked={field.value} {...field} />}
-                        label="Enable Audio API (Beta)"
+                        label={
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <span>Enable Audio API</span>
+                            <Chip label="Beta" color="warning" size="small" />
+                          </Stack>
+                        }
                       />
                     )}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
                   <Controller
                     name="betaFeatures.audioModel"
                     control={control}
+                    defaultValue=""
                     render={({ field }) => (
                       <TextField
                         {...field}
                         fullWidth
                         label="Audio Model"
-                        placeholder="e.g., whisper-1"
+                        size="small"
                         disabled={!control._formValues.betaFeatures?.audioEnabled}
-                        helperText="Currently supports Whisper models only"
                       />
                     )}
                   />
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Monitoring Settings */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Monitoring
-              </Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="monitoring.logLevel"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        select
-                        label="Log Level"
-                        SelectProps={{
-                          native: true,
-                        }}
-                      >
-                        <option value="debug">Debug</option>
-                        <option value="info">Info</option>
-                        <option value="warning">Warning</option>
-                        <option value="error">Error</option>
-                      </TextField>
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="monitoring.retentionDays"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Log Retention (days)"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="monitoring.alertThreshold"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="Error Alert Threshold (%)"
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Submit Button */}
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="flex-end" mt={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                type="submit"
-                disabled={updateSettingsMutation.isPending}
-              >
-                {updateSettingsMutation.isPending ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </Box>
+                </Stack>
+              </Stack>
+            </SettingSection>
           </Grid>
         </Grid>
       </form>
