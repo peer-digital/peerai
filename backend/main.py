@@ -11,14 +11,28 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
 )
 
-# @important: CORS configuration from environment
-origins = settings.ALLOWED_ORIGINS  # Already a list, no need to split
+# @important: CORS configuration for production and development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://peerai-fe.onrender.com",
+        "https://peerai-be.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://app.peerdigital.se",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "X-API-Key",
+    ],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 
