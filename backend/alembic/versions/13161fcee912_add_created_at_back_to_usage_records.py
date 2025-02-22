@@ -21,8 +21,11 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Add created_at column back to usage_records
     op.add_column('usage_records', sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False))
+    # Add model column to usage_records
+    op.add_column('usage_records', sa.Column('model', sa.String(), nullable=True))
 
 
 def downgrade() -> None:
-    # Remove created_at column from usage_records
+    # Remove created_at and model columns from usage_records
     op.drop_column('usage_records', 'created_at')
+    op.drop_column('usage_records', 'model')
