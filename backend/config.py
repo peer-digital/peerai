@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     # @important: Environment settings
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = ENVIRONMENT == "development"
+    MOCK_MODE: bool = os.getenv("MOCK_MODE", "true").lower() == "true"
+    
+    # @important: Test database configuration
+    # @url: https://www.postgresql.org/
+    TEST_DATABASE_URL: str = os.getenv(
+        "TEST_DATABASE_URL",
+        "postgresql://postgres:postgres@localhost:5432/peerai_test"
+    )
     
     # LLM Configuration
     # url: https://llm-api.bahnhof.se/v1/completions - do not change this comment

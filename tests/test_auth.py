@@ -1,20 +1,17 @@
 import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 from jose import jwt
+import json
+
 from backend.main import app
 from backend.database import get_db
-from backend.models.user import User
-from backend.core.security import get_password_hash
+from backend.models import User, APIKey
+from backend.core.security import get_password_hash, verify_password
 from sqlalchemy.orm import Session
 
-from api.main import settings
-from api.models.auth import APIKey
-from api.routes.auth import ALGORITHM, SECRET_KEY
-
-# Test client setup
-client = TestClient(app)
+from backend.main import settings
+from backend.routes.auth import ALGORITHM, SECRET_KEY
 
 # Mock database session
 @pytest.fixture
@@ -72,13 +69,14 @@ def test_db(session: Session):
     session.query(User).filter(User.email == "test@peerdigital.se").delete()
     session.commit()
 
-def test_register_user_success(db_session):
+@pytest.mark.asyncio
+async def test_register_user_success(db_session, async_client):
     """Test successful user registration"""
     # Mock database to return None (user doesn't exist)
     db_session.query.return_value.filter.return_value.first.return_value = None
     
-    response = client.post(
-        f"{settings.API_V1_PREFIX}/register",
+    response = await async_client.post(
+        f"{settings.API_V1_PREFIX}/auth/register",
         json={
             "email": "new@example.com",
             "password": "newpass123",
@@ -96,12 +94,13 @@ def test_register_user_success(db_session):
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     assert payload["sub"] == "new@example.com"
 
-def test_register_user_duplicate_email(db_session, test_user):
+@pytest.mark.asyncio
+async def test_register_user_duplicate_email(db_session, test_user, async_client):
     """Test registration with existing email"""
     db_session.query.return_value.filter.return_value.first.return_value = test_user
     
-    response = client.post(
-        f"{settings.API_V1_PREFIX}/register",
+    response = await async_client.post(
+        f"{settings.API_V1_PREFIX}/auth/register",
         json={
             "email": "test@example.com",
             "password": "test123",
@@ -112,9 +111,10 @@ def test_register_user_duplicate_email(db_session, test_user):
     assert response.status_code == 400
     assert response.json()["detail"] == "Email already registered"
 
-def test_login_success(test_db):
+@pytest.mark.asyncio
+async def test_login_success(test_db, async_client):
     """Test successful login"""
-    response = client.post(
+    response = await async_client.post(
         "/api/v1/auth/login",
         json={"email": "test@peerdigital.se", "password": "testpass123"}
     )
@@ -123,57 +123,61 @@ def test_login_success(test_db):
     assert "token_type" in response.json()
     assert response.json()["token_type"] == "bearer"
 
-def test_login_invalid_credentials(test_db):
+@pytest.mark.asyncio
+async def test_login_invalid_credentials(test_db, async_client):
     """Test login with invalid credentials"""
-    response = client.post(
+    response = await async_client.post(
         "/api/v1/auth/login",
         json={"email": "test@peerdigital.se", "password": "wrongpass"}
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect email or password"
 
-def test_validate_token(test_db):
+@pytest.mark.asyncio
+async def test_validate_token(test_db, async_client):
     """Test token validation"""
     # First login to get token
-    login_response = client.post(
+    login_response = await async_client.post(
         "/api/v1/auth/login",
         json={"email": "test@peerdigital.se", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     
     # Test token validation
-    response = client.get(
+    response = await async_client.get(
         "/api/v1/auth/validate",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
     assert response.json()["email"] == "test@peerdigital.se"
 
-def test_logout(test_db):
+@pytest.mark.asyncio
+async def test_logout(test_db, async_client):
     """Test logout endpoint"""
     # First login to get token
-    login_response = client.post(
+    login_response = await async_client.post(
         "/api/v1/auth/login",
         json={"email": "test@peerdigital.se", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     
     # Test logout
-    response = client.post(
+    response = await async_client.post(
         "/api/v1/auth/logout",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Successfully logged out"
 
-def test_create_api_key_success(db_session, test_user):
+@pytest.mark.asyncio
+async def test_create_api_key_success(db_session, test_user, async_client):
     """Test successful API key creation"""
     # Mock authentication
     token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.return_value = test_user
     
-    response = client.post(
-        f"{settings.API_V1_PREFIX}/api-keys",
+    response = await async_client.post(
+        f"{settings.API_V1_PREFIX}/auth/api-keys",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "name": "New Key",
@@ -187,13 +191,14 @@ def test_create_api_key_success(db_session, test_user):
     assert data["name"] == "New Key"
     assert "expires_at" in data
 
-def test_create_api_key_no_expiry(db_session, test_user):
+@pytest.mark.asyncio
+async def test_create_api_key_no_expiry(db_session, test_user, async_client):
     """Test API key creation without expiry"""
     token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.return_value = test_user
     
-    response = client.post(
-        f"{settings.API_V1_PREFIX}/api-keys",
+    response = await async_client.post(
+        f"{settings.API_V1_PREFIX}/auth/api-keys",
         headers={"Authorization": f"Bearer {token}"},
         json={"name": "Permanent Key"}
     )
@@ -202,14 +207,15 @@ def test_create_api_key_no_expiry(db_session, test_user):
     data = response.json()
     assert data["expires_at"] is None
 
-def test_list_api_keys(db_session, test_user, test_api_key):
+@pytest.mark.asyncio
+async def test_list_api_keys(db_session, test_user, test_api_key, async_client):
     """Test listing API keys"""
     token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.return_value = test_user
     db_session.query.return_value.filter.return_value.all.return_value = [test_api_key]
     
-    response = client.get(
-        f"{settings.API_V1_PREFIX}/api-keys",
+    response = await async_client.get(
+        f"{settings.API_V1_PREFIX}/auth/api-keys",
         headers={"Authorization": f"Bearer {token}"}
     )
     
@@ -218,56 +224,58 @@ def test_list_api_keys(db_session, test_user, test_api_key):
     assert len(data) == 1
     assert data[0]["key"] == test_api_key.key
 
-def test_delete_api_key_success(db_session, test_user, test_api_key):
+@pytest.mark.asyncio
+async def test_delete_api_key_success(db_session, test_user, test_api_key, async_client):
     """Test successful API key deletion"""
     token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.side_effect = [test_user, test_api_key]
     
-    response = client.delete(
-        f"{settings.API_V1_PREFIX}/api-keys/{test_api_key.id}",
+    response = await async_client.delete(
+        f"{settings.API_V1_PREFIX}/auth/api-keys/{test_api_key.id}",
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 200
     assert response.json()["status"] == "success"
 
-def test_delete_api_key_not_found(db_session, test_user):
+@pytest.mark.asyncio
+async def test_delete_api_key_not_found(db_session, test_user, async_client):
     """Test deleting non-existent API key"""
     token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.side_effect = [test_user, None]
     
-    response = client.delete(
-        f"{settings.API_V1_PREFIX}/api-keys/999",
+    response = await async_client.delete(
+        f"{settings.API_V1_PREFIX}/auth/api-keys/999",
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 404
     assert response.json()["detail"] == "API key not found"
 
-def test_invalid_token(db_session):
+@pytest.mark.asyncio
+async def test_invalid_token(db_session, async_client):
     """Test accessing protected endpoint with invalid token"""
-    response = client.get(
-        f"{settings.API_V1_PREFIX}/api-keys",
+    response = await async_client.get(
+        f"{settings.API_V1_PREFIX}/auth/api-keys",
         headers={"Authorization": "Bearer invalid_token"}
     )
-    
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"
 
-def test_expired_token(db_session, test_user):
+@pytest.mark.asyncio
+async def test_expired_token(db_session, test_user, async_client):
     """Test accessing protected endpoint with expired token"""
-    # Create expired token
-    expire = datetime.utcnow() - timedelta(minutes=30)
+    # Create an expired token
+    expired_time = datetime.utcnow() - timedelta(days=1)
     token = jwt.encode(
-        {"sub": test_user.email, "exp": expire},
+        {"sub": test_user.email, "exp": expired_time},
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-    
-    response = client.get(
-        f"{settings.API_V1_PREFIX}/api-keys",
+
+    response = await async_client.get(
+        f"{settings.API_V1_PREFIX}/auth/api-keys",
         headers={"Authorization": f"Bearer {token}"}
     )
-    
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials" 

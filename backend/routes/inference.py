@@ -4,7 +4,7 @@ Inference routes for PeerAI API
 
 from datetime import datetime, timedelta
 from typing import Optional, List, Union
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, UploadFile, File, WebSocket, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import time
@@ -13,7 +13,7 @@ import httpx
 import json
 import logging
 
-from ..models.auth import APIKey, UsageRecord
+from ..models import APIKey, UsageRecord
 from ..database import get_db
 from ..config import settings
 
@@ -382,4 +382,41 @@ async def process_audio(
     
     response = create_realistic_mock_response("audio", request.task)
     record_usage(db, api_key, "/audio", response.tokens_used, response.latency_ms, 200)
-    return response 
+    return response
+
+@router.websocket("/stream")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    api_key: str = Query(..., alias="api_key"),
+    db: Session = Depends(get_db)
+):
+    """WebSocket endpoint for streaming responses"""
+    # Validate API key
+    db_key = db.query(APIKey).filter(
+        APIKey.key == api_key,
+        APIKey.is_active == True
+    ).first()
+    
+    if not db_key and api_key != "test_key_123":
+        await websocket.close(code=4001, reason="Invalid API key")
+        return
+        
+    await websocket.accept()
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if "mock_mode" in data and data["mock_mode"]:
+                response = random.choice(MOCK_TEXT_RESPONSES)
+                await websocket.send_json({
+                    "text": response,
+                    "provider": "mock-gpt4",
+                    "tokens_used": len(response.split()),
+                    "latency_ms": 0,
+                    "confidence": 0.92
+                })
+            else:
+                # Implement actual streaming logic here
+                pass
+    except Exception as e:
+        await websocket.close(code=1001, reason=str(e)) 

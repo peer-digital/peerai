@@ -106,9 +106,25 @@ The API will be available at `http://localhost:8000`
 
 ### Running Tests
 
+The project uses PostgreSQL for both development and testing environments. Before running tests:
+
+1. **Create a test database**
+```bash
+createdb peerai_test
+```
+
+2. **Configure test database**
+```bash
+# In your .env file, set the test database URL:
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/peerai_test
+```
+
+3. **Run tests**
 ```bash
 pytest
 ```
+
+The test suite uses a separate PostgreSQL database to ensure isolation from your development environment. Each test runs in a transaction that is rolled back after the test completes.
 
 ## Documentation
 

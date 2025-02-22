@@ -3,6 +3,7 @@ from typing import Optional, List
 from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON
 from sqlalchemy.orm import relationship
 from .base import Base
+from .usage import UsageRecord
 
 class User(Base):
     """User model"""
@@ -17,47 +18,34 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    api_keys = relationship("APIKey", back_populates="user")
+    api_keys = relationship(
+        "APIKey",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
     usage_records = relationship("UsageRecord", back_populates="user")
 
 class APIKey(Base):
-    """API Key model"""
+    """API key model"""
     __tablename__ = "api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=True)
-    last_used_at = Column(DateTime, nullable=True)
     daily_limit = Column(Integer, default=1000)
     minute_limit = Column(Integer, default=60)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used = Column(DateTime, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="api_keys")
     usage_records = relationship("UsageRecord", back_populates="api_key")
 
-class UsageRecord(Base):
-    """Model for tracking API usage"""
-    __tablename__ = "usage_records"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    api_key_id = Column(Integer, ForeignKey("api_keys.id"), nullable=False)
-    endpoint = Column(String, nullable=False)
-    tokens_used = Column(Integer, default=0)
-    latency_ms = Column(Integer)
-    status_code = Column(Integer)
-    error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", back_populates="usage_records")
-    api_key = relationship("APIKey", back_populates="usage_records")
-
-class SystemSettings(Base):
+class DBSystemSettings(Base):
+    """Database model for system settings."""
     __tablename__ = "system_settings"
 
     id = Column(Integer, primary_key=True)

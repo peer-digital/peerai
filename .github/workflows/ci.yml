@@ -11,6 +11,21 @@ jobs:
   backend-tests:  # Renamed from build-and-test to be more specific
     runs-on: ubuntu-latest
     
+    services:
+      postgres:  # Add PostgreSQL service for integration tests
+        image: postgres:14  # @note: PostgreSQL version - update with caution
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       # Step 1: Get the code
       - name: Checkout code
@@ -28,7 +43,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"  # Install package with dev dependencies
-          pip install pre-commit black ruff coverage pytest
+          pip install pre-commit black ruff coverage pytest pytest-cov pytest-asyncio httpx
 
       # Step 4: Verify code quality with pre-commit
       - name: Run pre-commit hooks
@@ -42,14 +57,34 @@ jobs:
           ruff . --exit-zero
           black --check .
       
-      # Step 6: Run tests and verify coverage
-      - name: Run tests with coverage
+      # Step 6: Run unit tests
+      - name: Run unit tests
         run: |
-          coverage run -m pytest
-          coverage report --fail-under=80
-          coverage xml  # Generate coverage report for potential future integrations
+          pytest tests/test_auth.py tests/test_inference.py -v --cov=api --cov-report=xml
 
-      # Step 7: Cache pip packages
+      # Step 7: Run integration tests
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db  # @note: Test database URL - must match DATABASE_URL for CI
+        run: |
+          alembic upgrade head  # Run migrations before tests
+          pytest tests/test_db_integration.py tests/test_api_integration.py -v --cov=api --cov-append --cov-report=xml
+
+      # Step 8: Run load tests
+      - name: Run load tests
+        run: |
+          locust -f tests/locustfile.py --headless -u 10 -r 2 --run-time 30s --host http://localhost:8000
+
+      # Step 9: Upload coverage reports
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3  # @note: Codecov's official GitHub action - do not change URL
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
+
+      # Step 10: Cache pip packages
       - name: Cache pip packages
         uses: actions/cache@v3  # @note: GitHub's official caching action - do not change URL
         with:
@@ -85,11 +120,15 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      # Step 5: Build the application
+      # Step 5: Run unit tests
+      - name: Run unit tests
+        run: npm run test:unit:coverage
+
+      # Step 6: Build the application
       - name: Build
         run: npm run build
 
-      # Step 6: Start the application and run Cypress tests
+      # Step 7: Start the application and run Cypress tests
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6  # @note: Official Cypress GitHub action - do not change URL
         with:
@@ -101,7 +140,7 @@ jobs:
           record: false  # Set to true if you have Cypress Cloud configured
           config-file: cypress.config.ts
 
-      # Step 7: Upload test artifacts
+      # Step 8: Upload test artifacts
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v4  # @note: GitHub's official artifact upload action - do not change URL
         if: failure()  # Only upload on test failure
@@ -116,4 +155,33 @@ jobs:
         with:
           name: cypress-videos
           path: frontend/admin-dashboard/cypress/videos
-          retention-days: 5 
+          retention-days: 5
+
+      # Step 9: Upload coverage reports
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3  # @note: Codecov's official GitHub action - do not change URL
+        with:
+          file: ./frontend/admin-dashboard/coverage/coverage-final.json
+          fail_ci_if_error: true
+          verbose: true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/python@master  # @note: Snyk's official GitHub action - do not change URL
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main  # @note: TruffleHog's official GitHub action - do not change URL
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified 

@@ -2,15 +2,20 @@
 Admin routes for PeerAI API
 """
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, desc, case
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import json
 
 from ..database import get_db
-from ..models.auth import User, APIKey, UsageRecord, SystemSettings as DBSystemSettings
-from .auth import get_current_user
+from ..models import User, APIKey, UsageRecord
+from ..core.security import get_current_user
+from ..schemas.admin import SystemSettings, UserResponse
+from ..schemas.auth import User as UserSchema
+from ..services.analytics import get_analytics_data, get_user_stats, export_analytics_data
+from backend.models.settings import DBSystemSettings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -26,14 +31,6 @@ class UsageStats(BaseModel):
     activeUsers: int
     averageLatency: float
     dailyStats: List[DailyStats]
-
-class UserResponse(BaseModel):
-    id: int
-    email: str
-    full_name: Optional[str]
-    is_active: bool
-    is_superuser: bool
-    created_at: datetime
 
 class APIKeyResponse(BaseModel):
     id: int
@@ -53,34 +50,6 @@ class AnalyticsResponse(BaseModel):
     tokens: List[int]
     success_rate: List[float]
     avg_latency: List[float]
-
-class SystemSettings(BaseModel):
-    rateLimit: dict = {
-        "enabled": True,
-        "requestsPerMinute": 60,
-        "tokensPerDay": 100000
-    }
-    security: dict = {
-        "requireSSL": True,
-        "maxTokenLength": 4096,
-        "allowedOrigins": "http://localhost:3000, https://app.peerai.se"
-    }
-    models: dict = {
-        "defaultModel": "claude-3-sonnet-20240229",
-        "maxContextLength": 100000,
-        "temperature": 0.7
-    }
-    monitoring: dict = {
-        "logLevel": "info",
-        "retentionDays": 30,
-        "alertThreshold": 5
-    }
-    betaFeatures: dict = {
-        "visionEnabled": False,
-        "audioEnabled": False,
-        "visionModel": "claude-3-opus-20240229",
-        "audioModel": "whisper-1"
-    }
 
 @router.get("/stats", response_model=UsageStats)
 async def get_admin_stats(
@@ -254,7 +223,7 @@ async def get_settings(
 
 @router.put("/settings", response_model=SystemSettings)
 async def update_settings(
-    settings_update: SystemSettings,
+    settings: SystemSettings,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -262,21 +231,102 @@ async def update_settings(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get or create settings
+    # Get settings from database, create if not exists
     db_settings = db.query(DBSystemSettings).first()
     if not db_settings:
         db_settings = DBSystemSettings()
         db.add(db_settings)
     
     # Update settings
-    db_settings.rate_limit = settings_update.rateLimit
-    db_settings.security = settings_update.security
-    db_settings.models = settings_update.models
-    db_settings.monitoring = settings_update.monitoring
-    db_settings.beta_features = settings_update.betaFeatures
-    db_settings.updated_by = current_user.id
+    db_settings.rate_limit = settings.rateLimit.dict()
+    db_settings.security = settings.security.dict()
+    db_settings.models = settings.models.dict()
+    db_settings.monitoring = settings.monitoring.dict()
+    db_settings.beta_features = settings.betaFeatures.dict()
     
     db.commit()
     db.refresh(db_settings)
     
-    return settings_update 
+    return settings
+
+@router.patch("/settings", response_model=SystemSettings)
+async def partial_update_settings(
+    settings: Dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Partially update system settings"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get settings from database
+    db_settings = db.query(DBSystemSettings).first()
+    if not db_settings:
+        db_settings = DBSystemSettings()
+        db.add(db_settings)
+        db.commit()
+        db.refresh(db_settings)
+    
+    # Update only provided settings
+    current_settings = SystemSettings(
+        rateLimit=db_settings.rate_limit,
+        security=db_settings.security,
+        models=db_settings.models,
+        monitoring=db_settings.monitoring,
+        betaFeatures=db_settings.beta_features
+    )
+    
+    for key, value in settings.items():
+        if hasattr(current_settings, key):
+            setattr(current_settings, key, value)
+    
+    # Save updated settings
+    db_settings.rate_limit = current_settings.rateLimit.dict()
+    db_settings.security = current_settings.security.dict()
+    db_settings.models = current_settings.models.dict()
+    db_settings.monitoring = current_settings.monitoring.dict()
+    db_settings.beta_features = current_settings.betaFeatures.dict()
+    
+    db.commit()
+    db.refresh(db_settings)
+    
+    return current_settings
+
+@router.get("/analytics/data")
+async def get_analytics_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    timeframe: str = Query("7d", regex="^(24h|7d|30d)$"),
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+):
+    """Get analytics data"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    return get_analytics_data(db, timeframe, start_date, end_date)
+
+@router.get("/analytics/export")
+async def export_analytics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    format: str = Query("json", regex="^(json|csv)$")
+):
+    """Export analytics data"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    return export_analytics_data(db, start_date, end_date, format)
+
+@router.get("/users/stats")
+async def get_users_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user statistics"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    return get_user_stats(db) 

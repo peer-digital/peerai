@@ -10,16 +10,23 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from config import settings
-from models.base import Base
-from models.auth import User, APIKey, UsageRecord, SystemSettings
+from backend.config import settings
+from backend.models.base import Base
+from backend.models.auth import User, APIKey, DBSystemSettings
+from backend.models.usage import UsageRecord
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set the SQLAlchemy URL in the alembic.ini file
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Set the SQLAlchemy URL based on environment
+def get_url():
+    """Get database URL from settings."""
+    if os.getenv("ENVIRONMENT") == "test" or "pytest" in sys.modules:
+        return settings.TEST_DATABASE_URL
+    return settings.DATABASE_URL
+
+config.set_main_option("sqlalchemy.url", get_url())
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -35,7 +42,6 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -48,7 +54,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -67,8 +73,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section)
+    configuration["sqlalchemy.url"] = get_url()
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

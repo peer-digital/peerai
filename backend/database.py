@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 from .config import settings
+from .models.base import Base
 
 # Create SQLAlchemy engine
 engine = create_engine(settings.DATABASE_URL)
@@ -18,4 +19,6 @@ def get_db() -> Session:
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
+
+__all__ = ['Base', 'engine', 'get_db'] 
