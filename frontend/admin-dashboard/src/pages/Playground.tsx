@@ -33,6 +33,9 @@ import { useTheme } from '@mui/material/styles';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
+// @important: Import API base URL from config
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+
 interface EndpointConfig {
   method: string;
   path: string;
@@ -194,7 +197,7 @@ function Playground() {
 
   const generateCurlCommand = () => {
     const endpoint = ENDPOINTS[selectedEndpoint];
-    let command = `curl -X ${endpoint.method} http://localhost:8000${endpoint.path}`;
+    let command = `curl -X ${endpoint.method} ${API_BASE_URL}${endpoint.path}`;
     
     if (apiKey) {
       command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
@@ -227,7 +230,7 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`http://localhost:8000${endpoint.path}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint.path}`, {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,
