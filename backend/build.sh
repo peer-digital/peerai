@@ -15,4 +15,8 @@ alembic upgrade head
 echo "Creating admin user..."
 python scripts/create_admin.py
 
+# Verify database
+echo "Verifying database..."
+python scripts/verify_db.py
+
 echo "Build completed successfully!" 
