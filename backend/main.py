@@ -8,10 +8,11 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
 )
 
 # @important: CORS configuration from environment
-origins = settings.ALLOWED_ORIGINS.split(",")
+origins = settings.ALLOWED_ORIGINS  # Already a list, no need to split
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -46,3 +47,7 @@ app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 # - System configuration
 # from routes import admin
 # app.include_router(admin.router, prefix=settings.API_V1_PREFIX) 
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Peer AI API"} 

@@ -3,7 +3,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import secrets
@@ -11,16 +10,19 @@ import secrets
 from ..models.auth import User, APIKey
 from ..database import get_db
 from ..config import settings
+from ..core.security import verify_password, get_password_hash
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["authentication"]
+)
 
 # Security configuration
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
 
-# JWT configuration from settings
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = "HS256"
+# Use JWT_SECRET_KEY from settings
+SECRET_KEY = settings.JWT_SECRET_KEY
+ALGORITHM = settings.JWT_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 class Token(BaseModel):
@@ -39,24 +41,17 @@ class APIKeyCreate(BaseModel):
     name: str
     expires_in_days: Optional[int] = None
 
-def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
-
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> User:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -67,11 +62,10 @@ async def get_current_user(
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
-        
-    user = db.query(User).filter(User.email == token_data.email).first()
+    
+    user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
     return user
@@ -96,15 +90,15 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
-    access_token = create_access_token(data={"sub": user.email})
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/token", response_model=Token)
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    """Login to get access token"""
+@router.post("/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """Login endpoint that returns a JWT token"""
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -112,7 +106,11 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = create_access_token(data={"sub": user.email})
+    
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/api-keys", response_model=dict)
@@ -172,26 +170,12 @@ async def delete_api_key(
     db.commit()
     return {"status": "success"}
 
-@router.post("/auth/logout", status_code=200)
-async def logout():
-    """
-    Logout endpoint - clears session cookie
-    Returns 200 to indicate successful logout
-    Frontend should clear local storage/cookies
-    """
-    response = {"message": "Successfully logged out"}
-    return response 
+@router.post("/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    """Logout endpoint (client should discard token)"""
+    return {"message": "Successfully logged out"}
 
-@router.get("/auth/validate")
+@router.get("/validate")
 async def validate_token(current_user: User = Depends(get_current_user)):
-    """
-    Validates the current token and returns user info
-    Requires valid JWT token in Authorization header
-    """
-    return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "is_active": current_user.is_active,
-        "is_superuser": current_user.is_superuser
-    } 
+    """Validate the current user's token"""
+    return {"email": current_user.email, "is_active": current_user.is_active} 

@@ -1,0 +1,25 @@
+repos:
+  # black - Python code formatter
+  - repo: https://github.com/psf/black  # @note: Python code formatter - do not change URL
+    rev: 23.9.0  # @note: Black version - update with caution
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  # ruff - Fast Python linter
+  - repo: https://github.com/astral-sh/ruff  # @note: Fast Python linter - do not change URL
+    rev: v0.1.0  # @note: Ruff version - update with caution
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-zero, '.']
+
+  # Local hooks
+  - repo: local
+    hooks:
+      # Run tests before commit
+      - id: run-tests
+        name: Run Pytest
+        entry: bash scripts/pre_commit_tests.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit] 
