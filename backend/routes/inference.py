@@ -20,7 +20,7 @@ import httpx
 import logging
 
 from models.auth import APIKey
-from models import UsageRecord
+from models.usage import UsageRecord
 from database import get_db
 from config import settings
 

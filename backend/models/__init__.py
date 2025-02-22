@@ -1,14 +1,13 @@
 """SQLAlchemy models."""
 
 from .base import Base
-from .auth import User, APIKey
-from .system_settings import SystemSettings
+from .auth import User, APIKey, DBSystemSettings
 from .usage import UsageRecord
 
 __all__ = [
     "Base",
     "User",
     "APIKey",
-    "SystemSettings",
+    "DBSystemSettings",
     "UsageRecord",
 ]
