@@ -7,26 +7,58 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.109.0",  # API framework
-    "uvicorn>=0.27.0",  # ASGI server
-    "pydantic>=2.6.0",  # Data validation
-    "pydantic-settings>=2.1.0",  # Settings management
-    "sqlalchemy>=2.0.25",  # Database ORM
-    "alembic>=1.13.0",  # Database migrations
-    "psycopg2-binary>=2.9.9",  # PostgreSQL adapter
-    "python-jose[cryptography]>=3.3.0",  # JWT handling
-    "passlib[bcrypt]>=1.7.4",  # Password hashing
-    "python-multipart>=0.0.9",  # Form data handling
-    "httpx>=0.26.0",  # HTTP client for testing
-    "requests>=2.31.0",  # HTTP client for scripts and tools
+    # @url: https://fastapi.tiangolo.com/
+    "fastapi>=0.109.0",
+    # @url: https://www.uvicorn.org/
+    "uvicorn>=0.27.0",
+    # @url: https://www.sqlalchemy.org/
+    "sqlalchemy>=2.0.25",
+    # @url: https://alembic.sqlalchemy.org/
+    "alembic>=1.13.0",
+    # @url: https://www.psycopg.org/
+    "psycopg2-binary>=2.9.9",
+    # @url: https://python-jose.readthedocs.io/
+    "python-jose[cryptography]>=3.3.0",
+    # @url: https://passlib.readthedocs.io/
+    "passlib[bcrypt]>=1.7.4",
+    # @url: https://python-bcrypt.readthedocs.io/
+    "bcrypt>=3.2.2",
+    # @url: https://python-multipart.readthedocs.io/
+    "python-multipart>=0.0.9",
+    # @url: https://pydantic-docs.helpmanual.io/
+    "pydantic[email]>=2.6.0",
+    # @url: https://pydantic-settings.helpmanual.io/
+    "pydantic-settings>=2.1.0",
+    # @url: https://python-dotenv.readthedocs.io/
+    "python-dotenv>=1.0.0",
+    # @url: https://www.python-httpx.org/
+    "httpx>=0.26.0",
+    # @url: https://requests.readthedocs.io/
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.0.1",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "coverage>=7.4.1",
+    "locust>=2.24.0",
+    # Linting and formatting
+    "black>=23.9.0",
+    "ruff>=0.1.14",
+    "mypy>=1.8.0",
+    # Security
+    "trufflehog3>=3.0.3",
+    "detect-secrets>=1.4.0",
+    # Development tools
+    "pre-commit>=3.5.0",
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["api", "orchestrator"]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 88
@@ -38,30 +70,4 @@ python_files = ["test_*.py"]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.23.0",  # For async test support
-    "black>=23.7.0",
-    "ruff>=0.1.14",
-    "mypy>=1.8.0",
-    "locust>=2.24.0",  # Load testing
-    "trufflehog3>=3.0.3",  # Secret scanning (using trufflehog3 package instead)
-    "detect-secrets>=1.4.0",  # Additional secret detection
-]
-
-test = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.23.0",
-    "httpx>=0.26.0",
-    "locust>=2.24.0",  # Load testing
-]
-
-monitoring = [
-    "sentry-sdk>=1.40.0",  # Error tracking
-    "prometheus-client>=0.19.0",  # Metrics collection
 ] 

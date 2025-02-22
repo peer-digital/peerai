@@ -75,29 +75,24 @@ git clone https://github.com/peerdigital/peerai.git
 cd peerai
 ```
 
-2. **Create and activate a virtual environment**
+2. **Install dependencies**
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Unix/macOS
-```
-
-3. **Install dependencies**
-```bash
+# Install all dependencies including development tools
 pip install -e ".[dev]"
 ```
 
-4. **Set up environment variables**
+3. **Set up environment variables**
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-5. **Initialize the database**
+4. **Initialize the database**
 ```bash
 alembic upgrade head
 ```
 
-6. **Start the development server**
+5. **Start the development server**
 ```bash
 uvicorn api.main:app --reload
 ```

@@ -8,16 +8,16 @@ from sqlalchemy import func, desc, case
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from ..database import get_db
-from ..models import User, APIKey, UsageRecord
-from ..core.security import get_current_user
-from ..schemas.admin import SystemSettings, UserResponse
-from ..services.analytics import (
+from database import get_db
+from models import User, APIKey, UsageRecord
+from core.security import get_current_user
+from schemas.admin import SystemSettings, UserResponse
+from services.analytics import (
     get_analytics_data,
     get_user_stats,
     export_analytics_data,
 )
-from backend.models.settings import DBSystemSettings
+from models.settings import DBSystemSettings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

@@ -11,7 +11,7 @@ import requests
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from env file
 load_dotenv()
 
 

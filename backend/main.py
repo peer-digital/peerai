@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import settings
+from config import settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -35,7 +35,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from .routes import inference, auth, admin
+from routes import inference, auth, admin
 
 app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)

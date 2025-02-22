@@ -7,10 +7,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import secrets
 
-from ..models.auth import User, APIKey
-from ..database import get_db
-from ..config import settings
-from ..core.security import verify_password, get_password_hash
+from models.auth import User, APIKey
+from database import get_db
+from config import settings
+from core.security import verify_password, get_password_hash
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 

@@ -19,9 +19,9 @@ import random
 import httpx
 import logging
 
-from ..models import APIKey, UsageRecord
-from ..database import get_db
-from ..config import settings
+from models import APIKey, UsageRecord
+from database import get_db
+from config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)

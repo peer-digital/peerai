@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
-from ..models.auth import User, APIKey
-from ..models.usage import UsageRecord
+from models.auth import User, APIKey
+from models.usage import UsageRecord
 
 
 async def get_analytics_data(
