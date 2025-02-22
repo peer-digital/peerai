@@ -31,7 +31,7 @@ async def get_analytics_data(
     # Get usage records for the period
     records = (
         db.query(UsageRecord)
-        .filter(UsageRecord.timestamp >= start_date, UsageRecord.timestamp <= end_date)
+        .filter(UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date)
         .all()
     )
 
@@ -85,7 +85,7 @@ async def get_user_stats(db: Session) -> Dict:
     active_users = (
         db.query(UsageRecord.user_id)
         .distinct()
-        .filter(UsageRecord.timestamp >= seven_days_ago)
+        .filter(UsageRecord.created_at >= seven_days_ago)
         .count()
     )
 
@@ -128,8 +128,8 @@ async def export_analytics_data(
 
     records = (
         db.query(UsageRecord)
-        .filter(UsageRecord.timestamp >= start_date, UsageRecord.timestamp <= end_date)
-        .order_by(UsageRecord.timestamp)
+        .filter(UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date)
+        .order_by(UsageRecord.created_at)
         .all()
     )
 
@@ -137,7 +137,7 @@ async def export_analytics_data(
     for record in records:
         data.append(
             {
-                "timestamp": record.timestamp.isoformat(),
+                "timestamp": record.created_at.isoformat(),
                 "user_id": record.user_id,
                 "model": record.model,
                 "endpoint": record.endpoint,
