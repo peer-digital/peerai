@@ -18,6 +18,9 @@ class Base(DeclarativeBase):
     """Base class for all database models"""
     metadata = metadata
 
+    # Allow table redefinition
+    __table_args__ = {'extend_existing': True}
+
     def dict(self) -> dict[str, Any]:
         """Convert model instance to dictionary"""
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
