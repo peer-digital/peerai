@@ -150,7 +150,7 @@ async def check_rate_limits(api_key: APIKey, db: Session):
     today = datetime.utcnow().date()
     daily_usage = (
         db.query(UsageRecord)
-        .filter(UsageRecord.api_key_id == api_key.id, UsageRecord.created_at >= today)
+        .filter(UsageRecord.api_key_id == api_key.id, UsageRecord.timestamp >= today)
         .count()
     )
 
@@ -163,7 +163,7 @@ async def check_rate_limits(api_key: APIKey, db: Session):
         db.query(UsageRecord)
         .filter(
             UsageRecord.api_key_id == api_key.id,
-            UsageRecord.created_at >= one_minute_ago,
+            UsageRecord.timestamp >= one_minute_ago,
         )
         .count()
     )
