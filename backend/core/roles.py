@@ -15,6 +15,7 @@ class Role(str, Enum):
 class Permission(str, Enum):
     # Documentation access
     VIEW_DOCS = "view_docs"
+    VIEW_API_DOCS = "view_api_docs"  # Permission to view API documentation
     
     # User-level permissions
     VIEW_OWN_USAGE = "view_own_usage"
@@ -46,6 +47,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
     },
     Role.USER_ADMIN: {
         Permission.VIEW_DOCS,
+        Permission.VIEW_API_DOCS,  # User admins can view API docs
         Permission.VIEW_OWN_USAGE,
         Permission.USE_API,
         Permission.MANAGE_OWN_ACCOUNT,
@@ -55,6 +57,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
     },
     Role.SUPER_ADMIN: {
         Permission.VIEW_DOCS,
+        Permission.VIEW_API_DOCS,  # Super admins can view API docs
         Permission.VIEW_OWN_USAGE,
         Permission.USE_API,
         Permission.MANAGE_OWN_ACCOUNT,

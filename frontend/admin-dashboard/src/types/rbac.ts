@@ -10,6 +10,7 @@ export enum Role {
 export enum Permission {
     // Documentation access
     VIEW_DOCS = 'view_docs',
+    VIEW_API_DOCS = 'view_api_docs',  // Permission to view API documentation
     
     // User-level permissions
     VIEW_OWN_USAGE = 'view_own_usage',

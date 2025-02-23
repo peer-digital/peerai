@@ -23,6 +23,8 @@ import {
 } from '@mui/material';
 import { RedocStandalone } from 'redoc';
 import { styled } from '@mui/material/styles';
+import { useAuth } from '../contexts/AuthContext';
+import { Permission, hasPermission } from '../types/rbac';
 
 // @url: /api/v1/openapi.json - FastAPI OpenAPI specification endpoint
 // @note: This path matches the FastAPI configuration in backend/main.py
@@ -427,12 +429,17 @@ const DeveloperDocs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchOpenApiSpec = async () => {
       try {
         setLoading(true);
-        const response = await fetch(API_DOCS_URL);
+        const response = await fetch(API_DOCS_URL, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        });
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -460,14 +467,18 @@ const DeveloperDocs: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchOpenApiSpec();
-  }, []);
+
+    // Only fetch OpenAPI spec if user has permission and API Reference tab is selected
+    if (user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS) && tabValue === 4) {
+      fetchOpenApiSpec();
+    }
+  }, [tabValue, user?.role]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  if (loading) {
+  if (loading && tabValue === 4) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
         <CircularProgress />
@@ -475,15 +486,22 @@ const DeveloperDocs: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box p={3}>
-        <Typography color="error" variant="h6">
-          {error}
-        </Typography>
-      </Box>
-    );
-  }
+  // Get available tabs based on user permissions
+  const getTabs = () => {
+    const tabs = [
+      { label: "Overview", index: 0 },
+      { label: "Quick Start", index: 1 },
+      { label: "Endpoints", index: 2 },
+      { label: "Security", index: 3 },
+    ];
+
+    // Only show API Reference tab if user has permission
+    if (user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS)) {
+      tabs.push({ label: "API Reference", index: 4 });
+    }
+
+    return tabs;
+  };
 
   return (
     <Container maxWidth={false}>
@@ -494,11 +512,9 @@ const DeveloperDocs: React.FC = () => {
             onChange={handleTabChange}
             aria-label="documentation sections"
           >
-            <Tab label="Overview" />
-            <Tab label="Quick Start" />
-            <Tab label="Endpoints" />
-            <Tab label="Security" />
-            <Tab label="API Reference" />
+            {getTabs().map((tab) => (
+              <Tab key={tab.index} label={tab.label} />
+            ))}
           </Tabs>
         </Box>
 
@@ -514,9 +530,19 @@ const DeveloperDocs: React.FC = () => {
         <TabPanel value={tabValue} index={3}>
           <SecurityContent />
         </TabPanel>
-        <TabPanel value={tabValue} index={4}>
-          {spec && <APIReferenceContent spec={spec} />}
-        </TabPanel>
+        {user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS) && (
+          <TabPanel value={tabValue} index={4}>
+            {error ? (
+              <Box p={3}>
+                <Alert severity="error">
+                  {error}
+                </Alert>
+              </Box>
+            ) : (
+              spec && <APIReferenceContent spec={spec} />
+            )}
+          </TabPanel>
+        )}
       </Box>
     </Container>
   );
