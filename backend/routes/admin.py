@@ -18,6 +18,7 @@ from services.analytics import (
     get_user_stats,
     export_analytics_data,
 )
+from core.roles import Permission, has_permission
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -216,7 +217,7 @@ async def get_settings(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get system settings"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_SETTINGS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get settings from database, create if not exists
@@ -243,7 +244,7 @@ async def update_settings(
     db: Session = Depends(get_db),
 ):
     """Update system settings"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.EDIT_SETTINGS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get settings from database, create if not exists
@@ -258,6 +259,7 @@ async def update_settings(
     db_settings.models = settings.models.dict()
     db_settings.monitoring = settings.monitoring.dict()
     db_settings.beta_features = settings.betaFeatures.dict()
+    db_settings.updated_by = current_user.id
 
     db.commit()
     db.refresh(db_settings)
@@ -272,7 +274,7 @@ async def partial_update_settings(
     db: Session = Depends(get_db),
 ):
     """Partially update system settings"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.EDIT_SETTINGS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get settings from database
@@ -302,6 +304,7 @@ async def partial_update_settings(
     db_settings.models = current_settings.models.dict()
     db_settings.monitoring = current_settings.monitoring.dict()
     db_settings.beta_features = current_settings.betaFeatures.dict()
+    db_settings.updated_by = current_user.id
 
     db.commit()
     db.refresh(db_settings)

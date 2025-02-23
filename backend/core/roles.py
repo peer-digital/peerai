@@ -30,6 +30,8 @@ class Permission(str, Enum):
     VIEW_ALL_USAGE = "view_all_usage"
     MANAGE_ALL_TEAMS = "manage_all_teams"
     SYSTEM_CONFIGURATION = "system_configuration"
+    VIEW_SETTINGS = "view_settings"
+    EDIT_SETTINGS = "edit_settings"
 
 # Define which permissions each role has
 ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
@@ -62,6 +64,8 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.VIEW_ALL_USAGE,
         Permission.MANAGE_ALL_TEAMS,
         Permission.SYSTEM_CONFIGURATION,
+        Permission.VIEW_SETTINGS,
+        Permission.EDIT_SETTINGS,
     }
 }
 

@@ -115,7 +115,13 @@ class AuthService {
         full_name?: string;
       }>('/api/v1/auth/validate');
 
-      console.log('Backend response:', response.data); // Debug log
+      console.log('Token validation response:', {
+        rawData: response.data,
+        role: response.data.role,
+        roleType: typeof response.data.role,
+        roleMapping: ROLE_MAPPING,
+        mappedRole: ROLE_MAPPING[response.data.role.toLowerCase() as keyof typeof ROLE_MAPPING]
+      });
 
       // Ensure we have the required fields
       if (!response.data?.email || !response.data?.role) {

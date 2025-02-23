@@ -36,8 +36,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// @important: This should come from your auth context/state management
-const userRole: Role = Role.USER_ADMIN; // Example role, replace with actual user role
+// Remove hardcoded role
+// const userRole: Role = Role.USER_ADMIN; // Example role, replace with actual user role
 
 function App() {
   return (
@@ -65,12 +65,12 @@ function App() {
                   }
                 >
                   <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<PermissionGuard userRole={userRole} requiredPermissions={[Permission.VIEW_OWN_USAGE]}><Dashboard /></PermissionGuard>} />
-                  <Route path="/teams" element={<PermissionGuard userRole={userRole} requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><TeamManagement /></PermissionGuard>} />
-                  <Route path="/users" element={<PermissionGuard userRole={userRole} requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><UserManagement /></PermissionGuard>} />
+                  <Route path="/dashboard" element={<PermissionGuard requiredPermissions={[Permission.VIEW_OWN_USAGE]}><Dashboard /></PermissionGuard>} />
+                  <Route path="/teams" element={<PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><TeamManagement /></PermissionGuard>} />
+                  <Route path="/users" element={<PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><UserManagement /></PermissionGuard>} />
                   <Route path="/api-keys" element={<ApiKeys />} />
                   <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/settings" element={<PermissionGuard userRole={userRole} requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}><Settings /></PermissionGuard>} />
+                  <Route path="/settings" element={<PermissionGuard requiredPermissions={[Permission.VIEW_SETTINGS]}><Settings /></PermissionGuard>} />
                   <Route path="/playground" element={<Playground />} />
                   <Route path="/docs" element={<DeveloperDocs />} />
                 </Route>
