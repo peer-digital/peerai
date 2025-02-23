@@ -7,7 +7,6 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from config import settings
 from models.base import Base
 
 # this is the Alembic Config object, which provides
@@ -24,7 +23,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Get environment-specific database URL
-DATABASE_URL = settings.get_database_url()
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/peerai")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

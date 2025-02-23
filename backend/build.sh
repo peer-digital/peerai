@@ -11,8 +11,12 @@ echo "Running database migrations..."
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 alembic upgrade head
 
-# Create admin user
-echo "Creating admin user..."
+# Create admin and test users
+echo "Creating admin and test users..."
 python scripts/create_admin.py
+if [ "$ENVIRONMENT" = "development" ]; then
+    echo "Creating test users for development..."
+    python scripts/create_test_users.py
+fi
 
 echo "Build completed successfully!" 

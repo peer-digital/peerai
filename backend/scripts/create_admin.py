@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 
 from config import settings
 from models.auth import User
+from core.roles import Role
 
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -23,24 +24,24 @@ def create_admin_user():
     db = SessionLocal()
 
     try:
-        # Check if admin user exists
-        admin = db.query(User).filter(User.email == "admin@peerai.se").first()
+        # Check if super admin user exists
+        admin = db.query(User).filter(User.email == "super.admin@peerai.se").first()
         if not admin:
-            # Create admin user
+            # Create super admin user
             admin = User(
-                email="admin@peerai.se",
-                hashed_password=pwd_context.hash("admin123"),  # Default password
-                full_name="Admin User",
+                email="super.admin@peerai.se",
+                hashed_password=pwd_context.hash("superadmin123"),  # Default password
+                full_name="Super Admin",
                 is_active=True,
-                is_superuser=True
+                role=Role.SUPER_ADMIN
             )
             db.add(admin)
             db.commit()
-            print("Admin user created successfully!")
+            print("Super admin user created successfully!")
         else:
-            print("Admin user already exists.")
+            print("Super admin user already exists.")
     except Exception as e:
-        print(f"Error creating admin user: {e}")
+        print(f"Error creating super admin user: {e}")
         db.rollback()
     finally:
         db.close()

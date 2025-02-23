@@ -1,8 +1,11 @@
+import { Role } from './rbac';
+
 export interface User {
   id: string;
   email: string;
-  name: string;
-  role: 'admin' | 'user';
+  is_active: boolean;
+  role: Role;
+  name?: string;
 }
 
 export interface AuthResponse {

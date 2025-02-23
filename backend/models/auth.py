@@ -1,7 +1,28 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON, func
+from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON, func, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from .base import Base
+import sys
+import os
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.roles import Role
+
+
+class Team(Base):
+    """Team model for organization/customer accounts"""
+    
+    __tablename__ = "teams"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by_id = Column(Integer, ForeignKey("users.id"))
+    
+    # Relationships
+    members = relationship("User", back_populates="team", foreign_keys="[User.team_id]")
+    created_by = relationship("User", foreign_keys=[created_by_id])
 
 
 class User(Base):
@@ -14,7 +35,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
+    role = Column(SQLEnum(Role), default=Role.USER, nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -22,6 +44,12 @@ class User(Base):
         "APIKey", back_populates="user", cascade="all, delete-orphan"
     )
     usage_records = relationship("UsageRecord", back_populates="user")
+    team = relationship("Team", back_populates="members", foreign_keys=[team_id])
+
+    @property
+    def is_superuser(self):
+        """Maintain backwards compatibility with existing is_superuser field"""
+        return self.role == Role.SUPER_ADMIN
 
 
 class APIKey(Base):

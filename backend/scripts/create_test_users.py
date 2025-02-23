@@ -11,64 +11,69 @@ sys.path.append(
 )
 
 from backend.database import engine
-from backend.models.auth import User
+from backend.models.auth import User, APIKey, UsageRecord
 from backend.models.base import Base
 from backend.core.security import get_password_hash
+from backend.core.roles import Role
 from sqlalchemy.orm import Session
 
 # Test users configuration
 TEST_USERS = [
     {
-        "email": "super.admin@peerai.se",
-        "password": "admin123",
-        "full_name": "Super Admin",
-        "is_superuser": True,
-        "is_active": True,
-    },
-    {
-        "email": "manager@peerai.se",
-        "password": "testpass123",
-        "full_name": "Test Manager",
-        "is_superuser": False,
+        "email": "user@peerai.se",
+        "password": "user123",
+        "full_name": "Regular User",
+        "role": Role.USER,
         "is_active": True,
     },
     {
         "email": "admin@peerai.se",
         "password": "admin123",
-        "full_name": "Test Admin",
-        "is_superuser": True,
+        "full_name": "Team Admin",
+        "role": Role.USER_ADMIN,
+        "is_active": True,
+    },
+    {
+        "email": "super.admin@peerai.se",
+        "password": "superadmin123",
+        "full_name": "Super Admin",
+        "role": Role.SUPER_ADMIN,
         "is_active": True,
     },
 ]
 
 
 def create_test_users(db: Session):
-    """Create test users in the database."""
+    """Create test users in the database if they don't exist."""
     created_count = 0
     skipped_count = 0
 
-    # First, delete all existing users
-    db.query(User).delete()
-    db.commit()
-    print("Deleted all existing users")
-
     for user_data in TEST_USERS:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == user_data["email"]).first()
+        
+        if existing_user:
+            print(f"Skipped existing user: {user_data['email']}")
+            skipped_count += 1
+            continue
+            
         # Create new user
         hashed_password = get_password_hash(user_data["password"])
         user = User(
             email=user_data["email"],
             hashed_password=hashed_password,
             full_name=user_data["full_name"],
-            is_superuser=user_data["is_superuser"],
+            role=user_data["role"],
             is_active=user_data["is_active"],
         )
         db.add(user)
-        print(f"Created user: {user_data['email']}")
+        print(f"Created user: {user_data['email']} with role: {user_data['role']}")
         created_count += 1
 
     db.commit()
     print("\nSummary:")
     print(f"- Created: {created_count} users")
+    print(f"- Skipped: {skipped_count} existing users")
     print(f"- Total: {len(TEST_USERS)} users")
 
 

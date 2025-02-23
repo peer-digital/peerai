@@ -1,1 +1,1 @@
-"""Core functionality for the backend."""
+"""Core package initialization."""

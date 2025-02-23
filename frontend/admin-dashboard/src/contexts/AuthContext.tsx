@@ -17,7 +17,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => authService.getUser());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +27,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (authService.getToken()) {
           // Validate the token and get user data
           const userData = await authService.validateToken();
+          console.log('Validated user data:', userData); // Debug log
           setUser(userData);
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
+        // Clear invalid auth state
+        authService.logout();
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -42,8 +46,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials) => {
     try {
       const { user } = await authService.login(credentials);
+      console.log('Logged in user:', user); // Debug log
       setUser(user);
     } catch (error) {
+      console.error('Login failed:', error);
       throw error;
     }
   };
@@ -62,7 +68,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   if (isLoading) {
-    // You might want to show a loading spinner here
     return <div>Loading...</div>;
   }
 

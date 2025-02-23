@@ -59,6 +59,46 @@ The frontend is built with React and is located in the `frontend/` directory. It
 - ⚡ **High Performance**: Optimized inference with failover support
 - 📊 **Full Monitoring**: Comprehensive admin and customer dashboards
 
+## Role-Based Access Control (RBAC)
+
+The platform implements a comprehensive role-based access control system with the following roles:
+
+### Roles & Permissions
+
+1. **Guest** (Not signed in)
+   - Can access public documentation
+   - No access to authenticated API endpoints
+   - No portal or account management features
+
+2. **User**
+   - Access personal usage & account details
+   - Use the PeerAI API with their own API keys
+   - View personal usage logs and tokens consumed
+
+3. **User Admin** (Customer Admin)
+   - Everything a User can do
+   - Manage team-level billing details
+   - Manage team memberships (invite/remove users)
+   - View team usage statistics
+   - Cannot manage other teams or create super admins
+
+4. **Super Admin** (Peer Digital Admin)
+   - Full system access
+   - Manage any team or user
+   - Access system-wide analytics and configuration
+   - Reserved for Peer Digital staff
+
+### API Endpoints
+
+RBAC-related endpoints are available under `/api/v1/rbac/`:
+
+- `POST /teams` - Create a new team (User Admin+)
+- `GET /teams/{team_id}` - Get team details (Team members)
+- `PUT /users/{user_id}/role` - Update user role (User Admin+)
+- `POST /teams/{team_id}/members/{user_id}` - Add user to team (User Admin+)
+- `DELETE /teams/members/{user_id}` - Remove user from team (User Admin+)
+- `GET /teams/{team_id}/members` - List team members (User Admin+)
+
 ## Quick Start
 
 ### Prerequisites

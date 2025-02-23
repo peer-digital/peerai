@@ -31,8 +31,55 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Permission, hasAnyPermission, ROLE_PERMISSIONS } from '../types/rbac';
 
 const drawerWidth = 240;
+
+// @important: Menu items with required permissions
+const menuItems = [
+  { 
+    text: 'Dashboard', 
+    icon: <DashboardIcon />, 
+    path: '/dashboard',
+    requiredPermissions: [Permission.VIEW_OWN_USAGE, Permission.VIEW_ALL_USAGE]
+  },
+  { 
+    text: 'Users', 
+    icon: <PeopleIcon />, 
+    path: '/users',
+    requiredPermissions: [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]
+  },
+  { 
+    text: 'API Keys', 
+    icon: <ApiKeyIcon />, 
+    path: '/api-keys',
+    requiredPermissions: [Permission.USE_API]
+  },
+  { 
+    text: 'Analytics', 
+    icon: <AssessmentIcon />, 
+    path: '/analytics',
+    requiredPermissions: [Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]
+  },
+  { 
+    text: 'Playground', 
+    icon: <CodeIcon />, 
+    path: '/playground',
+    requiredPermissions: [Permission.USE_API]
+  },
+  { 
+    text: 'Settings', 
+    icon: <SettingsIcon />, 
+    path: '/settings',
+    requiredPermissions: [Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION]
+  },
+  { 
+    text: 'Developer Docs', 
+    icon: <MenuBookIcon />, 
+    path: '/docs',
+    requiredPermissions: [Permission.VIEW_DOCS]
+  },
+];
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   open?: boolean;
@@ -78,16 +125,6 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   justifyContent: 'flex-end',
 }));
 
-const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Users', icon: <PeopleIcon />, path: '/users' },
-  { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
-  { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
-  { text: 'Playground', icon: <CodeIcon />, path: '/playground' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Developer Docs', icon: <MenuBookIcon />, path: '/docs' },
-];
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -98,6 +135,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+
+  // Debug logging
+  console.log('Current user:', user);
+  console.log('User role:', user?.role);
+  console.log('Menu items:', menuItems);
+  console.log('Role permissions:', user?.role ? ROLE_PERMISSIONS[user.role] : 'No role');
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -121,6 +164,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
+  // Filter visible menu items based on user permissions
+  const visibleMenuItems = React.useMemo(() => {
+    if (!user?.role) {
+      console.log('No user role found - no menu items visible');
+      return [];
+    }
+
+    return menuItems.filter(item => {
+      const hasAccess = hasAnyPermission(user.role, item.requiredPermissions);
+      console.log(`Menu item "${item.text}":`, {
+        role: user.role,
+        requiredPermissions: item.requiredPermissions,
+        rolePermissions: ROLE_PERMISSIONS[user.role],
+        hasAccess
+      });
+      return hasAccess;
+    });
+  }, [user?.role]);
+
   return (
     <Box sx={{ display: 'flex' }}>
       <StyledAppBar position="fixed" open={open}>
@@ -143,9 +205,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             sx={{ ml: 2 }}
             data-testid="user-menu"
           >
-            {user?.name ? (
+            {user?.name || user?.email ? (
               <Avatar sx={{ width: 32, height: 32 }}>
-                {user.name.charAt(0).toUpperCase()}
+                {(user.name || user.email).charAt(0).toUpperCase()}
               </Avatar>
             ) : (
               <AccountCircleIcon />
@@ -187,7 +249,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
                 selected={location.pathname === item.path}

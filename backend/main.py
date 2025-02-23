@@ -49,11 +49,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from routes import inference, auth, admin
+from routes import inference, auth, admin, rbac
 
 app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 
 # TODO: Admin router is under development and will be enabled in a future PR
 # Features planned:

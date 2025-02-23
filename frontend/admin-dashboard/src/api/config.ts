@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 // @important: API base URL configuration
 // In development, we use the Vite proxy which is configured to localhost:8000
 // In production, this will be overridden by VITE_API_BASE_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000' : (import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com');
 
 // Create axios instance with default config
 const api = axios.create({
@@ -37,11 +37,6 @@ api.interceptors.response.use(
     if (error.response) {
       // Handle specific error cases
       switch (error.response.status) {
-        case 401:
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('access_token');
-          window.location.href = '/login';
-          break;
         case 403:
           toast.error('You do not have permission to perform this action');
           break;
@@ -49,13 +44,12 @@ api.interceptors.response.use(
           toast.error('Rate limit exceeded. Please try again later.');
           break;
         default:
-          toast.error(error.response.data.detail || 'An error occurred');
+          if (error.response.status !== 401) { // Don't show error toast for auth errors
+            toast.error(error.response.data?.detail || 'An error occurred');
+          }
       }
     } else if (error.request) {
-      // Network error
       toast.error('Network error. Please check your connection.');
-    } else {
-      toast.error('An unexpected error occurred');
     }
     return Promise.reject(error);
   }

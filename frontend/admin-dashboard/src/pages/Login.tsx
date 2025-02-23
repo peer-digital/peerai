@@ -15,12 +15,13 @@ import {
 import { useForm } from 'react-hook-form';
 import { LoginCredentials } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { Role } from '../types/rbac';
 
 // Test users for development mode
 const TEST_USERS = [
-  { email: 'admin@peerai.se', password: 'admin123', role: 'Admin' },
-  { email: 'manager@peerai.se', password: 'manager123', role: 'Manager' },
-  { email: 'super.admin@peerai.se', password: 'superadmin123', role: 'Super Admin' },
+  { email: 'user@peerai.se', password: 'user123', role: Role.USER },
+  { email: 'admin@peerai.se', password: 'admin123', role: Role.USER_ADMIN },
+  { email: 'super.admin@peerai.se', password: 'superadmin123', role: Role.SUPER_ADMIN },
 ];
 
 const Login: React.FC = () => {

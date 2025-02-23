@@ -30,11 +30,10 @@ class Settings(BaseSettings):
 
     # @url: https://peerdigital.se
     # @important: CORS allowed origins - modify with caution
-    ALLOWED_ORIGINS_ENV: Optional[str] = Field(
-        default=None,
-        description="Override default allowed origins"
+    ALLOWED_ORIGINS: List[str] = Field(
+        default_factory=lambda: DEFAULT_ORIGINS.copy(),
+        description="CORS allowed origins"
     )
-    ALLOWED_ORIGINS: List[str] = DEFAULT_ORIGINS
 
     # @important: JWT settings for authentication
     # @url: https://jwt.io/
@@ -117,27 +116,6 @@ class Settings(BaseSettings):
         if v is None:
             return values.get("ENVIRONMENT", "development") == "development"
         return v
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-        # Handle ALLOWED_ORIGINS from environment
-        if self.ALLOWED_ORIGINS_ENV:
-            # Try parsing as JSON first
-            if self.ALLOWED_ORIGINS_ENV.startswith("["):
-                try:
-                    import json
-                    parsed = json.loads(self.ALLOWED_ORIGINS_ENV)
-                    if isinstance(parsed, list):
-                        self.ALLOWED_ORIGINS = [str(x) for x in parsed if x]
-                        return
-                except:
-                    pass
-            
-            # Fall back to comma-separated string
-            origins_list = [x.strip() for x in self.ALLOWED_ORIGINS_ENV.split(",") if x.strip()]
-            if origins_list:
-                self.ALLOWED_ORIGINS = origins_list
 
     def get_database_url(self) -> str:
         """Get environment-specific database URL."""

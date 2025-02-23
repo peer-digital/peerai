@@ -184,4 +184,10 @@ async def logout(current_user: User = Depends(get_current_user)):
 @router.get("/validate")
 async def validate_token(current_user: User = Depends(get_current_user)):
     """Validate the current user's token"""
-    return {"email": current_user.email, "is_active": current_user.is_active}
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "is_active": current_user.is_active,
+        "role": current_user.role,
+        "full_name": current_user.full_name
+    }

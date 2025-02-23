@@ -1,15 +1,30 @@
 import api from '../api/config';
 import { AuthResponse, LoginCredentials, User } from '../types/auth';
+import { Role } from '../types/rbac';
 
 // Storage keys
 const USER_DATA_KEY = 'user_data';
 const ACCESS_TOKEN_KEY = 'access_token';
 
+// @important: Role mapping between backend and frontend
+const ROLE_MAPPING = {
+  'guest': Role.GUEST,
+  'user': Role.USER,
+  'user_admin': Role.USER_ADMIN,
+  'super_admin': Role.SUPER_ADMIN
+} as const;
+
 class AuthService {
   private static instance: AuthService;
   private currentUser: User | null = null;
 
-  private constructor() {}
+  private constructor() {
+    // Try to restore user from storage on initialization
+    const storedUser = this.getUserFromStorage();
+    if (storedUser) {
+      this.currentUser = storedUser;
+    }
+  }
 
   static getInstance(): AuthService {
     if (!AuthService.instance) {
@@ -25,7 +40,19 @@ class AuthService {
       formData.append('username', credentials.email);
       formData.append('password', credentials.password);
 
-      const response = await api.post<{access_token: string, token_type: string}>(
+      console.log('Sending login request...'); // Debug log
+
+      const response = await api.post<{
+        access_token: string;
+        token_type: string;
+        user?: {
+          id: number;
+          email: string;
+          role: string;
+          is_active: boolean;
+          full_name?: string;
+        };
+      }>(
         '/api/v1/auth/login',
         formData,
         {
@@ -35,11 +62,27 @@ class AuthService {
         }
       );
 
+      console.log('Login response:', response.data); // Debug log
+
       // Store the access token
       localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
 
-      // Get user data from validation endpoint
-      const userData = await this.validateToken();
+      // If user data is included in login response, use it
+      let userData: User;
+      if (response.data.user) {
+        userData = {
+          id: response.data.user.id.toString(),
+          email: response.data.user.email,
+          is_active: response.data.user.is_active ?? true,
+          role: ROLE_MAPPING[response.data.user.role.toLowerCase() as keyof typeof ROLE_MAPPING] || Role.USER,
+          name: response.data.user.full_name
+        };
+      } else {
+        // Otherwise get user data from validation endpoint
+        userData = await this.validateToken();
+      }
+
+      console.log('Final user data:', userData); // Debug log
 
       // Store user data in memory and storage
       this.currentUser = userData;
@@ -50,6 +93,11 @@ class AuthService {
         user: userData
       };
     } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       if (error.response?.status === 401) {
         throw new Error('Incorrect email or password');
       }
@@ -59,22 +107,75 @@ class AuthService {
 
   async validateToken(): Promise<User> {
     try {
-      const response = await api.get<User>('/api/v1/auth/validate');
-      this.currentUser = response.data;
-      return response.data;
-    } catch (error) {
-      this.logout();
+      const response = await api.get<{
+        id: number;
+        email: string;
+        is_active: boolean;
+        role: string;
+        full_name?: string;
+      }>('/api/v1/auth/validate');
+
+      console.log('Backend response:', response.data); // Debug log
+
+      // Ensure we have the required fields
+      if (!response.data?.email || !response.data?.role) {
+        console.error('Missing required fields:', {
+          hasEmail: !!response.data?.email,
+          hasRole: !!response.data?.role,
+          data: response.data
+        });
+        // Clear invalid auth state without making additional API calls
+        this.clearAuthState();
+        throw new Error('Invalid user data received from server');
+      }
+
+      // Log the role before mapping
+      console.log('Role before mapping:', {
+        rawRole: response.data.role,
+        roleType: typeof response.data.role,
+        lowercaseRole: response.data.role.toLowerCase()
+      });
+
+      const userData: User = {
+        id: response.data.id?.toString() || '0',
+        email: response.data.email,
+        is_active: response.data.is_active ?? true,
+        role: ROLE_MAPPING[response.data.role.toLowerCase() as keyof typeof ROLE_MAPPING] || Role.USER,
+        name: response.data.full_name
+      };
+
+      console.log('Mapped user data:', userData); // Debug log
+      console.log('Role mapping:', {
+        received: response.data.role,
+        mapped: userData.role,
+        availableMappings: ROLE_MAPPING
+      });
+
+      this.currentUser = userData;
+      this.setUser(userData);
+      return userData;
+    } catch (error: any) {
+      console.error('Token validation error:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      }
+      // Clear invalid auth state without making additional API calls
+      this.clearAuthState();
       throw this.handleError(error);
     }
   }
 
   logout(): void {
-    this.currentUser = null;
-    localStorage.removeItem(USER_DATA_KEY);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    // Clear session cookie by calling logout endpoint
-    api.post('/api/v1/auth/logout').catch(() => {
-      // Ignore logout errors
+    // First clear local state
+    this.clearAuthState();
+    // Then attempt to clear server session
+    api.post('/api/v1/auth/logout').catch((error) => {
+      // Ignore 401 errors as they're expected if token is already invalid
+      if (error.response?.status !== 401) {
+        console.warn('Error during logout:', error);
+      }
     });
   }
 
@@ -87,12 +188,29 @@ class AuthService {
   }
 
   private getUserFromStorage(): User | null {
-    const userData = localStorage.getItem(USER_DATA_KEY);
-    return userData ? JSON.parse(userData) : null;
+    try {
+      const userData = localStorage.getItem(USER_DATA_KEY);
+      if (!userData) return null;
+      
+      const parsedUser = JSON.parse(userData);
+      // Map the role string to enum value
+      return {
+        ...parsedUser,
+        role: ROLE_MAPPING[parsedUser.role as keyof typeof ROLE_MAPPING] || Role.USER
+      };
+    } catch (error) {
+      console.error('Error parsing stored user data:', error);
+      return null;
+    }
   }
 
   private setUser(user: User): void {
-    localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+    // Store the role as a string for proper serialization
+    const userData = {
+      ...user,
+      role: user.role.toString()
+    };
+    localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
 
   isAuthenticated(): boolean {
@@ -100,11 +218,18 @@ class AuthService {
   }
 
   private handleError(error: any): Error {
-    if (error.response) {
-      const message = error.response.data?.detail || error.response.data?.message || 'Authentication failed';
-      return new Error(message);
+    console.error('Auth service error:', error);
+    if (error.response?.data?.detail) {
+      return new Error(error.response.data.detail);
     }
-    return error instanceof Error ? error : new Error('An unexpected error occurred');
+    return error;
+  }
+
+  // Helper method to clear auth state without making API calls
+  private clearAuthState(): void {
+    this.currentUser = null;
+    localStorage.removeItem(USER_DATA_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
   }
 }
 
