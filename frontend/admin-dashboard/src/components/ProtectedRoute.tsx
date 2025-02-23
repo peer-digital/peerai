@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Permission } from '../utils/rbac';
+import { Permission } from '../types/rbac';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPermission } from '../utils/rbac';
 
