@@ -27,6 +27,7 @@ import {
   Assessment as AssessmentIcon,
   Code as CodeIcon,
   AccountCircle as AccountCircleIcon,
+  MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -84,6 +85,7 @@ const menuItems = [
   { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
   { text: 'Playground', icon: <CodeIcon />, path: '/playground' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'Developer Docs', icon: <MenuBookIcon />, path: '/docs' },
 ];
 
 interface DashboardLayoutProps {

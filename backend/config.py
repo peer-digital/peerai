@@ -1,5 +1,6 @@
+"""Configuration module for the application."""
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, validator
 from typing import List, Optional
 import os
 from dotenv import load_dotenv
@@ -65,8 +66,8 @@ class Settings(BaseSettings):
         description="Current environment (development/staging/production)"
     )
     DEBUG: bool = Field(
-        default=None,
-        description="Debug mode"
+        default=False,
+        description="Debug mode - defaults to True in development, False in production"
     )
     MOCK_MODE: bool = Field(
         default=True,
@@ -110,10 +111,15 @@ class Settings(BaseSettings):
         "use_enum_values": True,
     }
 
+    @validator("DEBUG", pre=True)
+    def set_debug_based_on_environment(cls, v, values):
+        """Set debug mode based on environment if not explicitly set."""
+        if v is None:
+            return values.get("ENVIRONMENT", "development") == "development"
+        return v
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Set debug mode based on environment if not explicitly set
-        self.DEBUG = self.ENVIRONMENT == "development" if self.DEBUG is None else self.DEBUG
         
         # Handle ALLOWED_ORIGINS from environment
         if self.ALLOWED_ORIGINS_ENV:

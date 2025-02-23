@@ -18,6 +18,7 @@ const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Playground = React.lazy(() => import('./pages/Playground'));
+const DeveloperDocs = React.lazy(() => import('./pages/DeveloperDocs'));
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -57,6 +58,7 @@ function App() {
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/playground" element={<Playground />} />
+                  <Route path="/docs" element={<DeveloperDocs />} />
                 </Route>
               </Routes>
             </React.Suspense>
