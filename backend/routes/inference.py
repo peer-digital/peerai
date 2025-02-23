@@ -270,9 +270,12 @@ def record_usage(
         user_id=api_key.user_id,
         api_key_id=api_key.id,
         endpoint=endpoint,
+        model=response.model,
         tokens_used=response.usage.get("total_tokens", 0),
-        latency_ms=response.latency_ms,
+        latency_ms=float(response.latency_ms),
         status_code=status_code,
+        error=status_code >= 400,
+        error_type="api_error" if status_code >= 400 else None,
         error_message=error_message,
     )
     db.add(usage)
@@ -329,6 +332,19 @@ async def call_mistral(
     """Call Mistral's API as fallback"""
     try:
         logger.debug("Calling Mistral API endpoint")
+        
+        # Clean and validate URL
+        if not settings.EXTERNAL_LLM_URL:
+            raise ValueError("Mistral API URL is not configured")
+            
+        # Clean the URL - remove any potential spaces, newlines, or comments
+        request_url = settings.EXTERNAL_LLM_URL.split('#')[0].strip()
+        
+        if not request_url.startswith("https://"):
+            raise ValueError(f"Invalid Mistral API URL format: {request_url}")
+            
+        logger.debug("Raw URL from settings: '%s'", settings.EXTERNAL_LLM_URL)
+        logger.debug("Cleaned URL for request: '%s'", request_url)
 
         # Prepare request payload according to Mistral's API format
         payload = {
@@ -336,27 +352,24 @@ async def call_mistral(
             "messages": [
                 {
                     "role": "user",
-                    "content": "[REDACTED PROMPT]",
-                }  # Don't log actual prompt
+                    "content": request.prompt
+                }
             ],
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
-        logger.debug(
-            "Prepared Mistral API request with model: %s", settings.EXTERNAL_MODEL
-        )
+        
+        logger.debug("Making request to Mistral API with payload: %s", payload)
 
+        # Make the API call
         response = await client.post(
-            settings.EXTERNAL_LLM_URL,
+            request_url,
             headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
-            json={
-                "model": settings.EXTERNAL_MODEL,
-                "messages": [{"role": "user", "content": request.prompt}],
-                "temperature": request.temperature,
-                "max_tokens": request.max_tokens,
-            },
-            timeout=30.0,
+            json=payload,
+            timeout=30.0
         )
+        
+        logger.debug("Response status code: %d", response.status_code)
         response.raise_for_status()
         result = response.json()
 
@@ -370,6 +383,7 @@ async def call_mistral(
         )
     except httpx.HTTPError as e:
         logger.error("HTTP error when calling Mistral API: %s", str(e))
+        logger.error("Request URL that failed: %s", request_url)
         raise HTTPException(
             status_code=e.response.status_code if hasattr(e, "response") else 502,
             detail=f"Mistral API error: {str(e)}",

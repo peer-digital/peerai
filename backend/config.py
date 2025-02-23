@@ -1,35 +1,58 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from pydantic import Field
+from typing import List, Optional
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# @important: Default allowed origins - do not remove without security review
+DEFAULT_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://app.peerdigital.se",
+    "https://peerai-fe.onrender.com",
+    "https://peerai-be.onrender.com"
+]
 
 class Settings(BaseSettings):
     # @url: https://www.postgresql.org/
-    DATABASE_URL: str = "postgresql://user:password@localhost/peerai"
+    # @important: Database configuration - override with environment variables
+    DATABASE_URL: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/peerai",
+        description="Main database URL"
+    )
+    TEST_DATABASE_URL: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/peerai_test",
+        description="Test database URL"
+    )
 
     # @url: https://peerdigital.se
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://app.peerdigital.se",
-        "https://peerai-fe.onrender.com",  # Frontend on Render
-        "https://peerai-be.onrender.com",  # Backend on Render
-    ]
+    # @important: CORS allowed origins - modify with caution
+    ALLOWED_ORIGINS_ENV: Optional[str] = Field(
+        default=None,
+        description="Override default allowed origins"
+    )
+    ALLOWED_ORIGINS: List[str] = DEFAULT_ORIGINS
 
     # @important: JWT settings for authentication
     # @url: https://jwt.io/
-    JWT_SECRET_KEY: str = os.getenv(
-        "JWT_SECRET_KEY", "your-secret-key-for-development-only"
+    JWT_SECRET_KEY: str = Field(
+        default="development-only-key",
+        description="JWT secret key - MUST be overridden in production"
     )
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Rate limiting settings
-    RATE_LIMIT_MINUTE: int = 60
-    RATE_LIMIT_DAILY: int = 1000
+    RATE_LIMIT_MINUTE: int = Field(
+        default=60,
+        description="API requests per minute"
+    )
+    RATE_LIMIT_DAILY: int = Field(
+        default=1000,
+        description="API requests per day"
+    )
 
     # API settings
     API_V1_PREFIX: str = "/api/v1"
@@ -37,31 +60,83 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
 
     # @important: Environment settings
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    DEBUG: bool = ENVIRONMENT == "development"
-    MOCK_MODE: bool = os.getenv("MOCK_MODE", "true").lower() == "true"
-
-    # @important: Test database configuration
-    # @url: https://www.postgresql.org/
-    TEST_DATABASE_URL: str = os.getenv(
-        "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/peerai_test"
+    ENVIRONMENT: str = Field(
+        default="development",
+        description="Current environment (development/staging/production)"
+    )
+    DEBUG: bool = Field(
+        default=None,
+        description="Debug mode"
+    )
+    MOCK_MODE: bool = Field(
+        default=True,
+        description="Mock external services"
     )
 
     # LLM Configuration
-    # url: https://llm-api.bahnhof.se/v1/completions - do not change this comment
-    HOSTED_LLM_URL: str = ""
-    # Mistral API endpoint - do not change this comment
-    EXTERNAL_LLM_URL: str = "https://api.mistral.ai/v1/chat/completions"
-    HOSTED_LLM_API_KEY: str = ""
-    # Mistral API key - do not change this comment
-    EXTERNAL_LLM_API_KEY: str = "YOUR_MISTRAL_API_KEY"  # Load from environment
+    # @url: https://llm-api.bahnhof.se/v1/completions
+    HOSTED_LLM_URL: str = Field(
+        default="",
+        description="Hosted LLM API URL"
+    )
+    
+    # @url: https://mistral.ai/
+    # @important: Mistral API endpoint
+    EXTERNAL_LLM_URL: str = Field(
+        default="https://api.mistral.ai/v1/chat/completions",
+        description="External LLM API URL"
+    )
+    
+    HOSTED_LLM_API_KEY: str = Field(
+        default="",
+        description="Hosted LLM API key"
+    )
+    # @important: Mistral API key
+    EXTERNAL_LLM_API_KEY: str = Field(
+        default="",
+        description="External LLM API key - Required for production"
+    )
 
-    # Model Configuration
-    # Mistral's base model - do not change this comment
-    EXTERNAL_MODEL: str = "mistral-tiny"
+    # @important: Model Configuration
+    # @model: mistral-tiny
+    EXTERNAL_MODEL: str = Field(
+        default="mistral-tiny",
+        description="External LLM model name"
+    )
 
-    class Config:
-        case_sensitive = True
+    model_config = {
+        "case_sensitive": True,
+        "env_prefix": "",
+        "use_enum_values": True,
+    }
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Set debug mode based on environment if not explicitly set
+        self.DEBUG = self.ENVIRONMENT == "development" if self.DEBUG is None else self.DEBUG
+        
+        # Handle ALLOWED_ORIGINS from environment
+        if self.ALLOWED_ORIGINS_ENV:
+            # Try parsing as JSON first
+            if self.ALLOWED_ORIGINS_ENV.startswith("["):
+                try:
+                    import json
+                    parsed = json.loads(self.ALLOWED_ORIGINS_ENV)
+                    if isinstance(parsed, list):
+                        self.ALLOWED_ORIGINS = [str(x) for x in parsed if x]
+                        return
+                except:
+                    pass
+            
+            # Fall back to comma-separated string
+            origins_list = [x.strip() for x in self.ALLOWED_ORIGINS_ENV.split(",") if x.strip()]
+            if origins_list:
+                self.ALLOWED_ORIGINS = origins_list
+
+    def get_database_url(self) -> str:
+        """Get environment-specific database URL."""
+        if self.ENVIRONMENT == "test":
+            return self.TEST_DATABASE_URL
+        return self.DATABASE_URL
 
 settings = Settings()

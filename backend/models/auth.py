@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON
+from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON, func
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -59,7 +59,7 @@ class DBSystemSettings(Base):
         default={
             "requireSSL": True,
             "maxTokenLength": 4096,
-            "allowedOrigins": "http://localhost:3000, https://app.peerai.se",
+            "allowedOrigins": ["http://localhost:3000", "http://localhost:5173", "https://app.peerdigital.se"],
         },
     )
     models = Column(
@@ -82,5 +82,6 @@ class DBSystemSettings(Base):
             "audioModel": "whisper-1",
         },
     )
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    updated_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)

@@ -1,8 +1,8 @@
 """Admin schemas for request/response validation."""
 
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field, validator
 
 
 class RateLimitSettings(BaseModel):
@@ -17,14 +17,22 @@ class SecuritySettings(BaseModel):
     """Security settings."""
 
     maxTokenLength: int = Field(4096, ge=1)
-    allowedOrigins: List[str]
+    allowedOrigins: Union[str, List[str]]  # Can be either string or list
+
+    @validator("allowedOrigins")
+    def validate_allowed_origins(cls, v):
+        if isinstance(v, str):
+            # Convert comma-separated string to list
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+            return origins
+        return v
 
 
 class ModelSettings(BaseModel):
     """Model settings."""
 
     defaultModel: str = "claude-3-sonnet-20240229"  # @note: Model name - do not change
-    maxContextLength: int = Field(200000, ge=1)
+    maxContextLength: int = Field(100000, ge=1)
     temperature: float = Field(0.7, ge=0.0, le=1.0)
 
 
@@ -37,10 +45,12 @@ class MonitoringSettings(BaseModel):
 
 
 class BetaFeatures(BaseModel):
-    """Beta feature flags."""
+    """Beta feature settings."""
 
-    visionEnabled: bool = True
-    audioEnabled: bool = True
+    visionEnabled: bool = False
+    audioEnabled: bool = False
+    visionModel: str = "claude-3-opus-20240229"  # @note: Model name - do not change
+    audioModel: str = "whisper-1"  # @note: Model name - do not change
 
 
 class SystemSettings(BaseModel):
