@@ -12,7 +12,7 @@ from database import get_db
 from models.auth import User, APIKey, DBSystemSettings
 from models.usage import UsageRecord
 from core.security import get_current_user
-from schemas.admin import SystemSettings, UserResponse
+from schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures
 from services.analytics import (
     get_analytics_data,
     get_user_stats,
@@ -57,6 +57,16 @@ class AnalyticsResponse(BaseModel):
     tokens: List[int]
     success_rate: List[float]
     avg_latency: List[float]
+
+
+class SettingsUpdateResponse(BaseModel):
+    status: str
+    message: str
+    rateLimit: RateLimitSettings
+    security: SecuritySettings
+    models: ModelSettings
+    monitoring: MonitoringSettings
+    betaFeatures: BetaFeatures
 
 
 @router.get("/stats", response_model=UsageStats)
@@ -267,7 +277,7 @@ async def update_settings(
     return settings
 
 
-@router.patch("/settings", response_model=SystemSettings)
+@router.patch("/settings", response_model=SettingsUpdateResponse)
 async def partial_update_settings(
     settings: Dict,
     current_user: User = Depends(get_current_user),
@@ -296,20 +306,57 @@ async def partial_update_settings(
 
     for key, value in settings.items():
         if hasattr(current_settings, key):
-            setattr(current_settings, key, value)
+            current_value = getattr(current_settings, key)
+            if isinstance(value, dict) and isinstance(current_value, dict):
+                # For dictionary values, update only the provided keys
+                current_value.update(value)
+            else:
+                # For non-dictionary values, replace the entire value
+                setattr(current_settings, key, value)
 
     # Save updated settings
-    db_settings.rate_limit = current_settings.rateLimit.dict()
-    db_settings.security = current_settings.security.dict()
-    db_settings.models = current_settings.models.dict()
-    db_settings.monitoring = current_settings.monitoring.dict()
-    db_settings.beta_features = current_settings.betaFeatures.dict()
+    # Convert Pydantic models to dictionaries for database storage
+    # But preserve the original structure of the settings
+    if isinstance(current_settings.rateLimit, BaseModel):
+        db_settings.rate_limit = current_settings.rateLimit.dict()
+    else:
+        db_settings.rate_limit = current_settings.rateLimit
+        
+    if isinstance(current_settings.security, BaseModel):
+        db_settings.security = current_settings.security.dict()
+    else:
+        db_settings.security = current_settings.security
+        
+    if isinstance(current_settings.models, BaseModel):
+        db_settings.models = current_settings.models.dict()
+    else:
+        db_settings.models = current_settings.models
+        
+    if isinstance(current_settings.monitoring, BaseModel):
+        db_settings.monitoring = current_settings.monitoring.dict()
+    else:
+        db_settings.monitoring = current_settings.monitoring
+        
+    if isinstance(current_settings.betaFeatures, BaseModel):
+        db_settings.beta_features = current_settings.betaFeatures.dict()
+    else:
+        db_settings.beta_features = current_settings.betaFeatures
+        
     db_settings.updated_by = current_user.id
 
     db.commit()
     db.refresh(db_settings)
 
-    return current_settings
+    # Return a response with status and message fields
+    return {
+        "status": "success",
+        "message": "Settings updated successfully",
+        "rateLimit": current_settings.rateLimit,
+        "security": current_settings.security,
+        "models": current_settings.models,
+        "monitoring": current_settings.monitoring,
+        "betaFeatures": current_settings.betaFeatures,
+    }
 
 
 @router.get("/analytics/data")
