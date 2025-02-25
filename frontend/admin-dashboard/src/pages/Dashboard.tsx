@@ -141,10 +141,10 @@ const Dashboard: React.FC = () => {
   const { data: stats, isLoading, error } = useQuery<UsageStats>({
     queryKey: ['usage-stats', viewType],
     queryFn: async () => {
-      let endpoint = '/api/v1/usage/personal';
+      let endpoint = '/api/v1/admin/usage/personal';
       
       if (viewType === 'team') {
-        endpoint = '/api/v1/usage/team';
+        endpoint = '/api/v1/admin/usage/team';
       } else if (viewType === 'all') {
         endpoint = '/api/v1/admin/stats';
       }

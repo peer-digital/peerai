@@ -178,12 +178,12 @@ const Analytics: React.FC = () => {
   const { data, isLoading, error } = useQuery<AnalyticsData>({
     queryKey: ['analytics', viewType, timeRange, selectedTeam, selectedUser],
     queryFn: async () => {
-      let endpoint = '/api/v1/analytics/personal';
+      let endpoint = '/api/v1/admin/analytics/personal';
       const params = new URLSearchParams();
       params.append('timeRange', timeRange);
       
       if (viewType === 'team') {
-        endpoint = '/api/v1/analytics/team';
+        endpoint = '/api/v1/admin/analytics/team';
       } else if (viewType === 'all') {
         endpoint = '/api/v1/admin/analytics';
         

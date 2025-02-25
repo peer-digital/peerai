@@ -99,6 +99,8 @@ async def get_admin_stats(
             func.date(UsageRecord.created_at).label("date"),
             func.count(UsageRecord.id).label("requests"),
             func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.user_id)).label("users"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
         )
         .filter(UsageRecord.created_at >= seven_days_ago)
         .group_by(func.date(UsageRecord.created_at))
@@ -106,19 +108,84 @@ async def get_admin_stats(
         .all()
     )
 
+    # Calculate change percentages
+    prev_period_start = seven_days_ago - timedelta(days=7)
+    prev_period_stats = (
+        db.query(
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.user_id)).label("users"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= prev_period_start,
+            UsageRecord.created_at < seven_days_ago,
+        )
+        .first()
+    )
+
+    # Calculate change percentages
+    current_requests = usage_stats.total_requests or 0
+    current_tokens = usage_stats.total_tokens or 0
+    current_latency = usage_stats.avg_latency or 0
+    
+    prev_requests = prev_period_stats.requests or 0
+    prev_tokens = prev_period_stats.tokens or 0
+    prev_users = prev_period_stats.users or 0
+    prev_latency = prev_period_stats.latency or 0
+    
+    requests_change = ((current_requests - prev_requests) / prev_requests * 100) if prev_requests > 0 else 0
+    tokens_change = ((current_tokens - prev_tokens) / prev_tokens * 100) if prev_tokens > 0 else 0
+    users_change = ((active_users - prev_users) / prev_users * 100) if prev_users > 0 else 0
+    latency_change = ((current_latency - prev_latency) / prev_latency * 100) if prev_latency > 0 else 0
+
+    # Get model usage distribution
+    model_usage = (
+        db.query(
+            UsageRecord.model.label("model"),
+            func.count(UsageRecord.id).label("requests"),
+        )
+        .filter(UsageRecord.created_at >= seven_days_ago)
+        .group_by(UsageRecord.model)
+        .order_by(func.count(UsageRecord.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    # Calculate percentages for model usage
+    total_model_requests = sum(m.requests for m in model_usage)
+    model_usage_data = [
+        {
+            "model": m.model,
+            "requests": m.requests,
+            "percentage": (m.requests / total_model_requests * 100) if total_model_requests > 0 else 0,
+        }
+        for m in model_usage
+    ]
+
+    # Format daily stats
+    daily_stats_data = [
+        {
+            "date": stat.date.isoformat(),
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+            "users": stat.users,
+            "latency": float(stat.latency or 0),
+        }
+        for stat in daily_stats
+    ]
+
     return {
-        "totalRequests": usage_stats.total_requests or 0,
-        "totalTokens": usage_stats.total_tokens or 0,
-        "activeUsers": active_users or 0,
-        "averageLatency": float(usage_stats.avg_latency or 0),
-        "dailyStats": [
-            {
-                "date": stat.date.isoformat(),
-                "requests": stat.requests,
-                "tokens": stat.tokens,
-            }
-            for stat in daily_stats
-        ],
+        "totalRequests": current_requests,
+        "totalTokens": current_tokens,
+        "activeUsers": active_users,
+        "averageLatency": float(current_latency or 0),
+        "requestsChange": float(requests_change),
+        "tokensChange": float(tokens_change),
+        "usersChange": float(users_change),
+        "latencyChange": float(latency_change),
+        "dailyStats": daily_stats_data,
+        "modelUsage": model_usage_data,
     }
 
 
@@ -398,3 +465,453 @@ async def get_users_stats(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return get_user_stats(db)
+
+
+@router.get("/usage/personal", response_model=UsageStats)
+async def get_personal_usage(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Get personal usage statistics"""
+    # Get total requests and tokens for the current user
+    usage_stats = db.query(
+        func.count(UsageRecord.id).label("total_requests"),
+        func.sum(UsageRecord.tokens_used).label("total_tokens"),
+        func.avg(UsageRecord.latency_ms).label("avg_latency"),
+    ).filter(UsageRecord.user_id == current_user.id).first()
+
+    # Get daily stats for the last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    daily_stats = (
+        db.query(
+            func.date(UsageRecord.created_at).label("date"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.api_key_id)).label("users"),  # Using API keys instead of sessions
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= seven_days_ago,
+            UsageRecord.user_id == current_user.id
+        )
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
+        .all()
+    )
+
+    # Calculate change percentages
+    prev_period_start = seven_days_ago - timedelta(days=7)
+    prev_period_stats = (
+        db.query(
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.api_key_id)).label("users"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= prev_period_start,
+            UsageRecord.created_at < seven_days_ago,
+            UsageRecord.user_id == current_user.id
+        )
+        .first()
+    )
+
+    # Calculate change percentages
+    current_requests = usage_stats.total_requests or 0
+    current_tokens = usage_stats.total_tokens or 0
+    current_latency = usage_stats.avg_latency or 0
+    current_api_keys = db.query(func.count(func.distinct(UsageRecord.api_key_id))).filter(
+        UsageRecord.created_at >= seven_days_ago,
+        UsageRecord.user_id == current_user.id
+    ).scalar() or 0
+    
+    prev_requests = prev_period_stats.requests or 0
+    prev_tokens = prev_period_stats.tokens or 0
+    prev_api_keys = prev_period_stats.users or 0
+    prev_latency = prev_period_stats.latency or 0
+    
+    requests_change = ((current_requests - prev_requests) / prev_requests * 100) if prev_requests > 0 else 0
+    tokens_change = ((current_tokens - prev_tokens) / prev_tokens * 100) if prev_tokens > 0 else 0
+    api_keys_change = ((current_api_keys - prev_api_keys) / prev_api_keys * 100) if prev_api_keys > 0 else 0
+    latency_change = ((current_latency - prev_latency) / prev_latency * 100) if prev_latency > 0 else 0
+
+    # Get model usage distribution
+    model_usage = (
+        db.query(
+            UsageRecord.model.label("model"),
+            func.count(UsageRecord.id).label("requests"),
+        )
+        .filter(
+            UsageRecord.created_at >= seven_days_ago,
+            UsageRecord.user_id == current_user.id
+        )
+        .group_by(UsageRecord.model)
+        .order_by(func.count(UsageRecord.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    # Calculate percentages for model usage
+    total_model_requests = sum(m.requests for m in model_usage)
+    model_usage_data = [
+        {
+            "model": m.model,
+            "requests": m.requests,
+            "percentage": (m.requests / total_model_requests * 100) if total_model_requests > 0 else 0,
+        }
+        for m in model_usage
+    ]
+
+    # Format daily stats
+    daily_stats_data = [
+        {
+            "date": stat.date.isoformat(),
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+            "users": stat.users,
+            "latency": float(stat.latency or 0),
+        }
+        for stat in daily_stats
+    ]
+
+    return {
+        "totalRequests": current_requests,
+        "totalTokens": current_tokens,
+        "activeUsers": current_api_keys,  # Using API keys instead of sessions
+        "averageLatency": float(current_latency or 0),
+        "requestsChange": float(requests_change),
+        "tokensChange": float(tokens_change),
+        "usersChange": float(api_keys_change),
+        "latencyChange": float(latency_change),
+        "dailyStats": daily_stats_data,
+        "modelUsage": model_usage_data,
+    }
+
+@router.get("/usage/team", response_model=UsageStats)
+async def get_team_usage(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Get team usage statistics"""
+    if not has_permission(current_user.role, Permission.VIEW_TEAM_USAGE):
+        raise HTTPException(status_code=403, detail="Not authorized to view team usage")
+    
+    # Get users in the same team
+    team_users = db.query(User.id).filter(User.team_id == current_user.team_id).all()
+    team_user_ids = [user.id for user in team_users]
+    
+    # Get total requests and tokens for the team
+    usage_stats = db.query(
+        func.count(UsageRecord.id).label("total_requests"),
+        func.sum(UsageRecord.tokens_used).label("total_tokens"),
+        func.avg(UsageRecord.latency_ms).label("avg_latency"),
+    ).filter(UsageRecord.user_id.in_(team_user_ids)).first()
+
+    # Get active users (users with API requests in the last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    active_users = (
+        db.query(func.count(func.distinct(UsageRecord.user_id)))
+        .filter(
+            UsageRecord.created_at >= thirty_days_ago,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .scalar()
+    )
+
+    # Get daily stats for the last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    daily_stats = (
+        db.query(
+            func.date(UsageRecord.created_at).label("date"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.user_id)).label("users"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= seven_days_ago,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
+        .all()
+    )
+
+    # Calculate change percentages
+    prev_period_start = seven_days_ago - timedelta(days=7)
+    prev_period_stats = (
+        db.query(
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.count(func.distinct(UsageRecord.user_id)).label("users"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= prev_period_start,
+            UsageRecord.created_at < seven_days_ago,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .first()
+    )
+
+    # Calculate change percentages
+    current_requests = usage_stats.total_requests or 0
+    current_tokens = usage_stats.total_tokens or 0
+    current_latency = usage_stats.avg_latency or 0
+    
+    prev_requests = prev_period_stats.requests or 0
+    prev_tokens = prev_period_stats.tokens or 0
+    prev_users = prev_period_stats.users or 0
+    prev_latency = prev_period_stats.latency or 0
+    
+    requests_change = ((current_requests - prev_requests) / prev_requests * 100) if prev_requests > 0 else 0
+    tokens_change = ((current_tokens - prev_tokens) / prev_tokens * 100) if prev_tokens > 0 else 0
+    users_change = ((active_users - prev_users) / prev_users * 100) if prev_users > 0 else 0
+    latency_change = ((current_latency - prev_latency) / prev_latency * 100) if prev_latency > 0 else 0
+
+    # Get model usage distribution
+    model_usage = (
+        db.query(
+            UsageRecord.model.label("model"),
+            func.count(UsageRecord.id).label("requests"),
+        )
+        .filter(
+            UsageRecord.created_at >= seven_days_ago,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .group_by(UsageRecord.model)
+        .order_by(func.count(UsageRecord.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    # Calculate percentages for model usage
+    total_model_requests = sum(m.requests for m in model_usage)
+    model_usage_data = [
+        {
+            "model": m.model,
+            "requests": m.requests,
+            "percentage": (m.requests / total_model_requests * 100) if total_model_requests > 0 else 0,
+        }
+        for m in model_usage
+    ]
+
+    # Format daily stats
+    daily_stats_data = [
+        {
+            "date": stat.date.isoformat(),
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+            "users": stat.users,
+            "latency": float(stat.latency or 0),
+        }
+        for stat in daily_stats
+    ]
+
+    return {
+        "totalRequests": current_requests,
+        "totalTokens": current_tokens,
+        "activeUsers": active_users,
+        "averageLatency": float(current_latency or 0),
+        "requestsChange": float(requests_change),
+        "tokensChange": float(tokens_change),
+        "usersChange": float(users_change),
+        "latencyChange": float(latency_change),
+        "dailyStats": daily_stats_data,
+        "modelUsage": model_usage_data,
+    }
+
+@router.get("/analytics/personal")
+async def get_personal_analytics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    timeRange: str = Query("7d", regex="^(7d|30d|90d)$"),
+):
+    """Get personal analytics data"""
+    # Convert time range to days
+    days = int(timeRange[:-1])
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Get time series data
+    time_series = (
+        db.query(
+            func.date(UsageRecord.created_at).label("date"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id == current_user.id
+        )
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
+        .all()
+    )
+    
+    time_series_data = [
+        {
+            "date": stat.date.isoformat(),
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+            "latency": float(stat.latency or 0),
+        }
+        for stat in time_series
+    ]
+    
+    # Get model distribution
+    model_distribution = (
+        db.query(
+            UsageRecord.model.label("model"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id == current_user.id
+        )
+        .group_by(UsageRecord.model)
+        .order_by(func.count(UsageRecord.id).desc())
+        .all()
+    )
+    
+    model_distribution_data = [
+        {
+            "model": stat.model,
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+        }
+        for stat in model_distribution
+    ]
+    
+    # Get top endpoints
+    top_endpoints = (
+        db.query(
+            UsageRecord.endpoint.label("endpoint"),
+            func.count(UsageRecord.id).label("requests"),
+            func.avg(UsageRecord.latency_ms).label("avg_latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id == current_user.id
+        )
+        .group_by(UsageRecord.endpoint)
+        .order_by(func.count(UsageRecord.id).desc())
+        .limit(5)
+        .all()
+    )
+    
+    top_endpoints_data = [
+        {
+            "endpoint": stat.endpoint,
+            "requests": stat.requests,
+            "avgLatency": float(stat.avg_latency or 0),
+        }
+        for stat in top_endpoints
+    ]
+    
+    return {
+        "timeSeriesData": time_series_data,
+        "modelDistribution": model_distribution_data,
+        "topEndpoints": top_endpoints_data,
+    }
+
+@router.get("/analytics/team")
+async def get_team_analytics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    timeRange: str = Query("7d", regex="^(7d|30d|90d)$"),
+):
+    """Get team analytics data"""
+    if not has_permission(current_user.role, Permission.VIEW_TEAM_USAGE):
+        raise HTTPException(status_code=403, detail="Not authorized to view team analytics")
+    
+    # Get users in the same team
+    team_users = db.query(User.id).filter(User.team_id == current_user.team_id).all()
+    team_user_ids = [user.id for user in team_users]
+    
+    # Convert time range to days
+    days = int(timeRange[:-1])
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Get time series data
+    time_series = (
+        db.query(
+            func.date(UsageRecord.created_at).label("date"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+            func.avg(UsageRecord.latency_ms).label("latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .group_by(func.date(UsageRecord.created_at))
+        .order_by(func.date(UsageRecord.created_at))
+        .all()
+    )
+    
+    time_series_data = [
+        {
+            "date": stat.date.isoformat(),
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+            "latency": float(stat.latency or 0),
+        }
+        for stat in time_series
+    ]
+    
+    # Get model distribution
+    model_distribution = (
+        db.query(
+            UsageRecord.model.label("model"),
+            func.count(UsageRecord.id).label("requests"),
+            func.sum(UsageRecord.tokens_used).label("tokens"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .group_by(UsageRecord.model)
+        .order_by(func.count(UsageRecord.id).desc())
+        .all()
+    )
+    
+    model_distribution_data = [
+        {
+            "model": stat.model,
+            "requests": stat.requests,
+            "tokens": stat.tokens or 0,
+        }
+        for stat in model_distribution
+    ]
+    
+    # Get top endpoints
+    top_endpoints = (
+        db.query(
+            UsageRecord.endpoint.label("endpoint"),
+            func.count(UsageRecord.id).label("requests"),
+            func.avg(UsageRecord.latency_ms).label("avg_latency"),
+        )
+        .filter(
+            UsageRecord.created_at >= start_date,
+            UsageRecord.user_id.in_(team_user_ids)
+        )
+        .group_by(UsageRecord.endpoint)
+        .order_by(func.count(UsageRecord.id).desc())
+        .limit(5)
+        .all()
+    )
+    
+    top_endpoints_data = [
+        {
+            "endpoint": stat.endpoint,
+            "requests": stat.requests,
+            "avgLatency": float(stat.avg_latency or 0),
+        }
+        for stat in top_endpoints
+    ]
+    
+    return {
+        "timeSeriesData": time_series_data,
+        "modelDistribution": model_distribution_data,
+        "topEndpoints": top_endpoints_data,
+    }
