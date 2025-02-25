@@ -37,12 +37,11 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Help as HelpIcon,
-  Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasAnyPermission, Role } from '../types/rbac';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 const drawerWidth = 260;
 
@@ -255,6 +254,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
           
+          {/* ThemeToggle component */}
+          <ThemeToggle />
+          
           {/* Notification icon */}
           <Tooltip title="Notifications">
             <IconButton 
@@ -268,25 +270,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </IconButton>
           </Tooltip>
           
-          {/* Dark/Light mode toggle - placeholder for future implementation */}
-          <Tooltip title="Toggle theme">
-            <IconButton 
-              color="inherit"
-              sx={{ mr: 1 }}
-            >
-              {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-          </Tooltip>
-          
           {/* User menu */}
           <Tooltip title={user?.email || 'User'}>
             <IconButton
               onClick={handleUserMenuOpen}
               size="small"
               sx={{ ml: 1 }}
-              aria-controls={Boolean(anchorEl) ? 'account-menu' : undefined}
+              aria-controls={anchorEl ? 'account-menu' : undefined}
               aria-haspopup="true"
-              aria-expanded={Boolean(anchorEl) ? 'true' : undefined}
+              aria-expanded={anchorEl ? 'true' : undefined}
             >
               <Avatar 
                 sx={{ 

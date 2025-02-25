@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -7,7 +6,8 @@ import { Permission, Role } from './types/rbac';
 import PermissionGuard from './components/PermissionGuard';
 import { ToastContainer } from './components/ui';
 
-import theme from './theme/theme';
+// Import our custom ThemeProvider instead of MUI's
+import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardLayout from './layouts/DashboardLayout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -41,7 +41,8 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
+      {/* Use our custom ThemeProvider that handles theme switching */}
+      <ThemeProvider>
         <CssBaseline />
         <AuthProvider>
           <Router>

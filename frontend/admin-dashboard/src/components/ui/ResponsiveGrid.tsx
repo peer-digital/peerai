@@ -1,92 +1,62 @@
 import React, { ReactNode } from 'react';
-import { Grid, GridProps, Box, useTheme, useMediaQuery } from '@mui/material';
+import { Grid, GridProps } from '@mui/material';
 
 // Props interface
-export interface ResponsiveGridProps extends Omit<GridProps, 'container' | 'spacing'> {
+interface ResponsiveGridProps extends Omit<GridProps, 'container'> {
   children: ReactNode;
-  spacing?: number;
-  mdSpacing?: number;
-  smSpacing?: number;
-  xsSpacing?: number;
-  minChildWidth?: number | string;
-  childWidth?: {
-    xs?: number;
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-  };
+  spacing?: number | { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
+  columns?: number;
 }
 
-// ResponsiveGrid component
-export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
+/**
+ * ResponsiveGrid component for creating responsive grid layouts
+ * Automatically adjusts item sizes based on screen size
+ */
+const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   children,
-  spacing = 3,
-  mdSpacing,
-  smSpacing,
-  xsSpacing,
-  minChildWidth,
-  childWidth,
-  ...rest
+  spacing = { xs: 2, sm: 3, md: 4 },
+  columns = 12,
+  ...props
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
   // Calculate responsive spacing
-  const responsiveSpacing = {
-    xs: xsSpacing !== undefined ? xsSpacing : isMobile ? Math.max(1, spacing - 2) : spacing,
-    sm: smSpacing !== undefined ? smSpacing : Math.max(1, spacing - 1),
-    md: mdSpacing !== undefined ? mdSpacing : spacing,
-  };
-  
-  // Calculate responsive column widths
-  const getResponsiveWidth = () => {
-    if (childWidth) {
-      return childWidth;
+  const getSpacing = () => {
+    if (typeof spacing === 'number') {
+      return spacing;
     }
     
-    if (minChildWidth) {
-      // Convert minChildWidth to a number if it's a string with px
-      const minWidth = typeof minChildWidth === 'string' && minChildWidth.endsWith('px')
-        ? parseInt(minChildWidth, 10)
-        : minChildWidth;
-        
-      // Calculate columns based on minChildWidth
-      if (typeof minWidth === 'number') {
-        return {
-          xs: 12,
-          sm: minWidth <= 200 ? 6 : 12,
-          md: minWidth <= 300 ? 4 : minWidth <= 400 ? 6 : 12,
-          lg: minWidth <= 200 ? 3 : minWidth <= 300 ? 4 : minWidth <= 400 ? 6 : 12,
-        };
-      }
-    }
-    
-    // Default responsive widths
     return {
-      xs: 12,
-      sm: 6,
-      md: 4,
-      lg: 3,
+      xs: spacing.xs || 2,
+      sm: spacing.sm || 3,
+      md: spacing.md || 4,
+      lg: spacing.lg || 4,
+      xl: spacing.xl || 4,
     };
   };
-  
-  const responsiveWidth = getResponsiveWidth();
-  
+
   return (
-    <Grid container spacing={responsiveSpacing} {...rest}>
-      {React.Children.map(children, (child) => (
-        <Grid
-          item
-          xs={responsiveWidth.xs}
-          sm={responsiveWidth.sm}
-          md={responsiveWidth.md}
-          lg={responsiveWidth.lg}
-          xl={responsiveWidth.xl}
-        >
-          {child}
-        </Grid>
-      ))}
+    <Grid 
+      container 
+      spacing={getSpacing()}
+      {...props}
+    >
+      {React.Children.map(children, (child) => {
+        if (!React.isValidElement(child)) return null;
+        
+        // Default responsive column sizes
+        const defaultItemProps = {
+          xs: 12,
+          sm: 6,
+          md: 4,
+          lg: 3,
+        };
+        
+        // Merge default props with any existing props on the child
+        return React.cloneElement(child, {
+          item: true,
+          ...defaultItemProps,
+          ...child.props,
+        });
+      })}
     </Grid>
   );
 };

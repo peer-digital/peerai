@@ -1,126 +1,105 @@
 import React, { ReactNode } from 'react';
-import { 
-  Card as MuiCard, 
-  CardContent, 
-  CardHeader, 
-  CardProps as MuiCardProps, 
-  Typography, 
-  Box,
+import {
+  Card as MuiCard,
+  CardProps as MuiCardProps,
+  CardContent,
+  CardHeader,
+  CardActions,
+  Typography,
   Divider,
-  IconButton,
-  Skeleton,
-  useTheme
+  Box
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-// Styled components
+// Styled Card component with consistent styling
 const StyledCard = styled(MuiCard)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[2],
+  transition: 'box-shadow 0.3s ease-in-out, transform 0.2s ease-in-out',
+  overflow: 'hidden',
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: theme.shape.borderRadius * 2,
-  transition: 'box-shadow 0.3s ease-in-out, transform 0.2s ease-in-out',
   '&:hover': {
-    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+    boxShadow: theme.shadows[4],
   },
 }));
 
-const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
-  padding: theme.spacing(2, 3),
-}));
-
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  padding: theme.spacing(2, 3),
-  flexGrow: 1,
-  '&:last-child': {
-    paddingBottom: theme.spacing(3),
-  },
-}));
-
-// Props interface
-export interface CardProps extends Omit<MuiCardProps, 'title'> {
-  title?: ReactNode;
-  subtitle?: ReactNode;
-  action?: ReactNode;
-  loading?: boolean;
-  noPadding?: boolean;
-  headerDivider?: boolean;
-  minHeight?: number | string;
+// Props interface for Card component
+interface CardProps extends MuiCardProps {
+  title?: string;
+  subtitle?: string;
+  headerAction?: ReactNode;
   children: ReactNode;
+  footer?: ReactNode;
+  elevation?: number;
+  noPadding?: boolean;
+  fullHeight?: boolean;
+  variant?: 'outlined' | 'elevation';
+  contentSx?: React.CSSProperties;
 }
 
-// Card component
-export const Card: React.FC<CardProps> = ({
+/**
+ * Card component with consistent styling and flexible layout options
+ * Provides header, content, and footer sections
+ */
+const Card: React.FC<CardProps> = ({
   title,
   subtitle,
-  action,
-  loading = false,
-  noPadding = false,
-  headerDivider = false,
-  minHeight,
+  headerAction,
   children,
-  ...rest
+  footer,
+  elevation = 1,
+  noPadding = false,
+  fullHeight = true,
+  variant = 'elevation',
+  contentSx,
+  ...props
 }) => {
-  const theme = useTheme();
-
-  // Loading state
-  if (loading) {
-    return (
-      <StyledCard {...rest} sx={{ minHeight, ...rest.sx }}>
-        {(title || subtitle || action) && (
-          <>
-            <StyledCardHeader
-              title={<Skeleton variant="text" width="60%" height={28} />}
-              subheader={subtitle && <Skeleton variant="text" width="40%" height={20} />}
-              action={action && <Skeleton variant="circular" width={32} height={32} />}
-            />
-            {headerDivider && <Divider />}
-          </>
-        )}
-        <StyledCardContent sx={{ padding: noPadding ? 0 : undefined }}>
-          <Box sx={{ p: noPadding ? 0 : 2 }}>
-            <Skeleton variant="rectangular" height={100} />
-            <Box sx={{ mt: 2 }}>
-              <Skeleton variant="text" />
-              <Skeleton variant="text" width="80%" />
-            </Box>
-          </Box>
-        </StyledCardContent>
-      </StyledCard>
-    );
-  }
+  const hasHeader = title || subtitle || headerAction;
+  const hasFooter = footer !== undefined;
 
   return (
-    <StyledCard {...rest} sx={{ minHeight, ...rest.sx }}>
-      {(title || subtitle || action) && (
+    <StyledCard
+      elevation={variant === 'outlined' ? 0 : elevation}
+      variant={variant}
+      sx={{
+        height: fullHeight ? '100%' : 'auto',
+        ...props.sx,
+      }}
+      {...props}
+    >
+      {hasHeader && (
         <>
-          <StyledCardHeader
-            title={
-              typeof title === 'string' ? (
-                <Typography variant="h6" color="textPrimary" fontWeight={600}>
-                  {title}
-                </Typography>
-              ) : (
-                title
-              )
-            }
-            subheader={
-              typeof subtitle === 'string' ? (
-                <Typography variant="body2" color="textSecondary">
-                  {subtitle}
-                </Typography>
-              ) : (
-                subtitle
-              )
-            }
-            action={action}
+          <CardHeader
+            title={title && <Typography variant="h6">{title}</Typography>}
+            subheader={subtitle && <Typography variant="body2" color="text.secondary">{subtitle}</Typography>}
+            action={headerAction}
+            sx={{ pb: subtitle ? 1 : 0 }}
           />
-          {headerDivider && <Divider />}
+          <Divider />
         </>
       )}
-      <StyledCardContent sx={{ padding: noPadding ? 0 : undefined }}>
+
+      <CardContent
+        sx={{
+          flexGrow: 1,
+          padding: noPadding ? '0 !important' : undefined,
+          '&:last-child': { paddingBottom: noPadding ? '0 !important' : undefined },
+          ...contentSx,
+        }}
+      >
         {children}
-      </StyledCardContent>
+      </CardContent>
+
+      {hasFooter && (
+        <>
+          <Divider />
+          <CardActions>
+            <Box sx={{ width: '100%' }}>{footer}</Box>
+          </CardActions>
+        </>
+      )}
     </StyledCard>
   );
 };
