@@ -1,7 +1,6 @@
-from datetime import datetime
 from typing import Any
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import Column, DateTime, Integer, MetaData
+from sqlalchemy import MetaData
 
 # Configure SQLAlchemy metadata with naming convention
 convention = {
@@ -14,12 +13,14 @@ convention = {
 
 metadata = MetaData(naming_convention=convention)
 
+
 class Base(DeclarativeBase):
     """Base class for all database models"""
+
     metadata = metadata
 
     # Allow table redefinition
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     def dict(self) -> dict[str, Any]:
         """Convert model instance to dictionary"""

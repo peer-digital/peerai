@@ -332,33 +332,28 @@ async def call_mistral(
     """Call Mistral's API as fallback"""
     try:
         logger.debug("Calling Mistral API endpoint")
-        
+
         # Clean and validate URL
         if not settings.EXTERNAL_LLM_URL:
             raise ValueError("Mistral API URL is not configured")
-            
+
         # Clean the URL - remove any potential spaces, newlines, or comments
-        request_url = settings.EXTERNAL_LLM_URL.split('#')[0].strip()
-        
+        request_url = settings.EXTERNAL_LLM_URL.split("#")[0].strip()
+
         if not request_url.startswith("https://"):
             raise ValueError(f"Invalid Mistral API URL format: {request_url}")
-            
+
         logger.debug("Raw URL from settings: '%s'", settings.EXTERNAL_LLM_URL)
         logger.debug("Cleaned URL for request: '%s'", request_url)
 
         # Prepare request payload according to Mistral's API format
         payload = {
             "model": settings.EXTERNAL_MODEL,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": request.prompt
-                }
-            ],
+            "messages": [{"role": "user", "content": request.prompt}],
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
-        
+
         logger.debug("Making request to Mistral API with payload: %s", payload)
 
         # Make the API call
@@ -366,9 +361,9 @@ async def call_mistral(
             request_url,
             headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
             json=payload,
-            timeout=30.0
+            timeout=30.0,
         )
-        
+
         logger.debug("Response status code: %d", response.status_code)
         response.raise_for_status()
         result = response.json()

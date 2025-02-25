@@ -52,7 +52,11 @@ function App() {
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/404" element={<NotFound />} />
 
+                {/* Public routes */}
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                
+                {/* Developer docs - accessible without login but with layout when authenticated */}
+                <Route path="/docs" element={<ConditionalLayout><DeveloperDocs /></ConditionalLayout>} />
                 
                 {/* Protected routes */}
                 <Route
@@ -65,14 +69,55 @@ function App() {
                   }
                 >
                   <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<PermissionGuard requiredPermissions={[Permission.VIEW_OWN_USAGE]}><Dashboard /></PermissionGuard>} />
-                  <Route path="/teams" element={<PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><TeamManagement /></PermissionGuard>} />
-                  <Route path="/users" element={<PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS]}><UserManagement /></PermissionGuard>} />
-                  <Route path="/api-keys" element={<ApiKeys />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/settings" element={<PermissionGuard requiredPermissions={[Permission.VIEW_SETTINGS]}><Settings /></PermissionGuard>} />
-                  <Route path="/playground" element={<Playground />} />
-                  <Route path="/docs" element={<DeveloperDocs />} />
+                  
+                  {/* Dashboard - different views based on role */}
+                  <Route path="/dashboard" element={
+                    <PermissionGuard requiredPermissions={[Permission.VIEW_OWN_USAGE, Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]}>
+                      <Dashboard />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* Team management - for admins */}
+                  <Route path="/teams" element={
+                    <PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]}>
+                      <TeamManagement />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* User management - for admins */}
+                  <Route path="/users" element={
+                    <PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]}>
+                      <UserManagement />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* API Keys - for users who can use the API */}
+                  <Route path="/api-keys" element={
+                    <PermissionGuard requiredPermissions={[Permission.USE_API]}>
+                      <ApiKeys />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* Analytics - for admins and super admins */}
+                  <Route path="/analytics" element={
+                    <PermissionGuard requiredPermissions={[Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]}>
+                      <Analytics />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* Settings - for super admins */}
+                  <Route path="/settings" element={
+                    <PermissionGuard requiredPermissions={[Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION]}>
+                      <Settings />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* Playground - for users who can use the API */}
+                  <Route path="/playground" element={
+                    <PermissionGuard requiredPermissions={[Permission.USE_API]}>
+                      <Playground />
+                    </PermissionGuard>
+                  } />
                 </Route>
 
                 {/* Catch all route */}
@@ -112,6 +157,25 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+// Conditional layout component that applies DashboardLayout for authenticated users
+function ConditionalLayout({ children }: { children: JSX.Element }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <DashboardLayout>
+        {children}
+      </DashboardLayout>
+    );
   }
 
   return children;

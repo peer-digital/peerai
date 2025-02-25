@@ -1,8 +1,6 @@
 """Configuration module for the application."""
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
-from typing import List, Optional
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,46 +11,41 @@ DEFAULT_ORIGINS = [
     "http://localhost:5173",
     "https://app.peerdigital.se",
     "https://peerai-fe.onrender.com",
-    "https://peerai-be.onrender.com"
+    "https://peerai-be.onrender.com",
 ]
+
 
 class Settings(BaseSettings):
     # @url: https://www.postgresql.org/
     # @important: Database configuration - override with environment variables
     DATABASE_URL: str = Field(
         default="postgresql://postgres:postgres@localhost:5432/peerai",
-        description="Main database URL"
+        description="Main database URL",
     )
     TEST_DATABASE_URL: str = Field(
         default="postgresql://postgres:postgres@localhost:5432/peerai_test",
-        description="Test database URL"
+        description="Test database URL",
     )
 
     # @url: https://peerdigital.se
     # @important: CORS allowed origins - modify with caution
-    ALLOWED_ORIGINS: List[str] = Field(
-        default_factory=lambda: DEFAULT_ORIGINS.copy(),
-        description="CORS allowed origins"
+    # @important: Default single allowed origin, update with care
+    ALLOWED_ORIGIN: str = Field(
+        default="http://localhost:3000", description="CORS allowed origin"
     )
 
     # @important: JWT settings for authentication
     # @url: https://jwt.io/
     JWT_SECRET_KEY: str = Field(
         default="development-only-key",
-        description="JWT secret key - MUST be overridden in production"
+        description="JWT secret key - MUST be overridden in production",
     )
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Rate limiting settings
-    RATE_LIMIT_MINUTE: int = Field(
-        default=60,
-        description="API requests per minute"
-    )
-    RATE_LIMIT_DAILY: int = Field(
-        default=1000,
-        description="API requests per day"
-    )
+    RATE_LIMIT_MINUTE: int = Field(default=60, description="API requests per minute")
+    RATE_LIMIT_DAILY: int = Field(default=1000, description="API requests per day")
 
     # API settings
     API_V1_PREFIX: str = "/api/v1"
@@ -62,46 +55,35 @@ class Settings(BaseSettings):
     # @important: Environment settings
     ENVIRONMENT: str = Field(
         default="development",
-        description="Current environment (development/staging/production)"
+        description="Current environment (development/staging/production)",
     )
     DEBUG: bool = Field(
         default=False,
-        description="Debug mode - defaults to True in development, False in production"
+        description="Debug mode - defaults to True in development, False in production",
     )
-    MOCK_MODE: bool = Field(
-        default=True,
-        description="Mock external services"
-    )
+    MOCK_MODE: bool = Field(default=True, description="Mock external services")
 
     # LLM Configuration
     # @url: https://llm-api.bahnhof.se/v1/completions
-    HOSTED_LLM_URL: str = Field(
-        default="",
-        description="Hosted LLM API URL"
-    )
-    
+    HOSTED_LLM_URL: str = Field(default="", description="Hosted LLM API URL")
+
     # @url: https://mistral.ai/
     # @important: Mistral API endpoint
     EXTERNAL_LLM_URL: str = Field(
         default="https://api.mistral.ai/v1/chat/completions",
-        description="External LLM API URL"
+        description="External LLM API URL",
     )
-    
-    HOSTED_LLM_API_KEY: str = Field(
-        default="",
-        description="Hosted LLM API key"
-    )
+
+    HOSTED_LLM_API_KEY: str = Field(default="", description="Hosted LLM API key")
     # @important: Mistral API key
     EXTERNAL_LLM_API_KEY: str = Field(
-        default="",
-        description="External LLM API key - Required for production"
+        default="", description="External LLM API key - Required for production"
     )
 
     # @important: Model Configuration
     # @model: mistral-tiny
     EXTERNAL_MODEL: str = Field(
-        default="mistral-tiny",
-        description="External LLM model name"
+        default="mistral-tiny", description="External LLM model name"
     )
 
     model_config = {
@@ -122,5 +104,6 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "test":
             return self.TEST_DATABASE_URL
         return self.DATABASE_URL
+
 
 settings = Settings()

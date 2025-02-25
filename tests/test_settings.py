@@ -7,6 +7,7 @@ from backend.database import get_db
 from backend.models.auth import User
 from backend.models import DBSystemSettings
 from backend.core.security import get_password_hash
+from backend.core.roles import Role
 
 
 @pytest.fixture
@@ -18,7 +19,7 @@ def admin_user():
         hashed_password=get_password_hash("admin123"),
         full_name="Admin User",
         is_active=True,
-        is_superuser=True,
+        role=Role.SUPER_ADMIN,
     )
 
 
@@ -31,7 +32,7 @@ def regular_user():
         hashed_password=get_password_hash("user123"),
         full_name="Regular User",
         is_active=True,
-        is_superuser=False,
+        role=Role.USER,
     )
 
 

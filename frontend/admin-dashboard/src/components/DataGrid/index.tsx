@@ -249,12 +249,15 @@ export const DataGrid: React.FC<DataGridProps> = ({
                   )}
                   {columns.map(column => (
                     <TableCell key={column.field}>
-                      {column.renderCell ? column.renderCell(row) : row[column.field]}
+                      {column.renderCell ? column.renderCell({ ...row, value: row[column.field] }) : row[column.field]}
                     </TableCell>
                   ))}
                   {actions && (
                     <TableCell align="right">
-                      <IconButton onClick={(e) => handleOpenMenu(e, row)}>
+                      <IconButton
+                        onClick={(event) => handleOpenMenu(event, row)}
+                        aria-label="more"
+                      >
                         <MoreVertIcon />
                       </IconButton>
                     </TableCell>
@@ -268,12 +271,13 @@ export const DataGrid: React.FC<DataGridProps> = ({
 
       {pagination && (
         <TablePagination
+          rowsPerPageOptions={[pageSize]}
           component="div"
           count={sortedData.length}
+          rowsPerPage={pageSize}
           page={page}
           onPageChange={handleChangePage}
-          rowsPerPage={pageSize}
-          rowsPerPageOptions={[pageSize]}
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
         />
       )}
 

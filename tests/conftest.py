@@ -18,7 +18,7 @@ from backend.main import app
 from backend.database import get_db
 from backend.models.base import Base
 from backend.config import settings
-from backend.models.auth import User, APIKey, DBSystemSettings
+from backend.models.auth import User, APIKey, DBSystemSettings, Role
 from backend.core.security import get_password_hash
 from backend.models.usage import UsageRecord
 
@@ -82,7 +82,7 @@ def test_user(db_session) -> User:
         hashed_password=get_password_hash("test123"),
         full_name="Test User",
         is_active=True,
-        is_superuser=False,
+        role=Role.USER,
     )
     db_session.add(user)
     db_session.commit()
@@ -164,22 +164,17 @@ def setup_test_database():
         Base.metadata.drop_all(bind=test_engine)
         logger.info("Dropped all existing tables")
 
-        # Run Alembic migrations to ensure schema is up to date
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Applied all migrations successfully")
+        # Create all tables directly instead of using Alembic migrations
+        Base.metadata.create_all(bind=test_engine)
+        logger.info("Created all tables successfully")
 
         yield
 
         # Drop all tables after tests
         Base.metadata.drop_all(bind=test_engine)
         logger.info("Cleaned up test database")
-
     except Exception as e:
-        logger.error(f"Error setting up test database: {str(e)}")
+        logger.error(f"Error setting up test database: {e}")
         raise
 
 

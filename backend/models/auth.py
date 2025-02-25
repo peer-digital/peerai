@@ -1,5 +1,15 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, DateTime, JSON, func, Enum as SQLEnum
+from sqlalchemy import (
+    Column,
+    String,
+    Boolean,
+    ForeignKey,
+    Integer,
+    DateTime,
+    JSON,
+    func,
+    Enum as SQLEnum,
+)
 from sqlalchemy.orm import relationship
 from .base import Base
 import sys
@@ -12,14 +22,14 @@ from core.roles import Role
 
 class Team(Base):
     """Team model for organization/customer accounts"""
-    
+
     __tablename__ = "teams"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by_id = Column(Integer, ForeignKey("users.id"))
-    
+
     # Relationships
     members = relationship("User", back_populates="team", foreign_keys="[User.team_id]")
     created_by = relationship("User", foreign_keys=[created_by_id])
@@ -87,7 +97,11 @@ class DBSystemSettings(Base):
         default={
             "requireSSL": True,
             "maxTokenLength": 4096,
-            "allowedOrigins": ["http://localhost:3000", "http://localhost:5173", "https://app.peerdigital.se"],
+            "allowedOrigins": [
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://app.peerdigital.se",
+            ],
         },
     )
     models = Column(
@@ -110,6 +124,13 @@ class DBSystemSettings(Base):
             "audioModel": "whisper-1",
         },
     )
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)

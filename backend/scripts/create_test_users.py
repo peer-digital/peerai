@@ -11,7 +11,7 @@ sys.path.append(
 )
 
 from backend.database import engine
-from backend.models.auth import User, APIKey, UsageRecord
+from backend.models.auth import User
 from backend.models.base import Base
 from backend.core.security import get_password_hash
 from backend.core.roles import Role
@@ -51,12 +51,12 @@ def create_test_users(db: Session):
     for user_data in TEST_USERS:
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == user_data["email"]).first()
-        
+
         if existing_user:
             print(f"Skipped existing user: {user_data['email']}")
             skipped_count += 1
             continue
-            
+
         # Create new user
         hashed_password = get_password_hash(user_data["password"])
         user = User(

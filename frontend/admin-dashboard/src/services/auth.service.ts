@@ -11,7 +11,11 @@ const ROLE_MAPPING = {
   'guest': Role.GUEST,
   'user': Role.USER,
   'user_admin': Role.USER_ADMIN,
-  'super_admin': Role.SUPER_ADMIN
+  'super_admin': Role.SUPER_ADMIN,
+  'GUEST': Role.GUEST,
+  'USER': Role.USER,
+  'USER_ADMIN': Role.USER_ADMIN,
+  'SUPER_ADMIN': Role.SUPER_ADMIN
 } as const;
 
 class AuthService {
@@ -74,7 +78,7 @@ class AuthService {
           id: response.data.user.id.toString(),
           email: response.data.user.email,
           is_active: response.data.user.is_active ?? true,
-          role: ROLE_MAPPING[response.data.user.role.toLowerCase() as keyof typeof ROLE_MAPPING] || Role.USER,
+          role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
           name: response.data.user.full_name
         };
       } else {
@@ -99,7 +103,7 @@ class AuthService {
         console.error('Response status:', error.response.status);
       }
       if (error.response?.status === 401) {
-        throw new Error('Incorrect email or password');
+        throw new Error(error.response.data.detail || 'Incorrect email or password');
       }
       throw this.handleError(error);
     }
@@ -120,7 +124,7 @@ class AuthService {
         role: response.data.role,
         roleType: typeof response.data.role,
         roleMapping: ROLE_MAPPING,
-        mappedRole: ROLE_MAPPING[response.data.role.toLowerCase() as keyof typeof ROLE_MAPPING]
+        mappedRole: ROLE_MAPPING[response.data.role as keyof typeof ROLE_MAPPING]
       });
 
       // Ensure we have the required fields
@@ -138,15 +142,14 @@ class AuthService {
       // Log the role before mapping
       console.log('Role before mapping:', {
         rawRole: response.data.role,
-        roleType: typeof response.data.role,
-        lowercaseRole: response.data.role.toLowerCase()
+        roleType: typeof response.data.role
       });
 
       const userData: User = {
         id: response.data.id?.toString() || '0',
         email: response.data.email,
         is_active: response.data.is_active ?? true,
-        role: ROLE_MAPPING[response.data.role.toLowerCase() as keyof typeof ROLE_MAPPING] || Role.USER,
+        role: ROLE_MAPPING[response.data.role as keyof typeof ROLE_MAPPING] || Role.USER,
         name: response.data.full_name
       };
 
@@ -199,7 +202,7 @@ class AuthService {
       if (!userData) return null;
       
       const parsedUser = JSON.parse(userData);
-      // Map the role string to enum value
+      // Map the role string to enum value without assuming case
       return {
         ...parsedUser,
         role: ROLE_MAPPING[parsedUser.role as keyof typeof ROLE_MAPPING] || Role.USER

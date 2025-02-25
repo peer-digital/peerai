@@ -5,8 +5,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
-from config import settings
-from models.base import Base
+from backend.config import settings
+from backend.models.base import Base
 
 # Create SQLAlchemy engine with proper pooling configuration
 engine = create_engine(
@@ -15,7 +15,7 @@ engine = create_engine(
     pool_size=5,
     max_overflow=10,
     pool_timeout=30,
-    pool_pre_ping=True  # Enable connection health checks
+    pool_pre_ping=True,  # Enable connection health checks
 )
 
 # Create sessionmaker

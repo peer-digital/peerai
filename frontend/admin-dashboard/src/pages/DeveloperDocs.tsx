@@ -1,58 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  CircularProgress, 
-  Box, 
-  Typography, 
-  Tabs, 
-  Tab, 
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
   Paper,
-  Container,
+  Tabs,
+  Tab,
   Divider,
   Link,
+  Button,
   List,
   ListItem,
   ListItemText,
-  Alert,
-  Grid,
+  ListItemIcon,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
+  useTheme,
+  useMediaQuery,
+  AppBar,
+  Toolbar,
 } from '@mui/material';
-import { RedocStandalone } from 'redoc';
-import { styled } from '@mui/material/styles';
+import CodeIcon from '@mui/icons-material/Code';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ApiIcon from '@mui/icons-material/Api';
+import SecurityIcon from '@mui/icons-material/Security';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import SwaggerUI from 'swagger-ui-react';
+import 'swagger-ui-react/swagger-ui.css';
+import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Permission, hasPermission } from '../types/rbac';
-
-// @url: /api/v1/openapi.json - FastAPI OpenAPI specification endpoint
-// @note: This path matches the FastAPI configuration in backend/main.py
-const API_DOCS_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/openapi.json`;
-
-// Styled components for documentation
-const DocSection = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  '& h2': {
-    marginBottom: theme.spacing(2),
-  },
-  '& h3': {
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
-  },
-  '& p': {
-    marginBottom: theme.spacing(2),
-  },
-}));
-
-const CodeBlock = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  margin: theme.spacing(2, 0),
-  backgroundColor: theme.palette.grey[900],
-  color: theme.palette.common.white,
-  fontFamily: 'monospace',
-  overflow: 'auto',
-}));
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -62,490 +38,564 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`doc-tabpanel-${index}`}
+      id={`docs-tabpanel-${index}`}
+      aria-labelledby={`docs-tab-${index}`}
       {...other}
     >
-      {value === index && <Box>{children}</Box>}
+      {value === index && <Box sx={{ p: { xs: 2, md: 3 } }}>{children}</Box>}
     </div>
   );
 }
 
-const IntroContent = () => (
-  <DocSection>
-    <Box sx={{ mb: 4, textAlign: 'center' }}>
-      <Typography variant="h2" gutterBottom>
-        PeerAI - Swedish AI API
-      </Typography>
-      <Typography variant="h5" color="text.secondary" sx={{ mb: 3 }}>
-        Secure, Compliant AI Processing within Sweden
-      </Typography>
-      <Alert severity="info" sx={{ mb: 3, maxWidth: 800, mx: 'auto' }}>
-        All data is securely processed within Swedish data centers (Bahnhof Cloud) to ensure local data residency and GDPR compliance.
-      </Alert>
-    </Box>
-
-    <Grid container spacing={4}>
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 3, height: '100%' }}>
-          <Typography variant="h6" gutterBottom>Available Services</Typography>
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary={<Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Text Completions
-                  <Chip size="small" label="STABLE" color="success" sx={{ ml: 1 }} />
-                </Box>}
-                secondary="Generate or transform text using advanced LLMs"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary={<Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Vision Analysis
-                  <Chip size="small" label="BETA" color="warning" sx={{ ml: 1 }} />
-                </Box>}
-                secondary="Get AI-driven descriptions or object analysis from images"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary={<Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Audio Processing
-                  <Chip size="small" label="BETA" color="warning" sx={{ ml: 1 }} />
-                </Box>}
-                secondary="Transcribe or analyze audio content"
-              />
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 3, height: '100%' }}>
-          <Typography variant="h6" gutterBottom>Key Benefits</Typography>
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Swedish Data Residency" 
-                secondary="All processing happens within Swedish borders"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="High Performance" 
-                secondary="Low-latency inference with built-in rate limiting"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="Simple Integration" 
-                secondary="RESTful API with comprehensive documentation"
-              />
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-    </Grid>
-  </DocSection>
-);
-
-const QuickstartContent = () => (
-  <DocSection>
-    <Typography variant="h2">Quick Start Guide</Typography>
-    
-    <Typography variant="h3">1. Get Your API Key</Typography>
-    <Typography>
-      Sign up on the <Link href="https://app.peerdigital.se" target="_blank">PeerAI Dashboard</Link> and create a new API key under API Keys.
-    </Typography>
-    <Alert severity="warning" sx={{ my: 2 }}>
-      Keep your API key secure and never share it publicly.
-    </Alert>
-
-    <Typography variant="h3">2. Authentication</Typography>
-    <Typography paragraph>
-      All requests must include:
-    </Typography>
-    <List>
-      <ListItem>
-        <ListItemText 
-          primary="X-API-Key header" 
-          secondary="Your API key for authentication"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemText 
-          primary="Content-Type: application/json" 
-          secondary="Required for POST requests with JSON body"
-        />
-      </ListItem>
-    </List>
-
-    <Typography variant="h3">3. Make Your First API Call</Typography>
-    <Typography>Using curl:</Typography>
-    <CodeBlock>
-      <pre>{`curl -X POST "https://api.peerdigital.se/api/v1/completions" \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: YOUR_API_KEY" \\
-  -d '{
-    "prompt": "Hello from Sweden!",
-    "max_tokens": 50,
-    "temperature": 0.7
-  }'`}</pre>
-    </CodeBlock>
-
-    <Typography variant="h3">4. Python Integration</Typography>
-    <CodeBlock>
-      <pre>{`import requests
-
-API_KEY = "YOUR_API_KEY"
-BASE_URL = "https://api.peerdigital.se/api/v1"
-
-def complete_text(prompt: str):
-    headers = {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-    }
-    data = {
-        "prompt": prompt,
-        "max_tokens": 50,
-        "temperature": 0.7
-    }
-    response = requests.post(f"{BASE_URL}/completions", 
-                           headers=headers, 
-                           json=data)
-    response.raise_for_status()
-    return response.json()
-
-print(complete_text("Hej, berätta om svenska AI-företag."))`}</pre>
-    </CodeBlock>
-  </DocSection>
-);
-
-const EndpointsContent = () => (
-  <DocSection>
-    <Typography variant="h2">Available Endpoints</Typography>
-    
-    <Typography variant="h3">1. Text Completions</Typography>
-    <Typography variant="body2" color="text.secondary" gutterBottom>
-      POST /api/v1/completions
-    </Typography>
-    <Typography paragraph>
-      Generate or transform text using our Swedish-based LLM.
-    </Typography>
-    
-    <Typography variant="subtitle1" gutterBottom>Request Parameters:</Typography>
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Field</TableCell>
-          <TableCell>Type</TableCell>
-          <TableCell>Required</TableCell>
-          <TableCell>Description</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        <TableRow>
-          <TableCell>prompt</TableCell>
-          <TableCell>string</TableCell>
-          <TableCell>Yes</TableCell>
-          <TableCell>Input text or question</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>max_tokens</TableCell>
-          <TableCell>integer</TableCell>
-          <TableCell>No</TableCell>
-          <TableCell>Up to 2048 tokens (default: 100)</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>temperature</TableCell>
-          <TableCell>float</TableCell>
-          <TableCell>No</TableCell>
-          <TableCell>Range [0.0 - 1.0] (default: 0.7)</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>mock_mode</TableCell>
-          <TableCell>boolean</TableCell>
-          <TableCell>No</TableCell>
-          <TableCell>Returns test response if true</TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
-
-    <Typography variant="h3" sx={{ mt: 4 }}>2. Vision Analysis (BETA)</Typography>
-    <Typography variant="body2" color="text.secondary" gutterBottom>
-      POST /api/v1/vision
-    </Typography>
-    <Typography paragraph>
-      Analyze images and get AI-driven descriptions or object detection.
-    </Typography>
-    <Alert severity="info" sx={{ mb: 2 }}>
-      Currently in mock mode by default. Real image analysis available upon request.
-    </Alert>
-    <CodeBlock>
-      <pre>{`{
-  "image_url": "https://example.com/myimage.jpg",
-  "prompt": "Describe the objects in this photo",
-  "max_tokens": 100,
-  "mock_mode": true
-}`}</pre>
-    </CodeBlock>
-
-    <Typography variant="h3">3. Audio Processing (BETA)</Typography>
-    <Typography variant="body2" color="text.secondary" gutterBottom>
-      POST /api/v1/audio
-    </Typography>
-    <Typography paragraph>
-      Transcribe or analyze audio content with support for Swedish and English.
-    </Typography>
-    <CodeBlock>
-      <pre>{`{
-  "audio_url": "https://example.com/audio.mp3",
-  "task": "transcribe",
-  "language": "sv",  // optional, default 'en'
-  "mock_mode": true
-}`}</pre>
-    </CodeBlock>
-  </DocSection>
-);
-
-const SecurityContent = () => (
-  <DocSection>
-    <Typography variant="h2">Security & Compliance</Typography>
-    
-    <Grid container spacing={4}>
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>Rate Limiting</Typography>
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Minute Limit" 
-                secondary="Default: 60 requests/minute"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="Daily Limit" 
-                secondary="Default: 1000 requests/day"
-              />
-            </ListItem>
-          </List>
-          <Typography variant="body2" color="text.secondary">
-            Configure custom limits in the PeerAI Dashboard.
-          </Typography>
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>Error Handling</Typography>
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="400 Bad Request" 
-                secondary="Invalid JSON or parameters"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="401 Unauthorized" 
-                secondary="Missing or invalid API key"
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="429 Too Many Requests" 
-                secondary="Rate limit exceeded"
-              />
-            </ListItem>
-          </List>
-        </Paper>
-      </Grid>
-    </Grid>
-
-    <Typography variant="h3" sx={{ mt: 4 }}>Data Processing</Typography>
-    <List>
-      <ListItem>
-        <ListItemText 
-          primary="Swedish Data Centers" 
-          secondary="All processing happens in Bahnhof Cloud facilities within Sweden"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemText 
-          primary="GDPR Compliance" 
-          secondary="Data handling follows EU and Swedish regulations"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemText 
-          primary="Encryption" 
-          secondary="All API requests must use HTTPS/TLS"
-        />
-      </ListItem>
-    </List>
-
-    <Typography variant="h3">Support</Typography>
-    <Typography paragraph>
-      For assistance or feature requests:
-    </Typography>
-    <List>
-      <ListItem>
-        <ListItemText 
-          primary="Email" 
-          secondary={<Link href="mailto:support@peerdigital.se">support@peerdigital.se</Link>}
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemText 
-          primary="Support Portal" 
-          secondary={<Link href="https://support.peerdigital.se" target="_blank">https://support.peerdigital.se</Link>}
-        />
-      </ListItem>
-    </List>
-  </DocSection>
-);
-
-const APIReferenceContent: React.FC<{ spec: any }> = ({ spec }) => (
-  <Box sx={{ height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
-    <RedocStandalone
-      spec={spec}
-      options={{
-        scrollYOffset: 50,
-        hideDownloadButton: false,
-        theme: {
-          typography: { fontFamily: 'Inter, system-ui, sans-serif' },
-          colors: { primary: { main: '#2196f3' } },
-        },
-      }}
-    />
-  </Box>
-);
+// OpenAPI specification endpoint
+const OPENAPI_SPEC_URL = '/api/v1/openapi.json'; // URL to your OpenAPI specification
 
 const DeveloperDocs: React.FC = () => {
-  const [spec, setSpec] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    const fetchOpenApiSpec = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(API_DOCS_URL, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          },
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            body: errorText
-          });
-          throw new Error(`Failed to fetch API documentation: ${response.status} ${response.statusText}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          console.error('Unexpected content type:', contentType);
-          throw new Error(`Expected JSON but got ${contentType}`);
-        }
-        
-        const data = await response.json();
-        setSpec(data);
-      } catch (err: any) {
-        console.error('Error details:', err);
-        setError(err.message || 'Failed to load documentation');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Only fetch OpenAPI spec if user has permission and API Reference tab is selected
-    if (user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS) && tabValue === 4) {
-      fetchOpenApiSpec();
-    }
-  }, [tabValue, user?.role]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isAuthenticated } = useAuth();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  if (loading && tabValue === 4) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Get available tabs based on user permissions
-  const getTabs = () => {
-    const tabs = [
-      { label: "Overview", index: 0 },
-      { label: "Quick Start", index: 1 },
-      { label: "Endpoints", index: 2 },
-      { label: "Security", index: 3 },
-    ];
-
-    // Only show API Reference tab if user has permission
-    if (user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS)) {
-      tabs.push({ label: "API Reference", index: 4 });
-    }
-
-    return tabs;
-  };
-
   return (
-    <Container maxWidth={false}>
-      <Box sx={{ width: '100%' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange}
-            aria-label="documentation sections"
-          >
-            {getTabs().map((tab) => (
-              <Tab key={tab.index} label={tab.label} />
-            ))}
-          </Tabs>
-        </Box>
+    <Box sx={{ flexGrow: 1 }}>
+      {/* Custom header for non-authenticated users only */}
+      {!isAuthenticated && (
+        <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              PeerAI Developer Documentation
+            </Typography>
+            <Button 
+              color="primary" 
+              variant="contained" 
+              component={RouterLink} 
+              to="/login"
+              sx={{ ml: 2 }}
+            >
+              Sign In
+            </Button>
+          </Toolbar>
+        </AppBar>
+      )}
 
-        <TabPanel value={tabValue} index={0}>
-          <IntroContent />
-        </TabPanel>
-        <TabPanel value={tabValue} index={1}>
-          <QuickstartContent />
-        </TabPanel>
-        <TabPanel value={tabValue} index={2}>
-          <EndpointsContent />
-        </TabPanel>
-        <TabPanel value={tabValue} index={3}>
-          <SecurityContent />
-        </TabPanel>
-        {user?.role && hasPermission(user.role, Permission.VIEW_API_DOCS) && (
-          <TabPanel value={tabValue} index={4}>
-            {error ? (
-              <Box p={3}>
-                <Alert severity="error">
-                  {error}
-                </Alert>
-              </Box>
-            ) : (
-              spec && <APIReferenceContent spec={spec} />
-            )}
-          </TabPanel>
-        )}
+      {/* Page title for authenticated users */}
+      {isAuthenticated && (
+        <Box sx={{ mb: 3, mt: 1 }}>
+          <Typography variant="h4" gutterBottom>
+            Developer Documentation
+          </Typography>
+          <Typography variant="body1" color="textSecondary">
+            Comprehensive guides and references for integrating with the PeerAI API
+          </Typography>
+        </Box>
+      )}
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons={isMobile ? "auto" : undefined}
+          aria-label="developer documentation tabs"
+        >
+          <Tab icon={<DescriptionIcon />} label="Introduction" iconPosition="start" />
+          <Tab icon={<PlayArrowIcon />} label="Quickstart" iconPosition="start" />
+          <Tab icon={<ApiIcon />} label="API Reference" iconPosition="start" />
+          <Tab icon={<CodeIcon />} label="Code Examples" iconPosition="start" />
+          <Tab icon={<SecurityIcon />} label="Authentication" iconPosition="start" />
+        </Tabs>
       </Box>
-    </Container>
+
+      {/* Introduction Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <IntroContent />
+      </TabPanel>
+
+      {/* Quickstart Tab */}
+      <TabPanel value={tabValue} index={1}>
+        <QuickstartContent />
+      </TabPanel>
+
+      {/* API Reference Tab */}
+      <TabPanel value={tabValue} index={2}>
+        <Typography variant="h5" gutterBottom>
+          API Reference
+        </Typography>
+        <Typography paragraph>
+          Explore our API endpoints using the interactive documentation below.
+        </Typography>
+        <Box sx={{ mt: 3, border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
+          <SwaggerUI url={OPENAPI_SPEC_URL} />
+        </Box>
+      </TabPanel>
+
+      {/* Code Examples Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <CodeExamplesContent />
+      </TabPanel>
+
+      {/* Authentication Tab */}
+      <TabPanel value={tabValue} index={4}>
+        <AuthenticationContent />
+      </TabPanel>
+    </Box>
   );
 };
+
+const IntroContent = () => (
+  <Box>
+    <Typography variant="h5" gutterBottom>
+      Welcome to PeerAI API Documentation
+    </Typography>
+    <Typography paragraph>
+      PeerAI provides a powerful API for integrating AI capabilities into your applications.
+      Our platform offers state-of-the-art language models and tools to help you build
+      intelligent features with minimal effort.
+    </Typography>
+    
+    <Divider sx={{ my: 3 }} />
+    
+    <Typography variant="h6" gutterBottom>
+      Key Features
+    </Typography>
+    
+    <List>
+      <ListItem>
+        <ListItemIcon>
+          <ApiIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="RESTful API" 
+          secondary="Simple and consistent API design following REST principles"
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemIcon>
+          <SecurityIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Secure Authentication" 
+          secondary="API key authentication with role-based access control"
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemIcon>
+          <CodeIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Multiple SDKs" 
+          secondary="Official client libraries for Python, JavaScript, and more"
+        />
+      </ListItem>
+    </List>
+    
+    <Divider sx={{ my: 3 }} />
+    
+    <Typography variant="h6" gutterBottom>
+      Getting Started
+    </Typography>
+    <Typography paragraph>
+      To get started with the PeerAI API, you'll need to:
+    </Typography>
+    <ol>
+      <li>
+        <Typography paragraph>
+          <strong>Create an account</strong> - Sign up for PeerAI to get access to the dashboard
+        </Typography>
+      </li>
+      <li>
+        <Typography paragraph>
+          <strong>Generate an API key</strong> - Create an API key in the dashboard
+        </Typography>
+      </li>
+      <li>
+        <Typography paragraph>
+          <strong>Install the SDK</strong> - Use our client libraries for your preferred language
+        </Typography>
+      </li>
+      <li>
+        <Typography paragraph>
+          <strong>Make your first API call</strong> - Follow our quickstart guide to make your first request
+        </Typography>
+      </li>
+    </ol>
+    
+    <Box sx={{ mt: 3 }}>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={() => window.open('https://github.com/peerai/api-examples', '_blank')}
+        startIcon={<CodeIcon />}
+      >
+        View Sample Projects
+      </Button>
+    </Box>
+  </Box>
+);
+
+const QuickstartContent = () => (
+  <Box>
+    <Typography variant="h5" gutterBottom>
+      Quickstart Guide
+    </Typography>
+    <Typography paragraph>
+      Get up and running with PeerAI API in minutes. Follow these steps to make your first API call.
+    </Typography>
+    
+    <Divider sx={{ my: 3 }} />
+    
+    <Typography variant="h6" gutterBottom>
+      Step 1: Install the SDK
+    </Typography>
+    <Typography paragraph>
+      Choose your preferred language and install our client library:
+    </Typography>
+    
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        Python
+      </Typography>
+      <SyntaxHighlighter language="bash" style={atomDark}>
+        pip install peerai-python
+      </SyntaxHighlighter>
+      
+      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+        JavaScript
+      </Typography>
+      <SyntaxHighlighter language="bash" style={atomDark}>
+        npm install peerai-js
+      </SyntaxHighlighter>
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Step 2: Initialize the Client
+    </Typography>
+    <Typography paragraph>
+      Set up the client with your API key:
+    </Typography>
+    
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        Python
+      </Typography>
+      <SyntaxHighlighter language="python" style={atomDark}>
+{`from peerai import PeerAI
+
+# Initialize the client with your API key
+client = PeerAI(api_key="your_api_key_here")
+
+# Now you can use the client to make API calls
+response = client.generate_text(
+    prompt="Explain quantum computing in simple terms",
+    model="gpt-4"
+)
+
+print(response.text)`}
+      </SyntaxHighlighter>
+      
+      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+        JavaScript
+      </Typography>
+      <SyntaxHighlighter language="javascript" style={atomDark}>
+{`import { PeerAI } from 'peerai-js';
+
+// Initialize the client with your API key
+const client = new PeerAI('your_api_key_here');
+
+// Make an API call
+async function generateText() {
+  const response = await client.generateText({
+    prompt: 'Explain quantum computing in simple terms',
+    model: 'gpt-4'
+  });
+  
+  console.log(response.text);
+}
+
+generateText();`}
+      </SyntaxHighlighter>
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Step 3: Explore Available Models
+    </Typography>
+    <Typography paragraph>
+      PeerAI offers access to various models with different capabilities:
+    </Typography>
+    
+    <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+      <Chip label="GPT-4" color="primary" />
+      <Chip label="Claude 3" color="primary" />
+      <Chip label="Llama 3" color="primary" />
+      <Chip label="Mistral" color="primary" />
+      <Chip label="PaLM 2" color="primary" />
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Next Steps
+    </Typography>
+    <Typography paragraph>
+      Now that you've made your first API call, you can:
+    </Typography>
+    
+    <List>
+      <ListItem>
+        <ListItemIcon>
+          <ApiIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Explore the API Reference" 
+          secondary="Learn about all available endpoints and parameters"
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemIcon>
+          <CodeIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Check out code examples" 
+          secondary="See examples for common use cases"
+        />
+      </ListItem>
+    </List>
+  </Box>
+);
+
+const CodeExamplesContent = () => (
+  <Box>
+    <Typography variant="h5" gutterBottom>
+      Code Examples
+    </Typography>
+    <Typography paragraph>
+      Learn how to use the PeerAI API with these practical examples.
+    </Typography>
+    
+    <Divider sx={{ my: 3 }} />
+    
+    <Typography variant="h6" gutterBottom>
+      Text Generation
+    </Typography>
+    <Typography paragraph>
+      Generate text based on a prompt:
+    </Typography>
+    
+    <Box sx={{ mb: 4 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        Python
+      </Typography>
+      <SyntaxHighlighter language="python" style={atomDark}>
+{`from peerai import PeerAI
+
+client = PeerAI(api_key="your_api_key_here")
+
+response = client.generate_text(
+    prompt="Write a short story about a robot learning to paint",
+    model="gpt-4",
+    max_tokens=500,
+    temperature=0.7
+)
+
+print(response.text)`}
+      </SyntaxHighlighter>
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Chat Completion
+    </Typography>
+    <Typography paragraph>
+      Create a conversational AI experience:
+    </Typography>
+    
+    <Box sx={{ mb: 4 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        JavaScript
+      </Typography>
+      <SyntaxHighlighter language="javascript" style={atomDark}>
+{`import { PeerAI } from 'peerai-js';
+
+const client = new PeerAI('your_api_key_here');
+
+async function chatExample() {
+  const chatHistory = [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Hello! Can you help me understand how neural networks work?' }
+  ];
+  
+  const response = await client.createChatCompletion({
+    messages: chatHistory,
+    model: 'claude-3-opus',
+    temperature: 0.5
+  });
+  
+  console.log(response.message.content);
+  
+  // Continue the conversation
+  chatHistory.push(response.message);
+  chatHistory.push({ role: 'user', content: 'Can you give me a simple example?' });
+  
+  const followUpResponse = await client.createChatCompletion({
+    messages: chatHistory,
+    model: 'claude-3-opus',
+    temperature: 0.5
+  });
+  
+  console.log(followUpResponse.message.content);
+}
+
+chatExample();`}
+      </SyntaxHighlighter>
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Error Handling
+    </Typography>
+    <Typography paragraph>
+      Properly handle API errors:
+    </Typography>
+    
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" gutterBottom>
+        Python
+      </Typography>
+      <SyntaxHighlighter language="python" style={atomDark}>
+{`from peerai import PeerAI, PeerAIError
+
+client = PeerAI(api_key="your_api_key_here")
+
+try:
+    response = client.generate_text(
+        prompt="Explain the theory of relativity",
+        model="gpt-4"
+    )
+    print(response.text)
+except PeerAIError as e:
+    print(f"Error: {e.status_code} - {e.message}")
+    if e.status_code == 401:
+        print("Authentication failed. Check your API key.")
+    elif e.status_code == 429:
+        print("Rate limit exceeded. Please try again later.")`}
+      </SyntaxHighlighter>
+    </Box>
+  </Box>
+);
+
+const AuthenticationContent = () => (
+  <Box>
+    <Typography variant="h5" gutterBottom>
+      Authentication
+    </Typography>
+    <Typography paragraph>
+      Learn how to authenticate your requests to the PeerAI API.
+    </Typography>
+    
+    <Divider sx={{ my: 3 }} />
+    
+    <Typography variant="h6" gutterBottom>
+      API Keys
+    </Typography>
+    <Typography paragraph>
+      All requests to the PeerAI API require authentication using API keys. 
+      You can generate API keys from your dashboard.
+    </Typography>
+    
+    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
+      <Typography variant="subtitle2" color="error">
+        Security Notice
+      </Typography>
+      <Typography variant="body2">
+        Keep your API keys secure and never expose them in client-side code. 
+        If you suspect your API key has been compromised, you should immediately 
+        revoke it and generate a new one.
+      </Typography>
+    </Box>
+    
+    <Typography variant="h6" gutterBottom>
+      Authentication Methods
+    </Typography>
+    <Typography paragraph>
+      There are two ways to authenticate your API requests:
+    </Typography>
+    
+    <Typography variant="subtitle1" gutterBottom>
+      1. Authorization Header (Recommended)
+    </Typography>
+    <Typography paragraph>
+      Include your API key in the Authorization header:
+    </Typography>
+    
+    <SyntaxHighlighter language="bash" style={atomDark}>
+      Authorization: Bearer your_api_key_here
+    </SyntaxHighlighter>
+    
+    <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+      2. Query Parameter
+    </Typography>
+    <Typography paragraph>
+      Include your API key as a query parameter (less secure, not recommended for production):
+    </Typography>
+    
+    <SyntaxHighlighter language="bash" style={atomDark}>
+      https://api.peerai.com/v1/generate?api_key=your_api_key_here
+    </SyntaxHighlighter>
+    
+    <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+      API Key Management
+    </Typography>
+    <Typography paragraph>
+      Best practices for managing your API keys:
+    </Typography>
+    
+    <List>
+      <ListItem>
+        <ListItemIcon>
+          <SecurityIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Use environment variables" 
+          secondary="Store API keys in environment variables, not in your code"
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemIcon>
+          <SecurityIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Rotate keys regularly" 
+          secondary="Periodically generate new API keys and update your applications"
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemIcon>
+          <SecurityIcon color="primary" />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Use different keys for different environments" 
+          secondary="Use separate keys for development, testing, and production"
+        />
+      </ListItem>
+    </List>
+    
+    <Box sx={{ mt: 4 }}>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        component={RouterLink} 
+        to="/login"
+        startIcon={<SecurityIcon />}
+      >
+        Manage API Keys
+      </Button>
+    </Box>
+  </Box>
+);
 
 export default DeveloperDocs; 

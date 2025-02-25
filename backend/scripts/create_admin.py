@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -17,6 +16,7 @@ from core.roles import Role
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def create_admin_user():
     """Create admin user if it doesn't exist."""
     engine = create_engine(settings.DATABASE_URL)
@@ -33,7 +33,7 @@ def create_admin_user():
                 hashed_password=pwd_context.hash("superadmin123"),  # Default password
                 full_name="Super Admin",
                 is_active=True,
-                role=Role.SUPER_ADMIN
+                role=Role.SUPER_ADMIN,
             )
             db.add(admin)
             db.commit()
@@ -46,5 +46,6 @@ def create_admin_user():
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    create_admin_user() 
+    create_admin_user()

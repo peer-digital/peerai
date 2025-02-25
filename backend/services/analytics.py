@@ -31,7 +31,9 @@ async def get_analytics_data(
     # Get usage records for the period
     records = (
         db.query(UsageRecord)
-        .filter(UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date)
+        .filter(
+            UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date
+        )
         .all()
     )
 
@@ -128,7 +130,9 @@ async def export_analytics_data(
 
     records = (
         db.query(UsageRecord)
-        .filter(UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date)
+        .filter(
+            UsageRecord.created_at >= start_date, UsageRecord.created_at <= end_date
+        )
         .order_by(UsageRecord.created_at)
         .all()
     )

@@ -1,22 +1,22 @@
-from typing import List, Optional
+from typing import List
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
 from models.auth import User, Team
-from schemas.rbac import TeamCreate, UserCreate, UserUpdate
+from schemas.rbac import TeamCreate
 from core.roles import Role, Permission, has_permission
+
 
 class RBACService:
     @staticmethod
     def create_team(db: Session, team: TeamCreate, created_by_user: User) -> Team:
         """Create a new team"""
         if not has_permission(created_by_user.role, Permission.MANAGE_TEAM_MEMBERS):
-            raise HTTPException(status_code=403, detail="Not authorized to create teams")
-        
-        db_team = Team(
-            name=team.name,
-            created_by_id=created_by_user.id
-        )
+            raise HTTPException(
+                status_code=403, detail="Not authorized to create teams"
+            )
+
+        db_team = Team(name=team.name, created_by_id=created_by_user.id)
         db.add(db_team)
         db.commit()
         db.refresh(db_team)
@@ -28,23 +28,22 @@ class RBACService:
         team = db.query(Team).filter(Team.id == team_id).first()
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
-        
+
         # Super admins can access any team
         if current_user.role == Role.SUPER_ADMIN:
             return team
-        
+
         # User admins can only access their own team
         if current_user.team_id != team.id:
-            raise HTTPException(status_code=403, detail="Not authorized to access this team")
-        
+            raise HTTPException(
+                status_code=403, detail="Not authorized to access this team"
+            )
+
         return team
 
     @staticmethod
     def update_user_role(
-        db: Session, 
-        user_id: int, 
-        new_role: Role, 
-        current_user: User
+        db: Session, user_id: int, new_role: Role, current_user: User
     ) -> User:
         """Update a user's role"""
         target_user = db.query(User).filter(User.id == user_id).first()
@@ -57,16 +56,16 @@ class RBACService:
             pass
         elif current_user.role == Role.USER_ADMIN:
             # User admins can only modify users in their team and can't create super admins
-            if (target_user.team_id != current_user.team_id or 
-                new_role == Role.SUPER_ADMIN):
+            if (
+                target_user.team_id != current_user.team_id
+                or new_role == Role.SUPER_ADMIN
+            ):
                 raise HTTPException(
-                    status_code=403, 
-                    detail="Not authorized to assign this role"
+                    status_code=403, detail="Not authorized to assign this role"
                 )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="Not authorized to modify user roles"
+                status_code=403, detail="Not authorized to modify user roles"
             )
 
         target_user.role = new_role
@@ -76,10 +75,7 @@ class RBACService:
 
     @staticmethod
     def add_user_to_team(
-        db: Session,
-        user_id: int,
-        team_id: int,
-        current_user: User
+        db: Session, user_id: int, team_id: int, current_user: User
     ) -> User:
         """Add a user to a team"""
         user = db.query(User).filter(User.id == user_id).first()
@@ -98,13 +94,11 @@ class RBACService:
             # User admins can only add users to their own team
             if current_user.team_id != team_id:
                 raise HTTPException(
-                    status_code=403,
-                    detail="Not authorized to add users to this team"
+                    status_code=403, detail="Not authorized to add users to this team"
                 )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="Not authorized to modify team membership"
+                status_code=403, detail="Not authorized to modify team membership"
             )
 
         user.team_id = team_id
@@ -113,11 +107,7 @@ class RBACService:
         return user
 
     @staticmethod
-    def remove_user_from_team(
-        db: Session,
-        user_id: int,
-        current_user: User
-    ) -> User:
+    def remove_user_from_team(db: Session, user_id: int, current_user: User) -> User:
         """Remove a user from their team"""
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -132,12 +122,11 @@ class RBACService:
             if current_user.team_id != user.team_id:
                 raise HTTPException(
                     status_code=403,
-                    detail="Not authorized to remove users from this team"
+                    detail="Not authorized to remove users from this team",
                 )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="Not authorized to modify team membership"
+                status_code=403, detail="Not authorized to modify team membership"
             )
 
         user.team_id = None
@@ -146,11 +135,7 @@ class RBACService:
         return user
 
     @staticmethod
-    def get_team_members(
-        db: Session,
-        team_id: int,
-        current_user: User
-    ) -> List[User]:
+    def get_team_members(db: Session, team_id: int, current_user: User) -> List[User]:
         """Get all members of a team"""
         # Check permissions
         if current_user.role == Role.SUPER_ADMIN:
@@ -160,13 +145,11 @@ class RBACService:
             # User admins can only view their own team's members
             if current_user.team_id != team_id:
                 raise HTTPException(
-                    status_code=403,
-                    detail="Not authorized to view this team's members"
+                    status_code=403, detail="Not authorized to view this team's members"
                 )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="Not authorized to view team members"
+                status_code=403, detail="Not authorized to view team members"
             )
 
-        return db.query(User).filter(User.team_id == team_id).all() 
+        return db.query(User).filter(User.team_id == team_id).all()

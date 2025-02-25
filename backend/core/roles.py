@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Set, Dict, List
+from typing import Set, Dict
+
 
 class Role(str, Enum):
     # Base roles in the system
@@ -11,28 +12,30 @@ class Role(str, Enum):
     def __str__(self) -> str:
         return self.value
 
+
 # Define all possible permissions in the system
 class Permission(str, Enum):
     # Documentation access
     VIEW_DOCS = "view_docs"
     VIEW_API_DOCS = "view_api_docs"  # Permission to view API documentation
-    
+
     # User-level permissions
     VIEW_OWN_USAGE = "view_own_usage"
     USE_API = "use_api"
     MANAGE_OWN_ACCOUNT = "manage_own_account"
-    
+
     # Team-level permissions
     MANAGE_TEAM_MEMBERS = "manage_team_members"
     MANAGE_TEAM_BILLING = "manage_team_billing"
     VIEW_TEAM_USAGE = "view_team_usage"
-    
+
     # Super admin permissions
     VIEW_ALL_USAGE = "view_all_usage"
     MANAGE_ALL_TEAMS = "manage_all_teams"
     SYSTEM_CONFIGURATION = "system_configuration"
     VIEW_SETTINGS = "view_settings"
     EDIT_SETTINGS = "edit_settings"
+
 
 # Define which permissions each role has
 ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
@@ -69,13 +72,15 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.SYSTEM_CONFIGURATION,
         Permission.VIEW_SETTINGS,
         Permission.EDIT_SETTINGS,
-    }
+    },
 }
+
 
 def get_role_permissions(role: Role) -> Set[Permission]:
     """Get all permissions for a given role."""
     return ROLE_PERMISSIONS.get(role, set())
 
+
 def has_permission(role: Role, permission: Permission) -> bool:
     """Check if a role has a specific permission."""
-    return permission in ROLE_PERMISSIONS.get(role, set()) 
+    return permission in ROLE_PERMISSIONS.get(role, set())

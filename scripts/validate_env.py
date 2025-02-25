@@ -4,11 +4,9 @@ Environment validation script.
 Checks if all required environment variables are set and validates their values.
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
-import json
+from typing import Dict, List
 
 # Add the parent directory to PYTHONPATH
 current_dir = Path(__file__).parent.parent
@@ -26,22 +24,22 @@ REQUIRED_TEST_VARS = {
     "TEST_DATABASE_URL": "Test database connection string",
 }
 
+
 def validate_database_url(url: str) -> bool:
     """Validate database URL format."""
     required_parts = ["postgresql://", "@", "/"]
     return all(part in url for part in required_parts)
 
+
 def validate_origins(origins: List[str]) -> bool:
     """Validate CORS origins."""
-    return all(
-        origin.startswith(("http://", "https://"))
-        for origin in origins
-    )
+    return all(origin.startswith(("http://", "https://")) for origin in origins)
+
 
 def validate_environment() -> Dict[str, List[str]]:
     """Validate environment configuration."""
     errors: Dict[str, List[str]] = {"critical": [], "warnings": []}
-    
+
     # Check environment-specific required variables
     required_vars = REQUIRED_PROD_VARS if settings.ENVIRONMENT == "production" else {}
     if settings.ENVIRONMENT == "test":
@@ -72,6 +70,7 @@ def validate_environment() -> Dict[str, List[str]]:
 
     return errors
 
+
 def main():
     """Main validation function."""
     print(f"\nValidating environment: {settings.ENVIRONMENT}")
@@ -100,5 +99,6 @@ def main():
     print("\n⚠️  Environment validation passed with warnings!")
     return 0
 
+
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())
