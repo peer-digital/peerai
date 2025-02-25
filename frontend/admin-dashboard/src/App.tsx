@@ -2,11 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import React from 'react';
 import { Permission, Role } from './types/rbac';
 import PermissionGuard from './components/PermissionGuard';
+import { ToastContainer } from './components/ui';
 
 import theme from './theme/theme';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -124,8 +123,8 @@ function App() {
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </React.Suspense>
+            <ToastContainer />
           </Router>
-          <ToastContainer position="top-right" />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
