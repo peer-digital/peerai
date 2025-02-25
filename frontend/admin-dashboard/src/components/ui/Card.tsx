@@ -7,7 +7,9 @@ import {
   CardActions,
   Typography,
   Divider,
-  Box
+  Box,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -23,6 +25,9 @@ const StyledCard = styled(MuiCard)(({ theme }) => ({
   '&:hover': {
     boxShadow: theme.shadows[4],
   },
+  [theme.breakpoints.up('md')]: {
+    borderRadius: theme.shape.borderRadius * 1.5,
+  },
 }));
 
 // Props interface for Card component
@@ -37,6 +42,8 @@ interface CardProps extends MuiCardProps {
   fullHeight?: boolean;
   variant?: 'outlined' | 'elevation';
   contentSx?: React.CSSProperties;
+  compact?: boolean;
+  hoverable?: boolean;
 }
 
 /**
@@ -54,8 +61,12 @@ const Card: React.FC<CardProps> = ({
   fullHeight = true,
   variant = 'elevation',
   contentSx,
+  compact = false,
+  hoverable = true,
   ...props
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const hasHeader = title || subtitle || headerAction;
   const hasFooter = footer !== undefined;
 
@@ -65,6 +76,11 @@ const Card: React.FC<CardProps> = ({
       variant={variant}
       sx={{
         height: fullHeight ? '100%' : 'auto',
+        boxShadow: theme.shadows[elevation],
+        '&:hover': hoverable ? {
+          boxShadow: theme.shadows[elevation + 2],
+          transform: 'translateY(-2px)',
+        } : undefined,
         ...props.sx,
       }}
       {...props}
@@ -72,10 +88,36 @@ const Card: React.FC<CardProps> = ({
       {hasHeader && (
         <>
           <CardHeader
-            title={title && <Typography variant="h6">{title}</Typography>}
-            subheader={subtitle && <Typography variant="body2" color="text.secondary">{subtitle}</Typography>}
+            title={title && (
+              <Typography 
+                variant={compact ? "subtitle1" : "h6"} 
+                fontWeight={compact ? 500 : 600}
+                sx={{ 
+                  fontSize: compact ? '1rem' : undefined,
+                  lineHeight: compact ? 1.4 : undefined,
+                }}
+              >
+                {title}
+              </Typography>
+            )}
+            subheader={subtitle && (
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: compact ? '0.75rem' : '0.875rem',
+                  mt: compact ? 0.5 : 1,
+                }}
+              >
+                {subtitle}
+              </Typography>
+            )}
             action={headerAction}
-            sx={{ pb: subtitle ? 1 : 0 }}
+            sx={{ 
+              pb: subtitle ? 1 : 0,
+              pt: compact ? 1.5 : 2,
+              px: compact ? 2 : (isMobile ? 2 : 3),
+            }}
           />
           <Divider />
         </>
@@ -84,8 +126,8 @@ const Card: React.FC<CardProps> = ({
       <CardContent
         sx={{
           flexGrow: 1,
-          padding: noPadding ? '0 !important' : undefined,
-          '&:last-child': { paddingBottom: noPadding ? '0 !important' : undefined },
+          padding: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '16px !important' : '24px !important')),
+          '&:last-child': { paddingBottom: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '16px !important' : '24px !important')) },
           ...contentSx,
         }}
       >
@@ -95,7 +137,9 @@ const Card: React.FC<CardProps> = ({
       {hasFooter && (
         <>
           <Divider />
-          <CardActions>
+          <CardActions sx={{ 
+            padding: compact ? '8px 12px' : (isMobile ? '8px 16px' : '12px 24px'),
+          }}>
             <Box sx={{ width: '100%' }}>{footer}</Box>
           </CardActions>
         </>

@@ -10,8 +10,8 @@ export * from './PageHeader';
 export { default as StatusBadge } from './StatusBadge';
 export * from './StatusBadge';
 
-export { default as LoadingOverlay } from './LoadingOverlay';
-export * from './LoadingOverlay';
+export { default as LoadingOverlay } from './EnhancedLoadingOverlay';
+export * from './EnhancedLoadingOverlay';
 
 export { default as EmptyState } from './EmptyState';
 export * from './EmptyState';
@@ -32,4 +32,7 @@ export { default as Chart } from './Chart';
 export * from './Chart';
 
 export { default as Form } from './Form';
-export * from './Form'; 
+export * from './Form';
+
+export { default as PageLoader } from './PageLoader';
+export * from './PageLoader'; 

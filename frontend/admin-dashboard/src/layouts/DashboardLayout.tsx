@@ -181,6 +181,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
+  // Determine which logo to use based on theme mode
+  // @important: Keep using SVG logos for the dashboard UI
+  const logoSrc = theme.palette.mode === 'dark' ? '/assets/logo_neg.svg' : '/assets/logo.svg';
+  
   const [open, setOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
@@ -248,6 +252,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
+          
+          {/* Add logo to AppBar when drawer is closed */}
+          {!open && (
+            <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+            </Box>
+          )}
           
           {/* Page title based on current route */}
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
@@ -398,10 +409,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       >
         <DrawerHeader>
           <LogoContainer>
-            <Logo src="/logo.svg" alt="PeerAI Logo" />
-            <Typography variant="h6" color="primary" fontWeight="bold">
-              PeerAI
-            </Typography>
+            <Logo src={logoSrc} alt="PeerAI Logo" />
           </LogoContainer>
           <IconButton onClick={handleDrawerClose}>
             <ChevronLeftIcon />

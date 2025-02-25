@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { Permission, Role } from './types/rbac';
 import PermissionGuard from './components/PermissionGuard';
-import { ToastContainer } from './components/ui';
+import { ToastContainer, PageLoader } from './components/ui';
 
 // Import our custom ThemeProvider instead of MUI's
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -46,7 +46,8 @@ function App() {
         <CssBaseline />
         <AuthProvider>
           <Router>
-            <React.Suspense fallback={<div>Loading...</div>}>
+            {/* Use our custom PageLoader for Suspense fallback */}
+            <React.Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
@@ -124,6 +125,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </React.Suspense>
+            {/* Toast container for notifications */}
             <ToastContainer />
           </Router>
         </AuthProvider>
@@ -137,7 +139,7 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
