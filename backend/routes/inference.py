@@ -3,7 +3,7 @@ Inference routes for PeerAI API
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import (
     APIRouter,
     Depends,
@@ -23,6 +23,7 @@ from models.auth import APIKey
 from models.usage import UsageRecord
 from database import get_db
 from config import settings
+from services.model_orchestrator import ModelOrchestrator
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class TextCompletionRequest(BaseModel):
     max_tokens: Optional[int] = Field(default=100, ge=1, le=2048)
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=1.0)
     mock_mode: Optional[bool] = False
+    model: Optional[str] = None  # Model name to use, or None for default
 
 
 class VisionRequest(BaseModel):
@@ -52,7 +54,7 @@ class AudioRequest(BaseModel):
     """Request model for audio endpoint"""
 
     audio_url: str
-    task: str = Field(description="Task type: 'transcribe' or 'analyze'")
+    task: str = "transcribe"  # "transcribe" or "analyze"
     language: Optional[str] = "en"
     mock_mode: Optional[bool] = False
 
@@ -388,11 +390,18 @@ async def call_mistral(
         raise HTTPException(status_code=502, detail=f"Mistral API error: {str(e)}")
 
 
+def get_orchestrator(db: Session = Depends(get_db)) -> ModelOrchestrator:
+    """Get a model orchestrator instance."""
+    orchestrator = ModelOrchestrator(db)
+    return orchestrator
+
+
 @router.post("/completions", response_model=CompletionResponse)
 async def create_completion(
     request: TextCompletionRequest,
     api_key: APIKey = Depends(get_api_key),
     db: Session = Depends(get_db),
+    orchestrator: ModelOrchestrator = Depends(get_orchestrator),
 ):
     """Create a completion for the given prompt"""
     # Record start time for latency tracking
@@ -407,54 +416,54 @@ async def create_completion(
     # Check rate limits
     await check_rate_limits(api_key, db)
 
-    async with httpx.AsyncClient() as client:
-        try:
-            # Try hosted LLM first if configured
-            if settings.HOSTED_LLM_URL and settings.HOSTED_LLM_API_KEY:
-                try:
-                    response = await call_hosted_llm(client, request)
-                    record_usage(db, api_key, "/completions", response, 200)
-                    return response
-                except HTTPException as e:
-                    # Fallback to Mistral on:
-                    # - Any 5xx server error
-                    # - Connection timeouts
-                    # - Connection errors
-                    should_fallback = (
-                        500 <= e.status_code < 600
-                    ) or str(  # Any 5xx error
-                        e.detail
-                    ).startswith(
-                        ("Connection refused", "Connection timed out")
-                    )
-                    if not should_fallback:
-                        raise
-                    logger.warning(
-                        "Hosted LLM failed, falling back to Mistral: %s", str(e)
-                    )
+    try:
+        # Call the model through the orchestrator
+        request_data = {
+            "prompt": request.prompt,
+            "max_tokens": request.max_tokens,
+            "temperature": request.temperature,
+        }
+        
+        response_data = await orchestrator.call_model(
+            request_data=request_data,
+            model_name=request.model,
+            api_key=api_key,
+        )
+        
+        # Convert to CompletionResponse
+        response = CompletionResponse(**response_data)
+        
+        # Usage is already recorded by the orchestrator
+        return response
 
-            # Use Mistral as fallback or primary if no hosted LLM
-            response = await call_mistral(client, request)
-            record_usage(db, api_key, "/completions", response, 200)
-            return response
+    except Exception as e:
+        error_latency = int((time.time() - start_time) * 1000)
+        error_response = CompletionResponse(
+            choices=[],
+            provider="error",
+            usage={"total_tokens": 0},
+            latency_ms=error_latency,
+        )
+        record_usage(
+            db,
+            api_key,
+            "/completions",
+            error_response,
+            getattr(e, "status_code", 500),
+            str(e),
+        )
+        raise
 
-        except Exception as e:
-            error_latency = int((time.time() - start_time) * 1000)
-            error_response = CompletionResponse(
-                choices=[],
-                provider="error",
-                usage={"total_tokens": 0},
-                latency_ms=error_latency,
-            )
-            record_usage(
-                db,
-                api_key,
-                "/completions",
-                error_response,
-                getattr(e, "status_code", 500),
-                str(e),
-            )
-            raise
+
+@router.get("/models", response_model=List[Dict[str, Any]])
+async def get_available_models(
+    model_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    orchestrator: ModelOrchestrator = Depends(get_orchestrator),
+):
+    """Get a list of available models."""
+    models = orchestrator.get_available_models(model_type)
+    return models
 
 
 @router.post("/vision", response_model=CompletionResponse)

@@ -8,9 +8,10 @@ from backend.database import get_db
 from backend.models.auth import User, APIKey
 from backend.core.security import get_password_hash
 from sqlalchemy.orm import Session
+from backend.core.roles import Role  # Import Role enum
 
 from backend.main import settings
-from backend.routes.auth import ALGORITHM, SECRET_KEY
+from backend.routes.auth import ALGORITHM, JWT_SECRET_KEY
 
 
 # Mock database session
@@ -31,13 +32,19 @@ def db_session():
 
 @pytest.fixture
 def test_user():
-    """Create a test user"""
+    """
+    Create a test user
+    
+    Note: To create a superuser, set role=Role.SUPER_ADMIN
+    The is_superuser property is READ-ONLY and computed from the role field.
+    """
     return User(
         id=1,
         email="test@example.com",
         hashed_password="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKyNiGpJ4vZKkOS",  # Password: test123
         full_name="Test User",
         is_active=True,
+        # To create a superuser: role=Role.SUPER_ADMIN
     )
 
 
@@ -88,7 +95,7 @@ async def test_register_user_success(test_db, async_client):
 
     # Verify token
     token = data["access_token"]
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
     assert payload["sub"] == unique_email
 
 
@@ -174,7 +181,7 @@ async def test_logout(test_db, async_client):
 async def test_create_api_key_success(db_session, test_user, async_client):
     """Test successful API key creation"""
     # Mock authentication
-    token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode({"sub": test_user.email}, JWT_SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.return_value = test_user
 
     response = await async_client.post(
@@ -193,7 +200,7 @@ async def test_create_api_key_success(db_session, test_user, async_client):
 @pytest.mark.asyncio
 async def test_create_api_key_no_expiry(db_session, test_user, async_client):
     """Test API key creation without expiry"""
-    token = jwt.encode({"sub": test_user.email}, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode({"sub": test_user.email}, JWT_SECRET_KEY, algorithm=ALGORITHM)
     db_session.query.return_value.filter.return_value.first.return_value = test_user
 
     response = await async_client.post(
@@ -324,7 +331,7 @@ async def test_expired_token(db_session, test_user, async_client):
     # Create an expired token
     expired_time = datetime.utcnow() - timedelta(days=1)
     token = jwt.encode(
-        {"sub": test_user.email, "exp": expired_time}, SECRET_KEY, algorithm=ALGORITHM
+        {"sub": test_user.email, "exp": expired_time}, JWT_SECRET_KEY, algorithm=ALGORITHM
     )
 
     response = await async_client.get(

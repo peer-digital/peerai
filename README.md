@@ -99,6 +99,10 @@ RBAC-related endpoints are available under `/api/v1/rbac/`:
 - `DELETE /teams/members/{user_id}` - Remove user from team (User Admin+)
 - `GET /teams/{team_id}/members` - List team members (User Admin+)
 
+### Implementation Status
+
+> **Note:** Team management and RBAC functionality is partially implemented. The database models and core services are in place, but some API routes and UI components are still in development. The `TeamManagement.tsx` component contains UI placeholders, but the backend integration is not yet complete. This feature is planned for the next release.
+
 ## Quick Start
 
 ### Prerequisites

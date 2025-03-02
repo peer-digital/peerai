@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -34,7 +34,7 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 // @important: Import API base URL from config
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+import { API_BASE_URL } from '../config';
 
 interface EndpointConfig {
   method: string;
@@ -80,13 +80,13 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
     method: 'POST',
     path: '/api/v1/completions',
     requiresBody: true,
-    supportedModels: ['hosted-llm', 'mistral'],
+    supportedModels: ['hosted-llm', 'mistral-tiny', 'mistral-small', 'mistral-medium'],
     defaultBody: JSON.stringify({
       prompt: "Explain quantum computing",
       max_tokens: 100,
       temperature: 0.7,
       mock_mode: false,
-      provider: "hosted-llm"  // @important: Default to hosted LLM
+      model: "hosted-llm"  // @important: Default to hosted LLM
     }, null, 2),
   },
   vision: {
@@ -109,19 +109,27 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
       mock_mode: true
     }, null, 2),
   },
+  models: {
+    method: 'GET',
+    path: '/api/v1/models',
+    requiresBody: false,
+    defaultBody: '',
+  },
 };
 
 function Playground() {
   const theme = useTheme();
-  const [selectedEndpoint, setSelectedEndpoint] = useState('health');
+  const [selectedEndpoint, setSelectedEndpoint] = useState('completions');
   const [selectedModel, setSelectedModel] = useState('hosted-llm');
-  const [apiKey, setApiKey] = useState('test_key_123');
-  const [requestBody, setRequestBody] = useState(ENDPOINTS.health.defaultBody);
+  const [apiKey, setApiKey] = useState('');
+  const [requestBody, setRequestBody] = useState(ENDPOINTS.completions.defaultBody);
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCurlCommand, setShowCurlCommand] = useState(true);
   const [mockMode, setMockMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
+  const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -131,8 +139,11 @@ function Playground() {
 
     // For completion responses, format nicely
     const response = data as CompletionResponse;
-    const content = response.choices[0]?.message?.content || '';
-    const usage = response.usage;
+    // Add null check for choices array
+    const content = response.choices && response.choices.length > 0 
+      ? response.choices[0]?.message?.content || '' 
+      : '';
+    const usage = response.usage || { total_tokens: 0 };
     const confidence = response.additional_data?.confidence;
     const detectedObjects = response.additional_data?.detected_objects;
     const language = response.additional_data?.language;
@@ -140,10 +151,10 @@ function Playground() {
 
     const formattedResponse = {
       content,
-      model: response.model,
-      provider: response.provider,
+      model: response.model || 'unknown',
+      provider: response.provider || 'unknown',
       usage,
-      latency_ms: response.latency_ms,
+      latency_ms: response.latency_ms || 0,
       ...(confidence !== undefined && { confidence }),
       ...(detectedObjects && { detected_objects: detectedObjects }),
       ...(language && { language }),
@@ -156,15 +167,28 @@ function Playground() {
   const updateRequestBody = (model: string, mock: boolean) => {
     if (selectedEndpoint === 'completions') {
       try {
-        const currentBody = JSON.parse(requestBody);
+        let currentBody = {};
+        try {
+          currentBody = JSON.parse(requestBody);
+        } catch (e) {
+          console.error('Failed to parse request body:', e);
+          // If parsing fails, start with a default body
+          currentBody = {
+            prompt: "Explain quantum computing",
+            max_tokens: 100,
+            temperature: 0.7,
+          };
+        }
+        
         const newBody = {
           ...currentBody,
-          provider: model,
+          model: model,
           mock_mode: mock
         };
         setRequestBody(JSON.stringify(newBody, null, 2));
       } catch (e) {
-        console.error('Failed to parse request body:', e);
+        console.error('Failed to update request body:', e);
+        toast.error(`Failed to update request body: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   };
@@ -196,11 +220,13 @@ function Playground() {
   };
 
   const generateCurlCommand = () => {
-    const endpoint = ENDPOINTS[selectedEndpoint];
+    const endpoint = endpointConfigs[selectedEndpoint];
     let command = `curl -X ${endpoint.method} ${API_BASE_URL}${endpoint.path}`;
     
-    if (apiKey) {
+    if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
       command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
+    } else {
+      command += ` \\\n  -H "X-API-Key: YOUR_API_KEY"`;
     }
     
     if (endpoint.requiresBody) {
@@ -215,13 +241,111 @@ function Playground() {
     toast.success('Copied to clipboard!');
   };
 
+  const fetchAvailableModels = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Validate API key
+      if (!apiKey) {
+        throw new Error('API key is required');
+      }
+      
+      if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/models`, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': apiKey,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Error fetching models: ${response.statusText}`);
+      }
+      
+      const models = await response.json();
+      
+      if (!Array.isArray(models)) {
+        throw new Error('Invalid response format: models data is not an array');
+      }
+      
+      setAvailableModels(models);
+      
+      // Update the supportedModels for the completions endpoint
+      const modelNames = models.map((model: any) => model.name);
+      setEndpointConfigs({
+        ...endpointConfigs,
+        completions: {
+          ...endpointConfigs.completions,
+          supportedModels: modelNames,
+        },
+      });
+
+      // If the current selected model is not in the list, select the first available model
+      if (modelNames.length > 0 && !modelNames.includes(selectedModel)) {
+        setSelectedModel(modelNames[0]);
+        updateRequestBody(modelNames[0], mockMode);
+      }
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      setAvailableModels([]);
+      setError(`Failed to fetch available models: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Failed to fetch available models: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem('apiKey');
+    if (storedApiKey) {
+      // Validate that the API key is a simple string without special characters
+      if (/^[a-zA-Z0-9_-]+$/.test(storedApiKey)) {
+        setApiKey(storedApiKey);
+      } else {
+        // If invalid, clear it from localStorage
+        localStorage.removeItem('apiKey');
+        console.error('Invalid API key format in localStorage');
+      }
+    }
+  }, []);
+
+  // Fetch available models when API key changes
+  useEffect(() => {
+    if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+      localStorage.setItem('apiKey', apiKey); // Save API key to localStorage
+      fetchAvailableModels();
+    }
+  }, [apiKey]);
+
+  // Initialize with empty model if no models are available
+  useEffect(() => {
+    if (availableModels.length === 0 && selectedEndpoint === 'completions') {
+      setSelectedModel('');
+    }
+  }, [availableModels, selectedEndpoint]);
+
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
     setResponse('');
-    const endpoint = ENDPOINTS[selectedEndpoint];
+    const endpoint = endpointConfigs[selectedEndpoint];
     
     try {
+      // Validate API key
+      if (!apiKey) {
+        throw new Error('API key is required');
+      }
+      
+      if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
+      }
+      
       const headers: Record<string, string> = {
         'X-API-Key': apiKey,
       };
@@ -313,7 +437,7 @@ function Playground() {
                   label="Endpoint"
                   onChange={handleEndpointChange}
                 >
-                  {Object.entries(ENDPOINTS).map(([key, config]) => (
+                  {Object.entries(endpointConfigs).map(([key, config]) => (
                     <MenuItem key={key} value={key}>
                       {config.method} {config.path}
                     </MenuItem>
@@ -325,15 +449,30 @@ function Playground() {
                 <FormControl fullWidth size="small">
                   <InputLabel>Model</InputLabel>
                   <Select
-                    value={selectedModel}
+                    value={availableModels.length > 0 ? selectedModel : ''}
                     label="Model"
                     onChange={handleModelChange}
+                    disabled={availableModels.length === 0}
                   >
-                    {ENDPOINTS.completions.supportedModels?.map((model) => (
-                      <MenuItem key={model} value={model}>{model}</MenuItem>
-                    ))}
+                    {availableModels.length === 0 ? (
+                      <MenuItem value="">
+                        <em>No models available</em>
+                      </MenuItem>
+                    ) : (
+                      availableModels.map((model) => (
+                        <MenuItem key={model.name} value={model.name}>
+                          {model.display_name}
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
                 </FormControl>
+              )}
+
+              {error && selectedEndpoint === 'completions' && (
+                <Alert severity="error" variant="outlined" sx={{ mt: 1 }}>
+                  {error}
+                </Alert>
               )}
 
               <TextField
@@ -341,10 +480,19 @@ function Playground() {
                 size="small"
                 label="API Key"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => {
+                  // Only allow alphanumeric characters, hyphens, and underscores
+                  const newValue = e.target.value;
+                  if (newValue === '' || /^[a-zA-Z0-9_-]+$/.test(newValue)) {
+                    setApiKey(newValue);
+                  }
+                }}
+                type="password"
+                helperText="API keys should only contain letters, numbers, hyphens, and underscores"
+                error={apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey)}
               />
 
-              {ENDPOINTS[selectedEndpoint].requiresBody && (
+              {endpointConfigs[selectedEndpoint].requiresBody && (
                 <TextField
                   fullWidth
                   multiline
@@ -385,7 +533,7 @@ function Playground() {
                     label="Show cURL"
                   />
 
-                  {selectedEndpoint !== 'health' && (
+                  {endpointConfigs[selectedEndpoint].requiresBody && (
                     <FormControlLabel
                       control={
                         <Switch

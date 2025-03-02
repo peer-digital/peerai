@@ -55,192 +55,110 @@ function TabPanel(props: TabPanelProps) {
 // OpenAPI specification endpoint
 const OPENAPI_SPEC_URL = '/api/v1/openapi.json'; // URL to your OpenAPI specification
 
-const DeveloperDocs: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+const IntroContent = () => {
   const { isAuthenticated } = useAuth();
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
+  
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      {/* Custom header for non-authenticated users only */}
-      {!isAuthenticated && (
-        <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              PeerAI Developer Documentation
-            </Typography>
-            <Button 
-              color="primary" 
-              variant="contained" 
-              component={RouterLink} 
-              to="/login"
-              sx={{ ml: 2 }}
-            >
-              Sign In
-            </Button>
-          </Toolbar>
-        </AppBar>
-      )}
-
-      {/* Page title for authenticated users */}
-      {isAuthenticated && (
-        <Box sx={{ mb: 3, mt: 1 }}>
-          <Typography variant="h4" gutterBottom>
-            Developer Documentation
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Welcome to PeerAI API Documentation
+      </Typography>
+      <Typography paragraph>
+        PeerAI provides a powerful API for integrating AI capabilities into your applications.
+        Our platform offers state-of-the-art language models and tools to help you build
+        intelligent features with minimal effort.
+      </Typography>
+      
+      <Divider sx={{ my: 3 }} />
+      
+      <Typography variant="h6" gutterBottom>
+        Key Features
+      </Typography>
+      
+      <List>
+        <ListItem>
+          <ListItemIcon>
+            <ApiIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="RESTful API" 
+            secondary="Simple and consistent API design following REST principles"
+          />
+        </ListItem>
+        <ListItem>
+          <ListItemIcon>
+            <SecurityIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Secure Authentication" 
+            secondary="API key authentication with role-based access control"
+          />
+        </ListItem>
+        <ListItem>
+          <ListItemIcon>
+            <CodeIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Multiple SDKs" 
+            secondary="Official client libraries for Python, JavaScript, and more"
+          />
+        </ListItem>
+      </List>
+      
+      <Divider sx={{ my: 3 }} />
+      
+      <Typography variant="h6" gutterBottom>
+        Getting Started
+      </Typography>
+      <Typography paragraph>
+        To get started with the PeerAI API, you'll need to:
+      </Typography>
+      <ol>
+        <li>
+          <Typography paragraph>
+            <strong>Create an account</strong> - Sign up for PeerAI to get access to the dashboard
           </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Comprehensive guides and references for integrating with the PeerAI API
+        </li>
+        <li>
+          <Typography paragraph>
+            <strong>Generate an API key</strong> - Create an API key in the dashboard
           </Typography>
-        </Box>
-      )}
-
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant={isMobile ? "scrollable" : "fullWidth"}
-          scrollButtons={isMobile ? "auto" : undefined}
-          aria-label="developer documentation tabs"
+        </li>
+        <li>
+          <Typography paragraph>
+            <strong>Install the SDK</strong> - Use our client libraries for your preferred language
+          </Typography>
+        </li>
+        <li>
+          <Typography paragraph>
+            <strong>Make your first API call</strong> - Follow our quickstart guide to make your first request
+          </Typography>
+        </li>
+      </ol>
+      
+      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => window.open('https://github.com/peerai/api-examples', '_blank')}
+          startIcon={<CodeIcon />}
         >
-          <Tab icon={<DescriptionIcon />} label="Introduction" iconPosition="start" />
-          <Tab icon={<PlayArrowIcon />} label="Quickstart" iconPosition="start" />
-          <Tab icon={<ApiIcon />} label="API Reference" iconPosition="start" />
-          <Tab icon={<CodeIcon />} label="Code Examples" iconPosition="start" />
-          <Tab icon={<SecurityIcon />} label="Authentication" iconPosition="start" />
-        </Tabs>
+          View Sample Projects
+        </Button>
+        {!isAuthenticated && (
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            component={RouterLink} 
+            to="/login"
+          >
+            Sign Up for API Access
+          </Button>
+        )}
       </Box>
-
-      {/* Introduction Tab */}
-      <TabPanel value={tabValue} index={0}>
-        <IntroContent />
-      </TabPanel>
-
-      {/* Quickstart Tab */}
-      <TabPanel value={tabValue} index={1}>
-        <QuickstartContent />
-      </TabPanel>
-
-      {/* API Reference Tab */}
-      <TabPanel value={tabValue} index={2}>
-        <Typography variant="h5" gutterBottom>
-          API Reference
-        </Typography>
-        <Typography paragraph>
-          Explore our API endpoints using the interactive documentation below.
-        </Typography>
-        <Box sx={{ mt: 3, border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
-          <SwaggerUI url={OPENAPI_SPEC_URL} />
-        </Box>
-      </TabPanel>
-
-      {/* Code Examples Tab */}
-      <TabPanel value={tabValue} index={3}>
-        <CodeExamplesContent />
-      </TabPanel>
-
-      {/* Authentication Tab */}
-      <TabPanel value={tabValue} index={4}>
-        <AuthenticationContent />
-      </TabPanel>
     </Box>
   );
 };
-
-const IntroContent = () => (
-  <Box>
-    <Typography variant="h5" gutterBottom>
-      Welcome to PeerAI API Documentation
-    </Typography>
-    <Typography paragraph>
-      PeerAI provides a powerful API for integrating AI capabilities into your applications.
-      Our platform offers state-of-the-art language models and tools to help you build
-      intelligent features with minimal effort.
-    </Typography>
-    
-    <Divider sx={{ my: 3 }} />
-    
-    <Typography variant="h6" gutterBottom>
-      Key Features
-    </Typography>
-    
-    <List>
-      <ListItem>
-        <ListItemIcon>
-          <ApiIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="RESTful API" 
-          secondary="Simple and consistent API design following REST principles"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemIcon>
-          <SecurityIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Secure Authentication" 
-          secondary="API key authentication with role-based access control"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemIcon>
-          <CodeIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Multiple SDKs" 
-          secondary="Official client libraries for Python, JavaScript, and more"
-        />
-      </ListItem>
-    </List>
-    
-    <Divider sx={{ my: 3 }} />
-    
-    <Typography variant="h6" gutterBottom>
-      Getting Started
-    </Typography>
-    <Typography paragraph>
-      To get started with the PeerAI API, you'll need to:
-    </Typography>
-    <ol>
-      <li>
-        <Typography paragraph>
-          <strong>Create an account</strong> - Sign up for PeerAI to get access to the dashboard
-        </Typography>
-      </li>
-      <li>
-        <Typography paragraph>
-          <strong>Generate an API key</strong> - Create an API key in the dashboard
-        </Typography>
-      </li>
-      <li>
-        <Typography paragraph>
-          <strong>Install the SDK</strong> - Use our client libraries for your preferred language
-        </Typography>
-      </li>
-      <li>
-        <Typography paragraph>
-          <strong>Make your first API call</strong> - Follow our quickstart guide to make your first request
-        </Typography>
-      </li>
-    </ol>
-    
-    <Box sx={{ mt: 3 }}>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={() => window.open('https://github.com/peerai/api-examples', '_blank')}
-        startIcon={<CodeIcon />}
-      >
-        View Sample Projects
-      </Button>
-    </Box>
-  </Box>
-);
 
 const QuickstartContent = () => (
   <Box>
@@ -248,7 +166,7 @@ const QuickstartContent = () => (
       Quickstart Guide
     </Typography>
     <Typography paragraph>
-      Get up and running with PeerAI API in minutes. Follow these steps to make your first API call.
+      Follow these steps to quickly integrate PeerAI into your application.
     </Typography>
     
     <Divider sx={{ my: 3 }} />
@@ -376,7 +294,7 @@ const CodeExamplesContent = () => (
       Code Examples
     </Typography>
     <Typography paragraph>
-      Learn how to use the PeerAI API with these practical examples.
+      Learn how to use PeerAI with these code examples.
     </Typography>
     
     <Divider sx={{ my: 3 }} />
@@ -494,7 +412,7 @@ const AuthenticationContent = () => (
       Authentication
     </Typography>
     <Typography paragraph>
-      Learn how to authenticate your requests to the PeerAI API.
+      Learn how to authenticate with the PeerAI API.
     </Typography>
     
     <Divider sx={{ my: 3 }} />
@@ -597,5 +515,81 @@ const AuthenticationContent = () => (
     </Box>
   </Box>
 );
+
+const DeveloperDocs: React.FC = () => {
+  const [tabValue, setTabValue] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isAuthenticated } = useAuth();
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      {/* Remove custom header for non-authenticated users since we're using DashboardLayout */}
+      
+      {/* Page title for all users */}
+      <Box sx={{ mb: 3, mt: 1 }}>
+        <Typography variant="h4" gutterBottom>
+          Developer Documentation
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
+          Comprehensive guides and references for integrating with the PeerAI API
+        </Typography>
+      </Box>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons={isMobile ? "auto" : undefined}
+          aria-label="developer documentation tabs"
+        >
+          <Tab icon={<DescriptionIcon />} label="Introduction" iconPosition="start" />
+          <Tab icon={<PlayArrowIcon />} label="Quickstart" iconPosition="start" />
+          <Tab icon={<ApiIcon />} label="API Reference" iconPosition="start" />
+          <Tab icon={<CodeIcon />} label="Code Examples" iconPosition="start" />
+          <Tab icon={<SecurityIcon />} label="Authentication" iconPosition="start" />
+        </Tabs>
+      </Box>
+
+      {/* Introduction Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <IntroContent />
+      </TabPanel>
+
+      {/* Quickstart Tab */}
+      <TabPanel value={tabValue} index={1}>
+        <QuickstartContent />
+      </TabPanel>
+
+      {/* API Reference Tab */}
+      <TabPanel value={tabValue} index={2}>
+        <Typography variant="h5" gutterBottom>
+          API Reference
+        </Typography>
+        <Typography paragraph>
+          Explore our API endpoints using the interactive documentation below.
+        </Typography>
+        <Box sx={{ mt: 3, border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
+          <SwaggerUI url={OPENAPI_SPEC_URL} />
+        </Box>
+      </TabPanel>
+
+      {/* Code Examples Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <CodeExamplesContent />
+      </TabPanel>
+
+      {/* Authentication Tab */}
+      <TabPanel value={tabValue} index={4}>
+        <AuthenticationContent />
+      </TabPanel>
+    </Box>
+  );
+};
 
 export default DeveloperDocs; 

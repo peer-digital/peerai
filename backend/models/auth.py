@@ -58,7 +58,12 @@ class User(Base):
 
     @property
     def is_superuser(self):
-        """Maintain backwards compatibility with existing is_superuser field"""
+        """
+        READ-ONLY property that returns True if role == Role.SUPER_ADMIN.
+        
+        IMPORTANT: This is a computed property and cannot be set directly.
+        To create a superuser, set role=Role.SUPER_ADMIN during creation.
+        """
         return self.role == Role.SUPER_ADMIN
 
 

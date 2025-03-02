@@ -9,6 +9,7 @@ from backend.models.auth import User
 from backend.models.auth import APIKey
 from backend.core.security import get_password_hash
 from backend.config import settings
+from backend.core.roles import Role  # Import Role enum
 
 # Use the configured test database URL
 TEST_DATABASE_URL = settings.TEST_DATABASE_URL
@@ -38,12 +39,18 @@ def db_session(engine):
 
 @pytest.fixture(scope="function")
 def test_user(db_session):
-    """Create a test user"""
+    """
+    Create a test user
+    
+    Note: To create a superuser, set role=Role.SUPER_ADMIN
+    The is_superuser property is READ-ONLY and computed from the role field.
+    """
     user = User(
         email="test@peerai.se",
         hashed_password=get_password_hash("testpass123"),
         full_name="Test User",
         is_active=True,
+        # To create a superuser: role=Role.SUPER_ADMIN
     )
     db_session.add(user)
     db_session.commit()

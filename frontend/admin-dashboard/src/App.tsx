@@ -20,6 +20,7 @@ const Settings = React.lazy(() => import('./pages/Settings'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Playground = React.lazy(() => import('./pages/Playground'));
 const DeveloperDocs = React.lazy(() => import('./pages/DeveloperDocs'));
+const GetStarted = React.lazy(() => import('./pages/GetStarted'));
 const TeamManagement = React.lazy(() => import('./pages/TeamManagement'));
 const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
@@ -49,15 +50,29 @@ function App() {
             {/* Use our custom PageLoader for Suspense fallback */}
             <React.Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/404" element={<NotFound />} />
 
                 {/* Public routes */}
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                 
-                {/* Developer docs - accessible without login but with layout when authenticated */}
-                <Route path="/docs" element={<ConditionalLayout><DeveloperDocs /></ConditionalLayout>} />
+                {/* Guest routes with dashboard layout */}
+                <Route
+                  element={
+                    <GuestLayout>
+                      <Outlet />
+                    </GuestLayout>
+                  }
+                >
+                  {/* Developer docs - accessible without login */}
+                  <Route path="/docs" element={<DeveloperDocs />} />
+                </Route>
+                
+                {/* Get Started page - accessible to both guests and authenticated users */}
+                <Route path="/get-started" element={<GetStartedRoute />} />
+                
+                {/* Root path redirects based on authentication */}
+                <Route path="/" element={<RootRedirect />} />
                 
                 {/* Protected routes */}
                 <Route
@@ -164,8 +179,8 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
-// Conditional layout component that applies DashboardLayout for authenticated users
-function ConditionalLayout({ children }: { children: JSX.Element }) {
+// Layout for guest users that applies DashboardLayout
+function GuestLayout({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
@@ -173,14 +188,44 @@ function ConditionalLayout({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    return (
-      <DashboardLayout>
-        {children}
-      </DashboardLayout>
-    );
+    return <Navigate to="/dashboard" replace />;
   }
 
-  return children;
+  return (
+    <DashboardLayout isGuestMode={true}>
+      {children}
+    </DashboardLayout>
+  );
+}
+
+// Root redirect component that sends authenticated users to dashboard and guests to get-started
+function RootRedirect() {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/get-started" replace />;
+}
+
+// Get Started route component that works for both authenticated and non-authenticated users
+function GetStartedRoute() {
+  const { isAuthenticated } = useAuth();
+  
+  return isAuthenticated ? (
+    <DashboardLayout>
+      <GetStarted />
+    </DashboardLayout>
+  ) : (
+    <DashboardLayout isGuestMode={true}>
+      <GetStarted />
+    </DashboardLayout>
+  );
 }
 
 export default App;

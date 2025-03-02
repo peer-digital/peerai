@@ -2,7 +2,7 @@
 Admin routes for PeerAI API
 """
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, desc, case
 from sqlalchemy.orm import Session
@@ -11,14 +11,15 @@ from pydantic import BaseModel
 from database import get_db
 from models.auth import User, APIKey, DBSystemSettings
 from models.usage import UsageRecord
+from models.models import ModelProvider, AIModel, ModelRequestMapping
 from core.security import get_current_user
 from schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures
+from core.roles import Permission, has_permission
 from services.analytics import (
     get_analytics_data,
     get_user_stats,
     export_analytics_data,
 )
-from core.roles import Permission, has_permission
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -915,3 +916,470 @@ async def get_team_analytics(
         "modelDistribution": model_distribution_data,
         "topEndpoints": top_endpoints_data,
     }
+
+# Model Registry Admin Routes
+@router.get("/models", response_model=List[dict])
+async def admin_list_models(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all models in the registry (admin only)"""
+    # Check if user is admin
+    if not has_permission(current_user, Permission.ADMIN_ACCESS):
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    models = (
+        db.query(AIModel)
+        .join(ModelProvider)
+        .all()
+    )
+    
+    return [
+        {
+            "id": model.id,
+            "name": model.name,
+            "display_name": model.display_name,
+            "provider": {
+                "id": model.provider.id,
+                "name": model.provider.name,
+                "display_name": model.provider.display_name,
+            },
+            "model_type": model.model_type,
+            "capabilities": model.capabilities,
+            "context_window": model.context_window,
+            "status": model.status,
+            "is_default": model.is_default,
+            "cost_per_1k_input_tokens": model.cost_per_1k_input_tokens,
+            "cost_per_1k_output_tokens": model.cost_per_1k_output_tokens,
+            "created_at": model.created_at,
+            "updated_at": model.updated_at,
+            "config": model.config,
+        }
+        for model in models
+    ]
+
+
+class ModelCreateRequest(BaseModel):
+    """Request model for creating a new model"""
+    name: str
+    display_name: str
+    provider_id: int
+    model_type: str
+    capabilities: List[str]
+    context_window: Optional[int] = None
+    status: str = "active"
+    is_default: bool = False
+    cost_per_1k_input_tokens: float = 0.0
+    cost_per_1k_output_tokens: float = 0.0
+    config: Optional[Dict[str, Any]] = None
+
+
+@router.post("/models", response_model=dict)
+async def admin_create_model(
+    request: ModelCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new model (admin only)"""
+    # Check if user is admin
+    if not has_permission(current_user, Permission.ADMIN_ACCESS):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if provider exists
+    provider = db.query(ModelProvider).filter(ModelProvider.id == request.provider_id).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    # Check if model name already exists
+    existing_model = db.query(AIModel).filter(AIModel.name == request.name).first()
+    if existing_model:
+        raise HTTPException(status_code=400, detail="Model with this name already exists")
+    
+    # If this is set as default, unset any other defaults for this model type
+    if request.is_default:
+        db.query(AIModel).filter(
+            AIModel.model_type == request.model_type,
+            AIModel.is_default == True
+        ).update({"is_default": False})
+    
+    # Create the model
+    model = AIModel(
+        name=request.name,
+        display_name=request.display_name,
+        provider_id=request.provider_id,
+        model_type=request.model_type,
+        capabilities=request.capabilities,
+        context_window=request.context_window,
+        status=request.status,
+        is_default=request.is_default,
+        cost_per_1k_input_tokens=request.cost_per_1k_input_tokens,
+        cost_per_1k_output_tokens=request.cost_per_1k_output_tokens,
+        config=request.config or {},
+    )
+    
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+    
+    return {
+        "id": model.id,
+        "name": model.name,
+        "display_name": model.display_name,
+        "provider_id": model.provider_id,
+        "model_type": model.model_type,
+        "capabilities": model.capabilities,
+        "context_window": model.context_window,
+        "status": model.status,
+        "is_default": model.is_default,
+        "cost_per_1k_input_tokens": model.cost_per_1k_input_tokens,
+        "cost_per_1k_output_tokens": model.cost_per_1k_output_tokens,
+        "created_at": model.created_at,
+        "updated_at": model.updated_at,
+        "config": model.config,
+    }
+
+
+class ModelUpdateRequest(BaseModel):
+    """Request model for updating a model"""
+    display_name: Optional[str] = None
+    model_type: Optional[str] = None
+    capabilities: Optional[List[str]] = None
+    context_window: Optional[int] = None
+    status: Optional[str] = None
+    is_default: Optional[bool] = None
+    cost_per_1k_input_tokens: Optional[float] = None
+    cost_per_1k_output_tokens: Optional[float] = None
+    config: Optional[Dict[str, Any]] = None
+
+
+@router.put("/models/{model_id}", response_model=dict)
+async def admin_update_model(
+    model_id: int,
+    request: ModelUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a model (admin only)"""
+    # Get the model
+    model = db.query(AIModel).filter(AIModel.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Update fields if provided
+    if request.display_name is not None:
+        model.display_name = request.display_name
+    
+    if request.model_type is not None:
+        model.model_type = request.model_type
+    
+    if request.capabilities is not None:
+        model.capabilities = request.capabilities
+    
+    if request.context_window is not None:
+        model.context_window = request.context_window
+    
+    if request.status is not None:
+        model.status = request.status
+    
+    if request.is_default is not None and request.is_default != model.is_default:
+        if request.is_default:
+            # If setting as default, unset any other defaults for this model type
+            db.query(AIModel).filter(
+                AIModel.model_type == model.model_type,
+                AIModel.is_default == True,
+                AIModel.id != model.id
+            ).update({"is_default": False})
+        model.is_default = request.is_default
+    
+    if request.cost_per_1k_input_tokens is not None:
+        model.cost_per_1k_input_tokens = request.cost_per_1k_input_tokens
+    
+    if request.cost_per_1k_output_tokens is not None:
+        model.cost_per_1k_output_tokens = request.cost_per_1k_output_tokens
+    
+    if request.config is not None:
+        model.config = request.config
+    
+    model.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(model)
+    
+    return {
+        "id": model.id,
+        "name": model.name,
+        "display_name": model.display_name,
+        "provider_id": model.provider_id,
+        "model_type": model.model_type,
+        "capabilities": model.capabilities,
+        "context_window": model.context_window,
+        "status": model.status,
+        "is_default": model.is_default,
+        "cost_per_1k_input_tokens": model.cost_per_1k_input_tokens,
+        "cost_per_1k_output_tokens": model.cost_per_1k_output_tokens,
+        "created_at": model.created_at,
+        "updated_at": model.updated_at,
+        "config": model.config,
+    }
+
+
+@router.delete("/models/{model_id}", response_model=dict)
+async def admin_delete_model(
+    model_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a model (admin only)"""
+    # Get the model
+    model = db.query(AIModel).filter(AIModel.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Check if this is a default model
+    if model.is_default:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete a default model. Set another model as default first."
+        )
+    
+    # Delete parameter mappings first
+    db.query(ModelRequestMapping).filter(ModelRequestMapping.model_id == model_id).delete()
+    
+    # Delete the model
+    db.delete(model)
+    db.commit()
+    
+    return {"message": f"Model {model.name} deleted successfully"}
+
+
+# Provider Management Routes
+@router.get("/providers", response_model=List[dict])
+async def admin_list_providers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all model providers (admin only)"""
+    providers = db.query(ModelProvider).all()
+    
+    return [
+        {
+            "id": provider.id,
+            "name": provider.name,
+            "display_name": provider.display_name,
+            "api_base_url": provider.api_base_url,
+            "api_key_env_var": provider.api_key_env_var,
+            "is_active": provider.is_active,
+            "created_at": provider.created_at,
+            "updated_at": provider.updated_at,
+            "config": provider.config,
+        }
+        for provider in providers
+    ]
+
+
+class ProviderCreateRequest(BaseModel):
+    """Request model for creating a new provider"""
+    name: str
+    display_name: str
+    api_base_url: str
+    api_key_env_var: str
+    is_active: bool = True
+    config: Optional[Dict[str, Any]] = None
+
+
+@router.post("/providers", response_model=dict)
+async def admin_create_provider(
+    request: ProviderCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new model provider (admin only)"""
+    # Check if provider name already exists
+    existing_provider = db.query(ModelProvider).filter(ModelProvider.name == request.name).first()
+    if existing_provider:
+        raise HTTPException(status_code=400, detail="Provider with this name already exists")
+    
+    # Create the provider
+    provider = ModelProvider(
+        name=request.name,
+        display_name=request.display_name,
+        api_base_url=request.api_base_url,
+        api_key_env_var=request.api_key_env_var,
+        is_active=request.is_active,
+        config=request.config or {},
+    )
+    
+    db.add(provider)
+    db.commit()
+    db.refresh(provider)
+    
+    return {
+        "id": provider.id,
+        "name": provider.name,
+        "display_name": provider.display_name,
+        "api_base_url": provider.api_base_url,
+        "api_key_env_var": provider.api_key_env_var,
+        "is_active": provider.is_active,
+        "created_at": provider.created_at,
+        "updated_at": provider.updated_at,
+        "config": provider.config,
+    }
+
+
+class ProviderUpdateRequest(BaseModel):
+    """Request model for updating a provider"""
+    display_name: Optional[str] = None
+    api_base_url: Optional[str] = None
+    api_key_env_var: Optional[str] = None
+    is_active: Optional[bool] = None
+    config: Optional[Dict[str, Any]] = None
+
+
+@router.put("/providers/{provider_id}", response_model=dict)
+async def admin_update_provider(
+    provider_id: int,
+    request: ProviderUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a model provider (admin only)"""
+    # Get the provider
+    provider = db.query(ModelProvider).filter(ModelProvider.id == provider_id).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    # Update fields if provided
+    if request.display_name is not None:
+        provider.display_name = request.display_name
+    
+    if request.api_base_url is not None:
+        provider.api_base_url = request.api_base_url
+    
+    if request.api_key_env_var is not None:
+        provider.api_key_env_var = request.api_key_env_var
+    
+    if request.is_active is not None:
+        provider.is_active = request.is_active
+    
+    if request.config is not None:
+        provider.config = request.config
+    
+    provider.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(provider)
+    
+    return {
+        "id": provider.id,
+        "name": provider.name,
+        "display_name": provider.display_name,
+        "api_base_url": provider.api_base_url,
+        "api_key_env_var": provider.api_key_env_var,
+        "is_active": provider.is_active,
+        "created_at": provider.created_at,
+        "updated_at": provider.updated_at,
+        "config": provider.config,
+    }
+
+
+# Parameter Mapping Routes
+@router.get("/models/{model_id}/mappings", response_model=List[dict])
+async def admin_list_parameter_mappings(
+    model_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List parameter mappings for a model (admin only)"""
+    # Check if model exists
+    model = db.query(AIModel).filter(AIModel.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    mappings = db.query(ModelRequestMapping).filter(ModelRequestMapping.model_id == model_id).all()
+    
+    return [
+        {
+            "id": mapping.id,
+            "model_id": mapping.model_id,
+            "peer_param": mapping.peer_param,
+            "provider_param": mapping.provider_param,
+            "transform_function": mapping.transform_function,
+            "created_at": mapping.created_at,
+            "updated_at": mapping.updated_at,
+        }
+        for mapping in mappings
+    ]
+
+
+class ParameterMappingCreateRequest(BaseModel):
+    """Request model for creating a parameter mapping"""
+    peer_param: str
+    provider_param: str
+    transform_function: Optional[str] = None
+
+
+@router.post("/models/{model_id}/mappings", response_model=dict)
+async def admin_create_parameter_mapping(
+    model_id: int,
+    request: ParameterMappingCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a parameter mapping for a model (admin only)"""
+    # Check if model exists
+    model = db.query(AIModel).filter(AIModel.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Check if mapping already exists
+    existing_mapping = (
+        db.query(ModelRequestMapping)
+        .filter(
+            ModelRequestMapping.model_id == model_id,
+            ModelRequestMapping.peer_param == request.peer_param
+        )
+        .first()
+    )
+    if existing_mapping:
+        raise HTTPException(status_code=400, detail=f"Mapping for parameter '{request.peer_param}' already exists")
+    
+    # Create the mapping
+    mapping = ModelRequestMapping(
+        model_id=model_id,
+        peer_param=request.peer_param,
+        provider_param=request.provider_param,
+        transform_function=request.transform_function,
+    )
+    
+    db.add(mapping)
+    db.commit()
+    db.refresh(mapping)
+    
+    return {
+        "id": mapping.id,
+        "model_id": mapping.model_id,
+        "peer_param": mapping.peer_param,
+        "provider_param": mapping.provider_param,
+        "transform_function": mapping.transform_function,
+        "created_at": mapping.created_at,
+        "updated_at": mapping.updated_at,
+    }
+
+
+@router.delete("/mappings/{mapping_id}", response_model=dict)
+async def admin_delete_parameter_mapping(
+    mapping_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a parameter mapping (admin only)"""
+    # Get the mapping
+    mapping = db.query(ModelRequestMapping).filter(ModelRequestMapping.id == mapping_id).first()
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Parameter mapping not found")
+    
+    # Delete the mapping
+    db.delete(mapping)
+    db.commit()
+    
+    return {"message": f"Parameter mapping for '{mapping.peer_param}' deleted successfully"}

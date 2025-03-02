@@ -21,6 +21,7 @@ import {
   useMediaQuery,
   Collapse,
   Fade,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -37,6 +38,10 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Help as HelpIcon,
+  Logout as LogoutIcon,
+  Rocket as RocketIcon,
+  Support as SupportIcon,
+  GitHub as GitHubIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -51,43 +56,57 @@ const menuItems = [
     text: 'Dashboard', 
     icon: <DashboardIcon />, 
     path: '/dashboard',
-    requiredPermissions: [Permission.VIEW_OWN_USAGE, Permission.VIEW_ALL_USAGE]
+    requiredPermissions: [Permission.VIEW_OWN_USAGE, Permission.VIEW_ALL_USAGE],
+    guestAccessible: false
   },
   { 
     text: 'Users', 
     icon: <PeopleIcon />, 
     path: '/users',
-    requiredPermissions: [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]
+    requiredPermissions: [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS],
+    guestAccessible: false
   },
   { 
     text: 'API Keys', 
     icon: <ApiKeyIcon />, 
     path: '/api-keys',
-    requiredPermissions: [Permission.USE_API]
+    requiredPermissions: [Permission.USE_API],
+    guestAccessible: false
   },
   { 
     text: 'Analytics', 
     icon: <AssessmentIcon />, 
     path: '/analytics',
-    requiredPermissions: [Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]
+    requiredPermissions: [Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE],
+    guestAccessible: false
   },
   { 
     text: 'Playground', 
     icon: <CodeIcon />, 
     path: '/playground',
-    requiredPermissions: [Permission.USE_API]
+    requiredPermissions: [Permission.USE_API],
+    guestAccessible: false
   },
   { 
     text: 'Settings', 
     icon: <SettingsIcon />, 
     path: '/settings',
-    requiredPermissions: [Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION]
+    requiredPermissions: [Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION],
+    guestAccessible: false
+  },
+  { 
+    text: 'Get Started', 
+    icon: <RocketIcon />, 
+    path: '/get-started',
+    requiredPermissions: [],
+    guestAccessible: true
   },
   { 
     text: 'Developer Docs', 
     icon: <MenuBookIcon />, 
     path: '/docs',
-    requiredPermissions: [Permission.VIEW_DOCS]
+    requiredPermissions: [],
+    guestAccessible: true
   },
 ];
 
@@ -172,9 +191,10 @@ const MenuSectionTitle = styled(Typography)(({ theme }) => ({
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  isGuestMode?: boolean;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode = false }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -192,6 +212,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   
   // Check if user has any of the required permissions
   const hasRequiredPermissions = (requiredPermissions: Permission[]): boolean => {
+    if (isGuestMode) return false;
     if (!user || !user.role) return false;
     return hasAnyPermission(user.role as Role, requiredPermissions);
   };
@@ -248,7 +269,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             aria-label="open drawer"
             onClick={handleDrawerOpen}
             edge="start"
-            sx={{ mr: 2, ...(open && { display: 'none' }) }}
+            sx={{
+              marginRight: 2,
+              ...(open && { display: 'none' }),
+            }}
           >
             <MenuIcon />
           </IconButton>
@@ -265,133 +289,102 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
           
-          {/* ThemeToggle component */}
+          {/* Theme toggle for all users */}
           <ThemeToggle />
           
-          {/* Notification icon */}
-          <Tooltip title="Notifications">
-            <IconButton 
-              color="inherit" 
-              onClick={handleNotificationMenuOpen}
-              sx={{ mr: 1 }}
-            >
-              <Badge badgeContent={3} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-          
-          {/* User menu */}
-          <Tooltip title={user?.email || 'User'}>
-            <IconButton
-              onClick={handleUserMenuOpen}
-              size="small"
-              sx={{ ml: 1 }}
-              aria-controls={anchorEl ? 'account-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={anchorEl ? 'true' : undefined}
-            >
-              <Avatar 
-                sx={{ 
-                  width: 32, 
-                  height: 32,
-                  bgcolor: theme.palette.primary.main,
-                  fontSize: '0.875rem',
-                }}
+          {/* Only show these controls for authenticated users */}
+          {!isGuestMode && (
+            <>
+              <Tooltip title="Notifications">
+                <IconButton 
+                  color="inherit" 
+                  onClick={handleNotificationMenuOpen}
+                  sx={{ mx: 1 }}
+                >
+                  <Badge badgeContent={3} color="error">
+                    <NotificationsIcon />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Account">
+                <IconButton
+                  onClick={handleUserMenuOpen}
+                  color="inherit"
+                  sx={{ ml: 1 }}
+                >
+                  <Avatar 
+                    sx={{ 
+                      width: 32, 
+                      height: 32,
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    }}
+                  >
+                    {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
+              
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleUserMenuClose}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               >
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
-              </Avatar>
-            </IconButton>
-          </Tooltip>
+                <MenuItem onClick={handleUserMenuClose}>
+                  <ListItemIcon>
+                    <AccountCircleIcon fontSize="small" />
+                  </ListItemIcon>
+                  Profile
+                </MenuItem>
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  Logout
+                </MenuItem>
+              </Menu>
+              
+              <Menu
+                anchorEl={notificationAnchorEl}
+                open={Boolean(notificationAnchorEl)}
+                onClose={handleNotificationMenuClose}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              >
+                <MenuItem onClick={handleNotificationMenuClose}>
+                  <Typography variant="inherit" noWrap>
+                    New user registered
+                  </Typography>
+                </MenuItem>
+                <MenuItem onClick={handleNotificationMenuClose}>
+                  <Typography variant="inherit" noWrap>
+                    Usage limit reached
+                  </Typography>
+                </MenuItem>
+                <MenuItem onClick={handleNotificationMenuClose}>
+                  <Typography variant="inherit" noWrap>
+                    System update completed
+                  </Typography>
+                </MenuItem>
+              </Menu>
+            </>
+          )}
+          
+          {/* Show login button for guest users */}
+          {isGuestMode && (
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={() => navigate('/login')}
+            >
+              Sign In
+            </Button>
+          )}
         </Toolbar>
       </AppBarStyled>
-      
-      {/* Notification menu */}
-      <Menu
-        anchorEl={notificationAnchorEl}
-        id="notification-menu"
-        open={Boolean(notificationAnchorEl)}
-        onClose={handleNotificationMenuClose}
-        PaperProps={{
-          elevation: 3,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
-            mt: 1.5,
-            width: 320,
-            '& .MuiAvatar-root': {
-              width: 32,
-              height: 32,
-              ml: -0.5,
-              mr: 1,
-            },
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="subtitle2">New API key created</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="subtitle2">Usage limit at 80%</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="subtitle2">New team member added</Typography>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleNotificationMenuClose} sx={{ justifyContent: 'center' }}>
-          <Typography variant="body2" color="primary">View all notifications</Typography>
-        </MenuItem>
-      </Menu>
-      
-      {/* User menu */}
-      <Menu
-        anchorEl={anchorEl}
-        id="account-menu"
-        open={Boolean(anchorEl)}
-        onClose={handleUserMenuClose}
-        PaperProps={{
-          elevation: 3,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
-            mt: 1.5,
-            '& .MuiAvatar-root': {
-              width: 32,
-              height: 32,
-              ml: -0.5,
-              mr: 1,
-            },
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={() => { handleUserMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <AccountCircleIcon fontSize="small" />
-          </ListItemIcon>
-          Profile
-        </MenuItem>
-        <MenuItem onClick={() => { handleUserMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-          </ListItemIcon>
-          Logout
-        </MenuItem>
-      </Menu>
       
       <Drawer
         sx={{
@@ -402,14 +395,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             boxSizing: 'border-box',
           },
         }}
-        variant={isMobile ? "temporary" : "persistent"}
+        variant="persistent"
         anchor="left"
         open={open}
-        onClose={handleDrawerClose}
       >
         <DrawerHeader>
           <LogoContainer>
             <Logo src={logoSrc} alt="PeerAI Logo" />
+            <Typography variant="h6" noWrap component="div">
+              PeerAI
+            </Typography>
           </LogoContainer>
           <IconButton onClick={handleDrawerClose}>
             <ChevronLeftIcon />
@@ -418,53 +413,78 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         
         <Divider />
         
-        <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <MenuSection>
-            <MenuSectionTitle>Main</MenuSectionTitle>
-            <List>
-              {menuItems.filter(item => 
-                item.text !== 'Settings' && 
-                item.text !== 'Developer Docs' &&
-                hasRequiredPermissions(item.requiredPermissions)
-              ).map((item) => (
+        <MenuSection>
+          <MenuSectionTitle>
+            MAIN
+          </MenuSectionTitle>
+          <List>
+            {menuItems.map((item) => {
+              // For guest mode, only show guest-accessible items
+              if (isGuestMode && !item.guestAccessible) {
+                return null;
+              }
+              
+              // For authenticated users, check permissions (except for Get Started which is always accessible)
+              if (!isGuestMode && item.requiredPermissions.length > 0 && !hasRequiredPermissions(item.requiredPermissions) && item.text !== 'Get Started') {
+                return null;
+              }
+              
+              return (
                 <ListItem key={item.text} disablePadding>
                   <ListItemButton
+                    onClick={() => navigate(item.path)}
                     selected={location.pathname === item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) handleDrawerClose();
+                    sx={{
+                      borderRadius: '0 24px 24px 0',
+                      mx: 1,
+                      my: 0.5,
+                      '&.Mui-selected': {
+                        backgroundColor: 'primary.main',
+                        color: 'primary.contrastText',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        },
+                        '& .MuiListItemIcon-root': {
+                          color: 'primary.contrastText',
+                        },
+                      },
                     }}
                   >
-                    <ListItemIcon sx={{ 
-                      color: location.pathname === item.path 
-                        ? theme.palette.primary.main 
-                        : theme.palette.text.secondary 
-                    }}>
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        color: location.pathname === item.path ? 'inherit' : 'text.secondary',
+                      }}
+                    >
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={item.text} 
-                      primaryTypographyProps={{ 
-                        fontWeight: location.pathname === item.path ? 600 : 400,
-                        color: location.pathname === item.path 
-                          ? theme.palette.primary.main 
-                          : theme.palette.text.primary
-                      }} 
-                    />
+                    <ListItemText primary={item.text} />
                   </ListItemButton>
                 </ListItem>
-              ))}
-            </List>
-          </MenuSection>
-          
-          <Divider sx={{ my: 1 }} />
-          
+              );
+            })}
+          </List>
+        </MenuSection>
+        
+        <Divider />
+        
+        {/* Only show support section for authenticated users */}
+        {!isGuestMode && (
           <MenuSection>
-            <MenuSectionTitle>Support</MenuSectionTitle>
+            <MenuSectionTitle>
+              SUPPORT
+            </MenuSectionTitle>
             <List>
               <ListItem disablePadding>
-                <ListItemButton onClick={toggleHelpMenu}>
-                  <ListItemIcon>
+                <ListItemButton
+                  onClick={toggleHelpMenu}
+                  sx={{
+                    borderRadius: '0 24px 24px 0',
+                    mx: 1,
+                    my: 0.5,
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
                     <HelpIcon />
                   </ListItemIcon>
                   <ListItemText primary="Help & Resources" />
@@ -474,125 +494,120 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               
               <Collapse in={helpMenuOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
-                  {menuItems.filter(item => 
-                    item.text === 'Developer Docs' &&
-                    hasRequiredPermissions(item.requiredPermissions)
-                  ).map((item) => (
-                    <ListItem key={item.text} disablePadding>
-                      <ListItemButton
-                        selected={location.pathname === item.path}
-                        onClick={() => {
-                          navigate(item.path);
-                          if (isMobile) handleDrawerClose();
-                        }}
-                        sx={{ pl: 4 }}
-                      >
-                        <ListItemIcon sx={{ 
-                          color: location.pathname === item.path 
-                            ? theme.palette.primary.main 
-                            : theme.palette.text.secondary 
-                        }}>
-                          {item.icon}
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={item.text} 
-                          primaryTypographyProps={{ 
-                            fontWeight: location.pathname === item.path ? 600 : 400,
-                            color: location.pathname === item.path 
-                              ? theme.palette.primary.main 
-                              : theme.palette.text.primary
-                          }} 
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
+                  <ListItemButton
+                    sx={{ pl: 4, borderRadius: '0 24px 24px 0', mx: 1, my: 0.5 }}
+                    onClick={() => window.open('https://docs.peerai.com', '_blank')}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                      <MenuBookIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Documentation" />
+                  </ListItemButton>
                   
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() => window.open('https://github.com/yourusername/peerai', '_blank')}
-                      sx={{ pl: 4 }}
-                    >
-                      <ListItemIcon>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-                        </svg>
-                      </ListItemIcon>
-                      <ListItemText primary="GitHub" />
-                    </ListItemButton>
-                  </ListItem>
+                  <ListItemButton
+                    sx={{ pl: 4, borderRadius: '0 24px 24px 0', mx: 1, my: 0.5 }}
+                    onClick={() => window.open('https://support.peerai.com', '_blank')}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                      <SupportIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Support" />
+                  </ListItemButton>
                 </List>
               </Collapse>
-              
-              {menuItems.filter(item => 
-                item.text === 'Settings' &&
-                hasRequiredPermissions(item.requiredPermissions)
-              ).map((item) => (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    selected={location.pathname === item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) handleDrawerClose();
-                    }}
-                  >
-                    <ListItemIcon sx={{ 
-                      color: location.pathname === item.path 
-                        ? theme.palette.primary.main 
-                        : theme.palette.text.secondary 
-                    }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.text} 
-                      primaryTypographyProps={{ 
-                        fontWeight: location.pathname === item.path ? 600 : 400,
-                        color: location.pathname === item.path 
-                          ? theme.palette.primary.main 
-                          : theme.palette.text.primary
-                      }} 
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
             </List>
           </MenuSection>
-          
-          <Box sx={{ flexGrow: 1 }} />
-          
-          {/* User info at bottom of sidebar */}
-          <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Avatar 
-                sx={{ 
-                  width: 32, 
-                  height: 32, 
-                  mr: 1,
-                  bgcolor: theme.palette.primary.main,
-                  fontSize: '0.875rem',
-                }}
-              >
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
-              </Avatar>
-              <Box sx={{ ml: 1 }}>
-                <Typography variant="body2" fontWeight={500} noWrap>
-                  {user?.email || 'User'}
-                </Typography>
-                <Typography variant="caption" color="textSecondary" noWrap>
-                  {user?.role || 'Role'}
-                </Typography>
-              </Box>
+        )}
+        
+        {/* Support section for guest users */}
+        {isGuestMode && (
+          <MenuSection>
+            <MenuSectionTitle>
+              SUPPORT
+            </MenuSectionTitle>
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{
+                    borderRadius: '0 24px 24px 0',
+                    mx: 1,
+                    my: 0.5,
+                  }}
+                  onClick={() => window.open('https://github.com/peerai', '_blank')}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                    <GitHubIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="GitHub" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{
+                    borderRadius: '0 24px 24px 0',
+                    mx: 1,
+                    my: 0.5,
+                  }}
+                  onClick={() => window.open('mailto:support@peerai.com', '_blank')}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                    <SupportIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Contact Support" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </MenuSection>
+        )}
+        
+        {/* Show a simplified footer for guest mode */}
+        {isGuestMode && (
+          <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
+            <Typography variant="body2" color="text.secondary" align="center">
+              © {new Date().getFullYear()} PeerAI
+            </Typography>
+            <Typography variant="caption" color="text.secondary" align="center" display="block">
+              Powerful AI for developers
+            </Typography>
+          </Box>
+        )}
+        
+        {/* User info section for authenticated users */}
+        {!isGuestMode && user && (
+          <Box
+            sx={{
+              p: 2,
+              mt: 'auto',
+              borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <Avatar
+              sx={{
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                width: 40,
+                height: 40,
+              }}
+            >
+              {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
+            </Avatar>
+            <Box sx={{ ml: 2, overflow: 'hidden' }}>
+              <Typography variant="body2" noWrap>
+                {user.name || user.email}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {user.email}
+              </Typography>
             </Box>
           </Box>
-        </Box>
+        )}
       </Drawer>
       
       <Main open={open}>
         <DrawerHeader />
-        <Fade in={true} timeout={500}>
-          <Box>
-            {children}
-          </Box>
-        </Fade>
+        {children}
       </Main>
     </Box>
   );
