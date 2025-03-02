@@ -74,58 +74,57 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_model_request_mappings_id"), "model_request_mappings", ["id"], unique=False)
 
-    # Use a connection to execute SQL and fetch results
-    connection = op.get_bind()
-    
-    # Insert default providers
-    connection.execute(text("""
-        INSERT INTO model_providers (name, display_name, api_base_url, api_key_env_var, is_active, config)
+    # Insert default providers with hardcoded IDs to avoid SELECT queries
+    op.execute(
+        """
+        INSERT INTO model_providers (id, name, display_name, api_base_url, api_key_env_var, is_active, config)
         VALUES 
-        ('hosted', 'Hosted LLM', 'https://llm-api.bahnhof.se/v1/completions', 'HOSTED_LLM_API_KEY', true, '{"request_format": "direct"}'),
-        ('mistral', 'Mistral AI', 'https://api.mistral.ai/v1/chat/completions', 'EXTERNAL_LLM_API_KEY', true, '{"request_format": "chat"}')
-    """))
+        (1, 'hosted', 'Hosted LLM', 'https://llm-api.bahnhof.se/v1/completions', 'HOSTED_LLM_API_KEY', true, '{"request_format": "direct"}'),
+        (2, 'mistral', 'Mistral AI', 'https://api.mistral.ai/v1/chat/completions', 'EXTERNAL_LLM_API_KEY', true, '{"request_format": "chat"}')
+        """
+    )
 
-    # Get provider IDs
-    hosted_result = connection.execute(text("SELECT id FROM model_providers WHERE name = 'hosted'"))
-    hosted_id = hosted_result.fetchone()[0]
-    
-    mistral_result = connection.execute(text("SELECT id FROM model_providers WHERE name = 'mistral'"))
-    mistral_id = mistral_result.fetchone()[0]
+    # Use hardcoded IDs instead of querying
+    hosted_id = 1
+    mistral_id = 2
 
-    # Insert default models
-    connection.execute(text(f"""
-        INSERT INTO ai_models (name, display_name, provider_id, model_type, capabilities, context_window, status, is_default, cost_per_1k_input_tokens, cost_per_1k_output_tokens, config)
+    # Insert default models with hardcoded IDs
+    op.execute(
+        f"""
+        INSERT INTO ai_models (id, name, display_name, provider_id, model_type, capabilities, context_window, status, is_default, cost_per_1k_input_tokens, cost_per_1k_output_tokens, config)
         VALUES 
-        ('hosted-llm', 'Hosted LLM', {hosted_id}, 'text', '["completion"]', 8192, 'active', true, 0.0, 0.0, '{{}}'),
-        ('mistral-tiny', 'Mistral Tiny', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 0.14, 0.42, '{{}}'),
-        ('mistral-small', 'Mistral Small', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 0.6, 1.8, '{{}}'),
-        ('mistral-medium', 'Mistral Medium', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 2.7, 8.1, '{{}}')
-    """))
+        (1, 'hosted-llm', 'Hosted LLM', {hosted_id}, 'text', '["completion"]', 8192, 'active', true, 0.0, 0.0, '{{}}'),
+        (2, 'mistral-tiny', 'Mistral Tiny', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 0.14, 0.42, '{{}}'),
+        (3, 'mistral-small', 'Mistral Small', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 0.6, 1.8, '{{}}'),
+        (4, 'mistral-medium', 'Mistral Medium', {mistral_id}, 'text', '["chat", "completion"]', 32000, 'active', false, 2.7, 8.1, '{{}}')
+        """
+    )
 
-    # Get model IDs
-    hosted_model_result = connection.execute(text("SELECT id FROM ai_models WHERE name = 'hosted-llm'"))
-    hosted_model_id = hosted_model_result.fetchone()[0]
-    
-    mistral_tiny_result = connection.execute(text("SELECT id FROM ai_models WHERE name = 'mistral-tiny'"))
-    mistral_tiny_id = mistral_tiny_result.fetchone()[0]
+    # Use hardcoded IDs for models
+    hosted_model_id = 1
+    mistral_tiny_id = 2
 
     # Insert parameter mappings for hosted model
-    connection.execute(text(f"""
+    op.execute(
+        f"""
         INSERT INTO model_request_mappings (model_id, peer_param, provider_param)
         VALUES 
         ({hosted_model_id}, 'prompt', 'prompt'),
         ({hosted_model_id}, 'max_tokens', 'max_tokens'),
         ({hosted_model_id}, 'temperature', 'temperature')
-    """))
+        """
+    )
 
     # Insert parameter mappings for Mistral models
-    connection.execute(text(f"""
+    op.execute(
+        f"""
         INSERT INTO model_request_mappings (model_id, peer_param, provider_param, transform_function)
         VALUES 
         ({mistral_tiny_id}, 'prompt', 'messages', 'format_as_chat_message'),
         ({mistral_tiny_id}, 'max_tokens', 'max_tokens', NULL),
         ({mistral_tiny_id}, 'temperature', 'temperature', NULL)
-    """))
+        """
+    )
 
 
 def downgrade() -> None:
