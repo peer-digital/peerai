@@ -19,14 +19,24 @@ import {
   Switch,
   FormControlLabel,
   Chip,
-  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { Permission } from '../types/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 import { apiClient } from '../api/client';
 import { toast } from 'react-toastify';
-import { DataGrid, Column, Action } from '../components/DataGrid';
 
 interface ModelProvider {
   id: number;
@@ -39,6 +49,11 @@ interface ModelRecord {
   name: string;
   display_name: string;
   provider_id: number;
+  provider?: {
+    id: number;
+    name: string;
+    display_name: string;
+  };
   model_type: string;
   capabilities?: string[];
   context_window?: number;
@@ -46,7 +61,7 @@ interface ModelRecord {
   is_default: boolean;
   cost_per_1k_input_tokens: number;
   cost_per_1k_output_tokens: number;
-  config?: any;
+  config?: Record<string, unknown>;
 }
 
 const ModelManagement: React.FC = () => {
@@ -54,6 +69,8 @@ const ModelManagement: React.FC = () => {
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // State for create/edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -73,16 +90,17 @@ const ModelManagement: React.FC = () => {
       const response = await apiClient.get('/api/v1/admin/models');
       setModels(response.data);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching models:', err);
-      if (err.response?.status === 401) {
+      const error = err as { response?: { status?: number; data?: { detail?: string } }; message?: string };
+      if (error.response?.status === 401) {
         setError('Authentication error: Please make sure you are logged in as a Super Admin');
         toast.error('Authentication error: Please log in again');
-      } else if (err.response?.status === 403) {
+      } else if (error.response?.status === 403) {
         setError('Permission denied: You need Super Admin privileges to access this page');
         toast.error('Permission denied: Super Admin access required');
       } else {
-        setError(err.response?.data?.detail || err.message || 'Failed to fetch models');
+        setError(error.response?.data?.detail || error.message || 'Failed to fetch models');
         toast.error('Failed to fetch models');
       }
     } finally {
@@ -92,10 +110,9 @@ const ModelManagement: React.FC = () => {
 
   const fetchProviders = async () => {
     try {
-      // This endpoint needs to be implemented or you can use a mock
       const response = await apiClient.get('/api/v1/admin/providers');
       setProviders(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching providers:', err);
       // Use mock data for now
       setProviders([
@@ -107,7 +124,8 @@ const ModelManagement: React.FC = () => {
       
       // Only show toast for provider fetch error if it's not a 401/403
       // (to avoid duplicate errors with the models fetch)
-      if (err.response?.status !== 401 && err.response?.status !== 403) {
+      const error = err as { response?: { status?: number } };
+      if (error.response?.status !== 401 && error.response?.status !== 403) {
         toast.warning('Using mock provider data');
       }
     }
@@ -163,9 +181,10 @@ const ModelManagement: React.FC = () => {
       }
       handleCloseDialog();
       fetchModels();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Save error:', err);
-      toast.error(err.response?.data?.detail || 'Failed to save model');
+      const error = err as { response?: { data?: { detail?: string } } };
+      toast.error(error.response?.data?.detail || 'Failed to save model');
     }
   };
 
@@ -175,9 +194,10 @@ const ModelManagement: React.FC = () => {
       await apiClient.delete(`/api/v1/admin/models/${record.id}`);
       toast.success('Model deleted successfully');
       fetchModels();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Delete error:', err);
-      toast.error(err.response?.data?.detail || 'Failed to delete model');
+      const error = err as { response?: { data?: { detail?: string } } };
+      toast.error(error.response?.data?.detail || 'Failed to delete model');
     }
   };
 
@@ -187,61 +207,17 @@ const ModelManagement: React.FC = () => {
     return provider ? provider.display_name : `Provider ${providerId}`;
   };
 
-  // DataGrid columns
-  const columns: Column[] = [
-    { field: 'id', headerName: 'ID', width: 60 },
-    { field: 'name', headerName: 'Name', width: 150 },
-    { field: 'display_name', headerName: 'Display Name', width: 200 },
-    { 
-      field: 'provider_id', 
-      headerName: 'Provider', 
-      width: 120,
-      renderCell: (params) => getProviderName(params.provider_id)
-    },
-    { field: 'model_type', headerName: 'Type', width: 120 },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      width: 100,
-      renderCell: (params) => (
-        <Chip 
-          label={params.status} 
-          color={
-            params.status === 'active' ? 'success' : 
-            params.status === 'beta' ? 'info' : 
-            params.status === 'deprecated' ? 'warning' : 'default'
-          } 
-          size="small" 
-        />
-      )
-    },
-    { 
-      field: 'is_default', 
-      headerName: 'Default', 
-      width: 80,
-      renderCell: (params) => params.is_default ? 'Yes' : 'No'
-    },
-    { field: 'cost_per_1k_input_tokens', headerName: 'Cost Input', width: 110 },
-    { field: 'cost_per_1k_output_tokens', headerName: 'Cost Output', width: 110 },
-    { 
-      field: 'context_window', 
-      headerName: 'Context', 
-      width: 100,
-      renderCell: (params) => params.context_window ? `${params.context_window.toLocaleString()}` : 'N/A'
-    },
-  ];
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
 
-  // DataGrid actions
-  const actions: Action[] = [
-    {
-      label: 'Edit',
-      onClick: (row) => handleOpenDialog(row),
-    },
-    {
-      label: 'Delete',
-      onClick: (row) => handleDelete(row),
-    },
-  ];
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Calculate displayed rows based on pagination
+  const displayedRows = models.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
@@ -291,16 +267,78 @@ const ModelManagement: React.FC = () => {
           </Paper>
         )}
 
-        <DataGrid
-          data={models}
-          columns={columns}
-          actions={actions}
-          loading={loading}
-          pagination
-          pageSize={10}
-          filterable
-          sortable
-        />
+        <TableContainer component={Paper}>
+          {loading ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell width="5%">ID</TableCell>
+                    <TableCell width="12%">Name</TableCell>
+                    <TableCell width="12%">Display Name</TableCell>
+                    <TableCell width="12%">Provider</TableCell>
+                    <TableCell width="8%">Type</TableCell>
+                    <TableCell width="8%">Status</TableCell>
+                    <TableCell width="8%">Default</TableCell>
+                    <TableCell width="8%">Cost Input</TableCell>
+                    <TableCell width="8%">Cost Output</TableCell>
+                    <TableCell width="10%">Context</TableCell>
+                    <TableCell width="9%" align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {displayedRows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.id}</TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.display_name}</TableCell>
+                      <TableCell>{row.provider ? row.provider.display_name : getProviderName(row.provider_id)}</TableCell>
+                      <TableCell>{row.model_type}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={row.status} 
+                          color={
+                            row.status === 'active' ? 'success' : 
+                            row.status === 'beta' ? 'info' : 
+                            row.status === 'deprecated' ? 'warning' : 'default'
+                          } 
+                          size="small" 
+                        />
+                      </TableCell>
+                      <TableCell>{row.is_default ? 'Yes' : 'No'}</TableCell>
+                      <TableCell>{row.cost_per_1k_input_tokens}</TableCell>
+                      <TableCell>{row.cost_per_1k_output_tokens}</TableCell>
+                      <TableCell>{row.context_window ? `${row.context_window.toLocaleString()}` : 'N/A'}</TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <IconButton size="small" onClick={() => handleOpenDialog(row)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleDelete(row)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={models.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </>
+          )}
+        </TableContainer>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
