@@ -23,6 +23,7 @@ const DeveloperDocs = React.lazy(() => import('./pages/DeveloperDocs'));
 const GetStarted = React.lazy(() => import('./pages/GetStarted'));
 const TeamManagement = React.lazy(() => import('./pages/TeamManagement'));
 const UserManagement = React.lazy(() => import('./pages/UserManagement'));
+const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
@@ -125,6 +126,13 @@ function App() {
                   <Route path="/settings" element={
                     <PermissionGuard requiredPermissions={[Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION]}>
                       <Settings />
+                    </PermissionGuard>
+                  } />
+                  
+                  {/* Model Management - for super admins only */}
+                  <Route path="/models" element={
+                    <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
+                      <ModelManagement />
                     </PermissionGuard>
                   } />
                   

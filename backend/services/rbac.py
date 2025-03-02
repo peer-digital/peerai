@@ -29,8 +29,8 @@ class RBACService:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
 
-        # Super admins can access any team
-        if current_user.role == Role.SUPER_ADMIN:
+        # Users with MANAGE_ALL_TEAMS permission can access any team
+        if has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
             return team
 
         # User admins can only access their own team
@@ -51,10 +51,10 @@ class RBACService:
             raise HTTPException(status_code=404, detail="User not found")
 
         # Check permissions
-        if current_user.role == Role.SUPER_ADMIN:
-            # Super admins can change any role
+        if has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
+            # Users with MANAGE_ALL_TEAMS permission can change any role
             pass
-        elif current_user.role == Role.USER_ADMIN:
+        elif has_permission(current_user.role, Permission.MANAGE_TEAM_MEMBERS):
             # User admins can only modify users in their team and can't create super admins
             if (
                 target_user.team_id != current_user.team_id
@@ -87,10 +87,10 @@ class RBACService:
             raise HTTPException(status_code=404, detail="Team not found")
 
         # Check permissions
-        if current_user.role == Role.SUPER_ADMIN:
-            # Super admins can add users to any team
+        if has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
+            # Users with MANAGE_ALL_TEAMS permission can add users to any team
             pass
-        elif current_user.role == Role.USER_ADMIN:
+        elif has_permission(current_user.role, Permission.MANAGE_TEAM_MEMBERS):
             # User admins can only add users to their own team
             if current_user.team_id != team_id:
                 raise HTTPException(
@@ -114,10 +114,10 @@ class RBACService:
             raise HTTPException(status_code=404, detail="User not found")
 
         # Check permissions
-        if current_user.role == Role.SUPER_ADMIN:
-            # Super admins can remove users from any team
+        if has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
+            # Users with MANAGE_ALL_TEAMS permission can remove users from any team
             pass
-        elif current_user.role == Role.USER_ADMIN:
+        elif has_permission(current_user.role, Permission.MANAGE_TEAM_MEMBERS):
             # User admins can only remove users from their own team
             if current_user.team_id != user.team_id:
                 raise HTTPException(
@@ -138,10 +138,10 @@ class RBACService:
     def get_team_members(db: Session, team_id: int, current_user: User) -> List[User]:
         """Get all members of a team"""
         # Check permissions
-        if current_user.role == Role.SUPER_ADMIN:
-            # Super admins can view any team's members
+        if has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
+            # Users with MANAGE_ALL_TEAMS permission can view any team's members
             pass
-        elif current_user.role == Role.USER_ADMIN:
+        elif has_permission(current_user.role, Permission.MANAGE_TEAM_MEMBERS):
             # User admins can only view their own team's members
             if current_user.team_id != team_id:
                 raise HTTPException(

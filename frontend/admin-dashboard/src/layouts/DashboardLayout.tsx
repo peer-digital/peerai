@@ -42,6 +42,7 @@ import {
   Rocket as RocketIcon,
   Support as SupportIcon,
   GitHub as GitHubIcon,
+  Science as ScienceIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -92,6 +93,13 @@ const menuItems = [
     icon: <SettingsIcon />, 
     path: '/settings',
     requiredPermissions: [Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION],
+    guestAccessible: false
+  },
+  { 
+    text: 'Models', 
+    icon: <ScienceIcon />, 
+    path: '/models',
+    requiredPermissions: [Permission.SYSTEM_CONFIGURATION],
     guestAccessible: false
   },
   { 

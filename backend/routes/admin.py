@@ -75,7 +75,7 @@ async def get_admin_stats(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get admin dashboard statistics"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_ALL_USAGE):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get total requests and tokens
@@ -195,7 +195,7 @@ async def get_users(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get all users"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     users = db.query(User).order_by(desc(User.created_at)).all()
@@ -207,7 +207,7 @@ async def get_api_keys(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get all API keys with user information"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     api_keys = (
@@ -241,7 +241,7 @@ async def get_analytics(
     time_range: str = Query("7d", regex="^(7d|30d|90d)$"),
 ):
     """Get detailed analytics data"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_ALL_USAGE):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Convert time range to days
@@ -436,7 +436,7 @@ async def get_analytics_data(
     end_date: Optional[datetime] = None,
 ):
     """Get analytics data"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_ALL_USAGE):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return get_analytics_data(db, timeframe, start_date, end_date)
@@ -451,7 +451,7 @@ async def export_analytics(
     format: str = Query("json", regex="^(json|csv)$"),
 ):
     """Export analytics data"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_ALL_USAGE):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return export_analytics_data(db, start_date, end_date, format)
@@ -462,7 +462,7 @@ async def get_users_stats(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get user statistics"""
-    if not current_user.is_superuser:
+    if not has_permission(current_user.role, Permission.VIEW_ALL_USAGE):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return get_user_stats(db)
@@ -925,7 +925,7 @@ async def admin_list_models(
 ):
     """List all models in the registry (admin only)"""
     # Check if user is admin
-    if not has_permission(current_user, Permission.ADMIN_ACCESS):
+    if not has_permission(current_user.role, Permission.SYSTEM_CONFIGURATION):
         raise HTTPException(status_code=403, detail="Not authorized")
         
     models = (
@@ -982,7 +982,7 @@ async def admin_create_model(
 ):
     """Create a new model (admin only)"""
     # Check if user is admin
-    if not has_permission(current_user, Permission.ADMIN_ACCESS):
+    if not has_permission(current_user.role, Permission.SYSTEM_CONFIGURATION):
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if provider exists
