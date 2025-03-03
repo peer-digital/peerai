@@ -13,7 +13,7 @@ from fastapi import (
     Query,
 )
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 import time
 import random
 import httpx
@@ -34,11 +34,24 @@ router = APIRouter()
 class TextCompletionRequest(BaseModel):
     """Request model for text completion endpoint"""
 
-    prompt: str
+    prompt: Optional[str] = None
+    messages: Optional[List[Dict[str, str]]] = None
     max_tokens: Optional[int] = Field(default=100, ge=1, le=2048)
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=1.0)
     mock_mode: Optional[bool] = False
     model: Optional[str] = None  # Model name to use, or None for default
+
+    @validator("prompt", "messages")
+    def validate_input(cls, v, values):
+        """Validate that either prompt or messages is provided."""
+        if (
+            "prompt" in values
+            and values["prompt"] is None
+            and "messages" in values
+            and values["messages"] is None
+        ):
+            raise ValueError("Either 'prompt' or 'messages' must be provided")
+        return v
 
 
 class VisionRequest(BaseModel):
@@ -125,7 +138,7 @@ async def get_api_key(
 
     # Check database for valid API key
     db_key = (
-        db.query(APIKey).filter(APIKey.key == api_key, APIKey.is_active == True).first()
+        db.query(APIKey).filter(APIKey.key == api_key, APIKey.is_active.is_(True)).first()
     )
 
     if not db_key:
@@ -351,7 +364,7 @@ async def call_mistral(
         # Prepare request payload according to Mistral's API format
         payload = {
             "model": settings.EXTERNAL_MODEL,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": request.messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
@@ -417,22 +430,29 @@ async def create_completion(
     await check_rate_limits(api_key, db)
 
     try:
+        # Prepare request data
+        request_data = {}
+
+        # Include either prompt or messages
+        if request.prompt:
+            request_data["prompt"] = request.prompt
+        elif request.messages:
+            request_data["messages"] = request.messages
+
+        # Add other parameters
+        request_data["max_tokens"] = request.max_tokens
+        request_data["temperature"] = request.temperature
+
         # Call the model through the orchestrator
-        request_data = {
-            "prompt": request.prompt,
-            "max_tokens": request.max_tokens,
-            "temperature": request.temperature,
-        }
-        
         response_data = await orchestrator.call_model(
             request_data=request_data,
             model_name=request.model,
             api_key=api_key,
         )
-        
+
         # Convert to CompletionResponse
         response = CompletionResponse(**response_data)
-        
+
         # Usage is already recorded by the orchestrator
         return response
 
@@ -533,7 +553,7 @@ async def websocket_endpoint(
     """WebSocket endpoint for streaming responses"""
     # Validate API key
     db_key = (
-        db.query(APIKey).filter(APIKey.key == api_key, APIKey.is_active == True).first()
+        db.query(APIKey).filter(APIKey.key == api_key, APIKey.is_active.is_(True)).first()
     )
 
     if not db_key and api_key != "test_key_123":
