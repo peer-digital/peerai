@@ -7,7 +7,8 @@ User=peerai
 Group=peerai
 WorkingDirectory=/opt/peerai
 Environment=PYTHONPATH=/opt/peerai
-Environment=DATABASE_URL=postgresql://peerai:password@localhost/peerai
+# @important: Render hosted PostgreSQL database - do not modify without approval
+Environment=DATABASE_URL=postgresql://peerai_pg_user:fdfdjP0fwMC70duWT9Q6BkH3vEe0YUhQ@dpg-cut20bjtq21c73bb6leg-a.oregon-postgres.render.com/peerai_pg
 Environment=HOSTED_LLM_URL=https://llm-api.bahnhof.se/v1/completions
 Environment=EXTERNAL_LLM_URL=https://fallback-llm.se/v1/completions
 Environment=HOSTED_LLM_API_KEY=your-hosted-api-key
