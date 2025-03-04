@@ -11,9 +11,11 @@ import {
   CircularProgress,
   Divider,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { LoginCredentials } from '../types/auth';
+import { LoginCredentials, RegisterCredentials } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { Role } from '../types/rbac';
 
@@ -24,25 +26,33 @@ const TEST_USERS = [
   { email: 'super.admin@peerai.se', password: 'superadmin123', role: Role.SUPER_ADMIN },
 ];
 
+type AuthMode = 'login' | 'register';
+
 const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<AuthMode>('login');
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials>();
+  const { login, register } = useAuth();
+  const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string }>();
 
   // Check if we're in development mode
   const isDevelopment = import.meta.env.VITE_DEV_MODE === 'true';
 
-  const onSubmit = async (credentials: LoginCredentials) => {
+  const onSubmit = async (credentials: LoginCredentials & { full_name?: string }) => {
     try {
       setError(null);
       setIsLoading(true);
 
-      await login(credentials);
+      if (mode === 'login') {
+        await login(credentials);
+      } else {
+        await register(credentials);
+      }
+      
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+      setError(err.message || `An error occurred during ${mode}`);
     } finally {
       setIsLoading(false);
     }
@@ -51,6 +61,13 @@ const Login: React.FC = () => {
   const handleQuickLogin = (email: string, password: string) => {
     setValue('email', email);
     setValue('password', password);
+  };
+
+  const handleModeChange = (event: React.MouseEvent<HTMLElement>, newMode: AuthMode) => {
+    if (newMode !== null) {
+      setMode(newMode);
+      setError(null);
+    }
   };
 
   return (
@@ -91,7 +108,7 @@ const Login: React.FC = () => {
               color: 'primary.main',
             }}
           >
-            PeerAI Admin Login
+            PeerAI Admin {mode === 'login' ? 'Login' : 'Register'}
           </Typography>
           
           {error && (
@@ -100,7 +117,7 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          {isDevelopment && (
+          {isDevelopment && mode === 'login' && (
             <>
               <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
                 Development mode is active. Click on a test user to prefill credentials:
@@ -135,6 +152,23 @@ const Login: React.FC = () => {
             noValidate
             sx={{ width: '100%' }}
           >
+            {mode === 'register' && (
+              <TextField
+                margin="normal"
+                fullWidth
+                id="full_name"
+                label="Full Name"
+                autoComplete="name"
+                error={!!errors.full_name}
+                helperText={errors.full_name?.message}
+                {...registerForm('full_name', {
+                  required: 'Full name is required',
+                })}
+                inputProps={{
+                  'aria-invalid': !!errors.full_name,
+                }}
+              />
+            )}
             <TextField
               margin="normal"
               required
@@ -145,7 +179,7 @@ const Login: React.FC = () => {
               autoFocus
               error={!!errors.email}
               helperText={errors.email?.message}
-              {...register('email', {
+              {...registerForm('email', {
                 required: 'Email is required',
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -163,10 +197,10 @@ const Login: React.FC = () => {
               label="Password"
               type="password"
               id="password"
-              autoComplete="current-password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               error={!!errors.password}
               helperText={errors.password?.message}
-              {...register('password', {
+              {...registerForm('password', {
                 required: 'Password is required',
                 minLength: {
                   value: 6,
@@ -189,9 +223,25 @@ const Login: React.FC = () => {
               }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+              {isLoading ? <CircularProgress size={24} /> : mode === 'login' ? 'Sign In' : 'Register'}
             </Button>
           </Box>
+
+          <ToggleButtonGroup
+            value={mode}
+            exclusive
+            onChange={handleModeChange}
+            aria-label="auth mode"
+            size="small"
+            sx={{ mt: 2 }}
+          >
+            <ToggleButton value="login" aria-label="login mode">
+              Login
+            </ToggleButton>
+            <ToggleButton value="register" aria-label="register mode">
+              Register
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Paper>
       </Box>
     </Container>

@@ -37,20 +37,21 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/config';
+import { Role } from '../types/rbac';
 
 interface User {
   id: string;
   email: string;
-  name: string;
-  role: 'admin' | 'user';
-  status: 'active' | 'blocked';
-  createdAt: string;
-  lastLogin: string | null;
+  full_name?: string;
+  is_active: boolean;
+  role: Role;
+  created_at: string;
+  last_login?: string;
 }
 
 interface EditUserData {
-  name?: string;
-  role?: 'admin' | 'user';
+  full_name?: string;
+  role?: Role;
 }
 
 const formatDate = (date: string | null): string => {
@@ -94,7 +95,7 @@ const Users: React.FC = () => {
   // Filter users based on search query
   const filteredUsers = users?.filter(user => 
     !searchQuery || (
-      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   ) || [];
@@ -131,7 +132,7 @@ const Users: React.FC = () => {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditData({
-      name: user.name,
+      full_name: user.full_name,
       role: user.role,
     });
     setEditDialogOpen(true);
@@ -152,7 +153,7 @@ const Users: React.FC = () => {
   };
 
   const handleToggleStatus = async (user: User) => {
-    const action = user.status === 'active' ? 'block' : 'unblock';
+    const action = user.is_active ? 'block' : 'unblock';
     await toggleUserStatusMutation.mutateAsync({
       userId: user.id,
       action,
@@ -225,32 +226,32 @@ const Users: React.FC = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow key={user.id} hover>
-                      <TableCell>{user.name || 'N/A'}</TableCell>
+                      <TableCell>{user.full_name || 'N/A'}</TableCell>
                       <TableCell>{user.email || 'N/A'}</TableCell>
                       <TableCell>
                         <Chip
-                          label={(user.role || 'user').toUpperCase()}
-                          color={user.role === 'admin' ? 'primary' : 'default'}
+                          label={user.role.toUpperCase()}
+                          color={user.role === Role.SUPER_ADMIN ? 'primary' : 'default'}
                           size="small"
                           sx={{ fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={(user.status || 'active').toUpperCase()}
-                          color={user.status === 'active' ? 'success' : 'error'}
+                          label={user.is_active ? 'ACTIVE' : 'BLOCKED'}
+                          color={user.is_active ? 'success' : 'error'}
                           size="small"
                           sx={{ fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={formatDate(user.createdAt)} arrow>
-                          <span>{formatDate(user.createdAt)}</span>
+                        <Tooltip title={formatDate(user.created_at)} arrow>
+                          <span>{formatDate(user.created_at)}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={user.lastLogin ? formatDate(user.lastLogin) : 'Never logged in'} arrow>
-                          <span>{user.lastLogin ? formatDate(user.lastLogin) : 'Never'}</span>
+                        <Tooltip title={user.last_login ? formatDate(user.last_login) : 'Never logged in'} arrow>
+                          <span>{user.last_login ? formatDate(user.last_login) : 'Never'}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
@@ -262,13 +263,13 @@ const Users: React.FC = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={user.status === 'active' ? 'Block user' : 'Unblock user'} arrow>
+                        <Tooltip title={user.is_active ? 'Block user' : 'Unblock user'} arrow>
                           <IconButton
                             size="small"
-                            color={user.status === 'active' ? 'error' : 'success'}
+                            color={user.is_active ? 'error' : 'success'}
                             onClick={() => handleToggleStatus(user)}
                           >
-                            {user.status === 'active' ? <BlockIcon /> : <UnblockIcon />}
+                            {user.is_active ? <BlockIcon /> : <UnblockIcon />}
                           </IconButton>
                         </Tooltip>
                       </TableCell>
@@ -324,9 +325,9 @@ const Users: React.FC = () => {
           <Box mt={2} display="flex" flexDirection="column" gap={2}>
             <TextField
               fullWidth
-              label="Name"
-              value={editData.name || ''}
-              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+              label="Full Name"
+              value={editData.full_name || ''}
+              onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
               size="small"
             />
             <FormControl fullWidth size="small">
@@ -334,10 +335,13 @@ const Users: React.FC = () => {
               <Select
                 value={editData.role || ''}
                 label="Role"
-                onChange={(e) => setEditData({ ...editData, role: e.target.value as 'admin' | 'user' })}
+                onChange={(e) => setEditData({ ...editData, role: e.target.value as Role })}
               >
-                <MenuItem value="user">User</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
+                {Object.values(Role).map((role) => (
+                  <MenuItem key={role} value={role}>
+                    {role}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Box>

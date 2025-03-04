@@ -18,10 +18,15 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RegisterCredentials extends LoginCredentials {
+  full_name?: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
 } 

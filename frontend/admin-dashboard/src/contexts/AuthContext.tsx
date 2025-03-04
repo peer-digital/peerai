@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthContextType, LoginCredentials, User } from '../types/auth';
+import { AuthContextType, LoginCredentials, RegisterCredentials, User } from '../types/auth';
 import { authService } from '../services/auth.service';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,6 +54,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const register = async (credentials: RegisterCredentials) => {
+    try {
+      const { user } = await authService.register(credentials);
+      console.log('Registered user:', user); // Debug log
+      setUser(user);
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -64,6 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     isLoading,
     login,
+    register,
     logout,
   };
 

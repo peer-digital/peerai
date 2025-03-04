@@ -101,10 +101,10 @@ function App() {
                     </PermissionGuard>
                   } />
                   
-                  {/* User management - for admins */}
+                  {/* User management - for super admins only */}
                   <Route path="/users" element={
-                    <PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]}>
-                      <UserManagement />
+                    <PermissionGuard requiredPermissions={[Permission.MANAGE_ALL_TEAMS]}>
+                      <Users />
                     </PermissionGuard>
                   } />
                   

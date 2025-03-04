@@ -43,6 +43,7 @@ import {
   Support as SupportIcon,
   GitHub as GitHubIcon,
   Science as ScienceIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -268,6 +269,99 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     setHelpMenuOpen(!helpMenuOpen);
   };
 
+  const renderNavigationItems = () => {
+    const items = [
+      {
+        text: 'Dashboard',
+        icon: <DashboardIcon />,
+        path: '/dashboard',
+        permission: Permission.VIEW_OWN_USAGE,
+      },
+      {
+        text: 'API Keys',
+        icon: <ApiKeyIcon />,
+        path: '/api-keys',
+        permission: Permission.USE_API,
+      },
+      {
+        text: 'Documentation',
+        icon: <MenuBookIcon />,
+        path: '/docs',
+        permission: Permission.VIEW_DOCS,
+      },
+      {
+        text: 'Playground',
+        icon: <ScienceIcon />,
+        path: '/playground',
+        permission: Permission.USE_API,
+      },
+      {
+        text: 'Get Started',
+        icon: <RocketIcon />,
+        path: '/get-started',
+        permission: Permission.VIEW_DOCS,
+      },
+    ];
+
+    // Add admin-only items
+    if (user && hasAnyPermission(user.role, [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS])) {
+      items.push(
+        {
+          text: 'Team Management',
+          icon: <PeopleIcon />,
+          path: '/teams',
+          permission: Permission.MANAGE_TEAM_MEMBERS,
+        }
+      );
+    }
+
+    // Add super admin-only items
+    if (user && user.role === Role.SUPER_ADMIN) {
+      items.push(
+        {
+          text: 'Users',
+          icon: <GroupIcon />,
+          path: '/users',
+          permission: Permission.MANAGE_ALL_TEAMS,
+        }
+      );
+    }
+
+    return items.map((item) => (
+      <ListItem key={item.text} disablePadding>
+        <ListItemButton
+          selected={location.pathname === item.path}
+          onClick={() => navigate(item.path)}
+          sx={{
+            minHeight: 48,
+            px: 2.5,
+            '&.Mui-selected': {
+              backgroundColor: 'primary.light',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.light',
+              },
+              '& .MuiListItemIcon-root': {
+                color: 'inherit',
+              },
+            },
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 0,
+              mr: 3,
+              justifyContent: 'center',
+            }}
+          >
+            {item.icon}
+          </ListItemIcon>
+          <ListItemText primary={item.text} />
+        </ListItemButton>
+      </ListItem>
+    ));
+  };
+
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <AppBarStyled position="fixed" open={open}>
@@ -426,51 +520,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
             MAIN
           </MenuSectionTitle>
           <List>
-            {menuItems.map((item) => {
-              // For guest mode, only show guest-accessible items
-              if (isGuestMode && !item.guestAccessible) {
-                return null;
-              }
-              
-              // For authenticated users, check permissions (except for Get Started which is always accessible)
-              if (!isGuestMode && item.requiredPermissions.length > 0 && !hasRequiredPermissions(item.requiredPermissions) && item.text !== 'Get Started') {
-                return null;
-              }
-              
-              return (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton
-                    onClick={() => navigate(item.path)}
-                    selected={location.pathname === item.path}
-                    sx={{
-                      borderRadius: '0 24px 24px 0',
-                      mx: 1,
-                      my: 0.5,
-                      '&.Mui-selected': {
-                        backgroundColor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '&:hover': {
-                          backgroundColor: 'primary.dark',
-                        },
-                        '& .MuiListItemIcon-root': {
-                          color: 'primary.contrastText',
-                        },
-                      },
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 40,
-                        color: location.pathname === item.path ? 'inherit' : 'text.secondary',
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+            {renderNavigationItems()}
           </List>
         </MenuSection>
         

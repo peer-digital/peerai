@@ -1,5 +1,5 @@
 import api from '../api/config';
-import { AuthResponse, LoginCredentials, User } from '../types/auth';
+import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../types/auth';
 import { Role } from '../types/rbac';
 
 // Storage keys
@@ -239,6 +239,68 @@ class AuthService {
     this.currentUser = null;
     localStorage.removeItem(USER_DATA_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
+
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    try {
+      console.log('Sending registration request...'); // Debug log
+
+      const response = await api.post<{
+        access_token: string;
+        token_type: string;
+        user?: {
+          id: number;
+          email: string;
+          role: string;
+          is_active: boolean;
+          full_name?: string;
+        };
+      }>(
+        '/api/v1/auth/register',
+        credentials
+      );
+
+      console.log('Registration response:', response.data); // Debug log
+
+      // Store the access token
+      localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
+
+      // If user data is included in registration response, use it
+      let userData: User;
+      if (response.data.user) {
+        userData = {
+          id: response.data.user.id.toString(),
+          email: response.data.user.email,
+          is_active: response.data.user.is_active ?? true,
+          role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
+          name: response.data.user.full_name
+        };
+      } else {
+        // Otherwise get user data from validation endpoint
+        userData = await this.validateToken();
+      }
+
+      console.log('Final user data:', userData); // Debug log
+
+      // Store user data in memory and storage
+      this.currentUser = userData;
+      this.setUser(userData);
+
+      return {
+        token: response.data.access_token,
+        user: userData
+      };
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      if (error.response?.status === 400) {
+        throw new Error(error.response.data.detail || 'Registration failed');
+      }
+      throw this.handleError(error);
+    }
   }
 }
 
