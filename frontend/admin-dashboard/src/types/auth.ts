@@ -6,6 +6,7 @@ export interface User {
   is_active: boolean;
   role: Role;
   name?: string;
+  token_limit: number;  // Default is 2500
 }
 
 export interface AuthResponse {

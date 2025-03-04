@@ -15,6 +15,7 @@ import {
   Alert,
   Tabs,
   Tab,
+  Button,
 } from '@mui/material';
 import {
   BarChart,
@@ -38,8 +39,6 @@ import { hasAnyPermission } from '../utils/rbac';
 interface UsageStats {
   totalRequests: number;
   totalTokens: number;
-  tokenLimit: number;
-  tokenUsagePercentage: number;
   activeUsers: number;
   averageLatency: number;
   requestsChange: number;
@@ -155,13 +154,25 @@ const Dashboard: React.FC = () => {
       }
       
       const response = await api.get(endpoint);
+      console.log('Usage stats:', response.data);
       return response.data;
     },
   });
 
+  // Calculate token usage percentage
+  const tokenUsagePercentage = stats && user ? (stats.totalTokens / user.token_limit) * 100 : 0;
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
+
+  // Debug log for stats
+  useEffect(() => {
+    if (stats) {
+      console.log('Token usage percentage:', tokenUsagePercentage);
+      console.log('Total tokens:', stats.totalTokens);
+    }
+  }, [stats, tokenUsagePercentage]);
 
   if (isLoading) {
     return (
@@ -209,6 +220,27 @@ const Dashboard: React.FC = () => {
         {getDashboardTitle()}
       </Typography>
 
+      {/* Token Status Alert */}
+      {stats && user && tokenUsagePercentage >= 100 && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+          action={
+            <Button
+              variant="contained"
+              color="primary"
+              href="mailto:info@peerdigital.se?subject=Token%20Request"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get New Tokens
+            </Button>
+          }
+        >
+          You have reached your token limit. Please contact us to get more tokens.
+        </Alert>
+      )}
+
       {/* Super Admin Tabs - only show if user has VIEW_ALL_USAGE permission */}
       {viewType === 'all' && (
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -255,34 +287,34 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Token Usage Progress Bar */}
-        {viewType === 'personal' && stats.tokenLimit !== undefined && (
+        {viewType === 'personal' && user && (
           <Paper sx={{ p: 3, mb: 4 }}>
             <Typography variant="h6" gutterBottom>
               Token Usage
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
-                {stats.totalTokens.toLocaleString()} / {stats.tokenLimit.toLocaleString()} tokens
+                {stats.totalTokens.toLocaleString()} / {user.token_limit.toLocaleString()} tokens
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                ({stats.tokenUsagePercentage?.toFixed(1) || 0}%)
+                ({tokenUsagePercentage.toFixed(1)}%)
               </Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
-              value={Math.min(stats.tokenUsagePercentage || 0, 100)} 
+              value={Math.min(tokenUsagePercentage, 100)} 
               sx={{ 
                 height: 8,
                 borderRadius: 1,
                 bgcolor: 'rgba(0,0,0,0.05)',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 1,
-                  bgcolor: (stats.tokenUsagePercentage || 0) >= 90 ? 'error.main' : 
-                           (stats.tokenUsagePercentage || 0) >= 75 ? 'warning.main' : 'primary.main',
+                  bgcolor: tokenUsagePercentage >= 90 ? 'error.main' : 
+                           tokenUsagePercentage >= 75 ? 'warning.main' : 'primary.main',
                 }
               }}
             />
-            {(stats.tokenUsagePercentage || 0) >= 90 && (
+            {tokenUsagePercentage >= 90 && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 You are approaching your token limit. Please contact info@peerdigital.se to increase your limit.
               </Alert>
