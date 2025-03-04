@@ -7,24 +7,18 @@ import { hasAnyPermission } from '../utils/rbac';
 interface PermissionGuardProps {
     children: React.ReactNode;
     requiredPermissions: Permission[];
-    fallbackPath?: string;
+    fallback?: React.ReactNode;
 }
 
-export const PermissionGuard: React.FC<PermissionGuardProps> = ({
+const PermissionGuard: React.FC<PermissionGuardProps> = ({
     children,
     requiredPermissions,
-    fallbackPath = '/unauthorized'
+    fallback = <Navigate to="/unauthorized" replace />,
 }) => {
     const { user } = useAuth();
 
-    if (!user) {
-        return <Navigate to="/login" replace />;
-    }
-
-    const hasAccess = hasAnyPermission(user, requiredPermissions);
-
-    if (!hasAccess) {
-        return <Navigate to={fallbackPath} replace />;
+    if (!user || !hasAnyPermission(user, requiredPermissions)) {
+        return <>{fallback}</>;
     }
 
     return <>{children}</>;

@@ -94,7 +94,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from backend.routes import inference, auth, admin, rbac
+from backend.routes import inference, auth, admin, rbac, referral
 from backend.routes import admin_models  # Use the correct import path with backend prefix
 
 app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
@@ -102,6 +102,7 @@ app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
+app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 
 # TODO: Admin router is under development and will be enabled in a future PR
 # Features planned:

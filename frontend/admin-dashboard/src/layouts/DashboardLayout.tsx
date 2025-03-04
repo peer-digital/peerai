@@ -43,6 +43,7 @@ import {
   Support as SupportIcon,
   GitHub as GitHubIcon,
   Science as ScienceIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -217,6 +218,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
     { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
+    { text: 'Referrals', icon: <ShareIcon />, path: '/referrals' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     // Only show these items for super admins
     ...(user?.role === Role.SUPER_ADMIN ? [

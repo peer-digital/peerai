@@ -3,7 +3,9 @@ export enum Role {
     GUEST = 'guest',
     USER = 'user',
     USER_ADMIN = 'user_admin',
-    SUPER_ADMIN = 'super_admin'
+    SUPER_ADMIN = 'super_admin',
+    TEAM_ADMIN = 'team_admin',
+    ADMIN = 'admin'
 }
 
 // @important: Permission definitions - must match backend enum
@@ -27,7 +29,20 @@ export enum Permission {
     MANAGE_ALL_TEAMS = 'manage_all_teams',
     SYSTEM_CONFIGURATION = 'system_configuration',
     VIEW_SETTINGS = 'view_settings',
-    EDIT_SETTINGS = 'edit_settings'
+    EDIT_SETTINGS = 'edit_settings',
+
+    // User permissions
+    VIEW_DASHBOARD = 'view_dashboard',
+    VIEW_ANALYTICS = 'view_analytics',
+    VIEW_API_KEYS = 'view_api_keys',
+    MANAGE_API_KEYS = 'manage_api_keys',
+    VIEW_REFERRALS = 'view_referrals',
+    USE_REFERRALS = 'use_referrals',
+
+    // Admin permissions
+    MANAGE_USERS = 'manage_users',
+    MANAGE_MODELS = 'manage_models',
+    MANAGE_SYSTEM = 'manage_system',
 }
 
 export interface Team {
@@ -74,6 +89,18 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     ],
     [Role.SUPER_ADMIN]: [
         // Super admin has access to ALL permissions
+        ...Object.values(Permission)
+    ],
+    [Role.TEAM_ADMIN]: [
+        Permission.VIEW_DOCS,
+        Permission.VIEW_OWN_USAGE,
+        Permission.USE_API,
+        Permission.MANAGE_OWN_ACCOUNT,
+        Permission.MANAGE_TEAM_MEMBERS,
+        Permission.MANAGE_TEAM_BILLING,
+        Permission.VIEW_TEAM_USAGE,
+    ],
+    [Role.ADMIN]: [
         ...Object.values(Permission)
     ]
 };
