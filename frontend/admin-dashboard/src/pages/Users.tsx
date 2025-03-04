@@ -42,15 +42,15 @@ import { Role } from '../types/rbac';
 interface User {
   id: string;
   email: string;
-  full_name?: string;
-  is_active: boolean;
+  name?: string;
   role: Role;
+  is_active: boolean;
   created_at: string;
   last_login?: string;
 }
 
 interface EditUserData {
-  full_name?: string;
+  name?: string;
   role?: Role;
 }
 
@@ -95,7 +95,7 @@ const Users: React.FC = () => {
   // Filter users based on search query
   const filteredUsers = users?.filter(user => 
     !searchQuery || (
-      (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   ) || [];
@@ -132,7 +132,7 @@ const Users: React.FC = () => {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditData({
-      full_name: user.full_name,
+      name: user.name,
       role: user.role,
     });
     setEditDialogOpen(true);
@@ -226,11 +226,11 @@ const Users: React.FC = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow key={user.id} hover>
-                      <TableCell>{user.full_name || 'N/A'}</TableCell>
-                      <TableCell>{user.email || 'N/A'}</TableCell>
+                      <TableCell>{user.name || 'N/A'}</TableCell>
+                      <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Chip
-                          label={user.role.toUpperCase()}
+                          label={user.role}
                           color={user.role === Role.SUPER_ADMIN ? 'primary' : 'default'}
                           size="small"
                           sx={{ fontWeight: 500 }}
@@ -238,7 +238,7 @@ const Users: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={user.is_active ? 'ACTIVE' : 'BLOCKED'}
+                          label={user.is_active ? 'Active' : 'Blocked'}
                           color={user.is_active ? 'success' : 'error'}
                           size="small"
                           sx={{ fontWeight: 500 }}
@@ -325,9 +325,9 @@ const Users: React.FC = () => {
           <Box mt={2} display="flex" flexDirection="column" gap={2}>
             <TextField
               fullWidth
-              label="Full Name"
-              value={editData.full_name || ''}
-              onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
+              label="Name"
+              value={editData.name || ''}
+              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
               size="small"
             />
             <FormControl fullWidth size="small">

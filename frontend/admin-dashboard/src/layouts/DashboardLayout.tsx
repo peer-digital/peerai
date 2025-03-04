@@ -43,7 +43,6 @@ import {
   Support as SupportIcon,
   GitHub as GitHubIcon,
   Science as ScienceIcon,
-  Group as GroupIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,72 +51,13 @@ import ThemeToggle from '../components/ui/ThemeToggle';
 
 const drawerWidth = 260;
 
-// @important: Menu items with required permissions
-const menuItems = [
-  { 
-    text: 'Dashboard', 
-    icon: <DashboardIcon />, 
-    path: '/dashboard',
-    requiredPermissions: [Permission.VIEW_OWN_USAGE, Permission.VIEW_ALL_USAGE],
-    guestAccessible: false
-  },
-  { 
-    text: 'Users', 
-    icon: <PeopleIcon />, 
-    path: '/users',
-    requiredPermissions: [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS],
-    guestAccessible: false
-  },
-  { 
-    text: 'API Keys', 
-    icon: <ApiKeyIcon />, 
-    path: '/api-keys',
-    requiredPermissions: [Permission.USE_API],
-    guestAccessible: false
-  },
-  { 
-    text: 'Analytics', 
-    icon: <AssessmentIcon />, 
-    path: '/analytics',
-    requiredPermissions: [Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE],
-    guestAccessible: false
-  },
-  { 
-    text: 'Playground', 
-    icon: <CodeIcon />, 
-    path: '/playground',
-    requiredPermissions: [Permission.USE_API],
-    guestAccessible: false
-  },
-  { 
-    text: 'Settings', 
-    icon: <SettingsIcon />, 
-    path: '/settings',
-    requiredPermissions: [Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION],
-    guestAccessible: false
-  },
-  { 
-    text: 'Models', 
-    icon: <ScienceIcon />, 
-    path: '/models',
-    requiredPermissions: [Permission.SYSTEM_CONFIGURATION],
-    guestAccessible: false
-  },
-  { 
-    text: 'Get Started', 
-    icon: <RocketIcon />, 
-    path: '/get-started',
-    requiredPermissions: [],
-    guestAccessible: true
-  },
-  { 
-    text: 'Developer Docs', 
-    icon: <MenuBookIcon />, 
-    path: '/docs',
-    requiredPermissions: [],
-    guestAccessible: true
-  },
-];
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+  requiredPermissions?: Permission[];
+  guestAccessible?: boolean;
+}
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   open?: boolean;
@@ -215,8 +155,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   const logoSrc = theme.palette.mode === 'dark' ? '/assets/logo_neg.svg' : '/assets/logo.svg';
   
   const [open, setOpen] = useState(!isMobile);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [notificationMenuAnchor, setNotificationMenuAnchor] = useState<null | HTMLElement>(null);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
   
   // Check if user has any of the required permissions
@@ -244,19 +184,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   };
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+    setUserMenuAnchor(event.currentTarget);
   };
 
   const handleUserMenuClose = () => {
-    setAnchorEl(null);
+    setUserMenuAnchor(null);
   };
   
   const handleNotificationMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchorEl(event.currentTarget);
+    setNotificationMenuAnchor(event.currentTarget);
   };
 
   const handleNotificationMenuClose = () => {
-    setNotificationAnchorEl(null);
+    setNotificationMenuAnchor(null);
   };
 
   const handleLogout = () => {
@@ -269,98 +209,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     setHelpMenuOpen(!helpMenuOpen);
   };
 
-  const renderNavigationItems = () => {
-    const items = [
-      {
-        text: 'Dashboard',
-        icon: <DashboardIcon />,
-        path: '/dashboard',
-        permission: Permission.VIEW_OWN_USAGE,
-      },
-      {
-        text: 'API Keys',
-        icon: <ApiKeyIcon />,
-        path: '/api-keys',
-        permission: Permission.USE_API,
-      },
-      {
-        text: 'Documentation',
-        icon: <MenuBookIcon />,
-        path: '/docs',
-        permission: Permission.VIEW_DOCS,
-      },
-      {
-        text: 'Playground',
-        icon: <ScienceIcon />,
-        path: '/playground',
-        permission: Permission.USE_API,
-      },
-      {
-        text: 'Get Started',
-        icon: <RocketIcon />,
-        path: '/get-started',
-        permission: Permission.VIEW_DOCS,
-      },
-    ];
-
-    // Add admin-only items
-    if (user && hasAnyPermission(user.role, [Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS])) {
-      items.push(
-        {
-          text: 'Team Management',
-          icon: <PeopleIcon />,
-          path: '/teams',
-          permission: Permission.MANAGE_TEAM_MEMBERS,
-        }
-      );
-    }
-
-    // Add super admin-only items
-    if (user && user.role === Role.SUPER_ADMIN) {
-      items.push(
-        {
-          text: 'Users',
-          icon: <GroupIcon />,
-          path: '/users',
-          permission: Permission.MANAGE_ALL_TEAMS,
-        }
-      );
-    }
-
-    return items.map((item) => (
-      <ListItem key={item.text} disablePadding>
-        <ListItemButton
-          selected={location.pathname === item.path}
-          onClick={() => navigate(item.path)}
-          sx={{
-            minHeight: 48,
-            px: 2.5,
-            '&.Mui-selected': {
-              backgroundColor: 'primary.light',
-              color: 'primary.contrastText',
-              '&:hover': {
-                backgroundColor: 'primary.light',
-              },
-              '& .MuiListItemIcon-root': {
-                color: 'inherit',
-              },
-            },
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              mr: 3,
-              justifyContent: 'center',
-            }}
-          >
-            {item.icon}
-          </ListItemIcon>
-          <ListItemText primary={item.text} />
-        </ListItemButton>
-      </ListItem>
-    ));
-  };
+  // @important: Menu items with required permissions
+  const menuItems: MenuItem[] = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
+    { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
+    { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
+    { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+    // Only show these items for super admins
+    ...(user?.role === Role.SUPER_ADMIN ? [
+      { text: 'Users', icon: <PeopleIcon />, path: '/users' },
+      { text: 'Teams', icon: <PeopleIcon />, path: '/teams' },
+      { text: 'Models', icon: <ScienceIcon />, path: '/models' },
+    ] : []),
+  ];
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -429,8 +292,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
               </Tooltip>
               
               <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
+                anchorEl={userMenuAnchor}
+                open={Boolean(userMenuAnchor)}
                 onClose={handleUserMenuClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -450,8 +313,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
               </Menu>
               
               <Menu
-                anchorEl={notificationAnchorEl}
-                open={Boolean(notificationAnchorEl)}
+                anchorEl={notificationMenuAnchor}
+                open={Boolean(notificationMenuAnchor)}
                 onClose={handleNotificationMenuClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -502,165 +365,38 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
         open={open}
       >
         <DrawerHeader>
-          <LogoContainer>
-            <Logo src={logoSrc} alt="PeerAI Logo" />
-            <Typography variant="h6" noWrap component="div">
-              PeerAI
-            </Typography>
-          </LogoContainer>
           <IconButton onClick={handleDrawerClose}>
             <ChevronLeftIcon />
           </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+            <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+          </Box>
         </DrawerHeader>
-        
         <Divider />
-        
-        <MenuSection>
-          <MenuSectionTitle>
-            MAIN
-          </MenuSectionTitle>
-          <List>
-            {renderNavigationItems()}
-          </List>
-        </MenuSection>
-        
-        <Divider />
-        
-        {/* Only show support section for authenticated users */}
-        {!isGuestMode && (
-          <MenuSection>
-            <MenuSectionTitle>
-              SUPPORT
-            </MenuSectionTitle>
-            <List>
-              <ListItem disablePadding>
+        <List>
+          {menuItems.map((item) => {
+            // Skip menu items that require permissions the user doesn't have
+            if (item.requiredPermissions && !hasAnyPermission(user?.role || Role.GUEST, item.requiredPermissions)) {
+              return null;
+            }
+            // Skip menu items that aren't guest accessible in guest mode
+            if (isGuestMode && !item.guestAccessible) {
+              return null;
+            }
+            
+            return (
+              <ListItem key={item.text} disablePadding>
                 <ListItemButton
-                  onClick={toggleHelpMenu}
-                  sx={{
-                    borderRadius: '0 24px 24px 0',
-                    mx: 1,
-                    my: 0.5,
-                  }}
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
                 >
-                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                    <HelpIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Help & Resources" />
-                  {helpMenuOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
                 </ListItemButton>
               </ListItem>
-              
-              <Collapse in={helpMenuOpen} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  <ListItemButton
-                    sx={{ pl: 4, borderRadius: '0 24px 24px 0', mx: 1, my: 0.5 }}
-                    onClick={() => window.open('https://docs.peerai.com', '_blank')}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                      <MenuBookIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Documentation" />
-                  </ListItemButton>
-                  
-                  <ListItemButton
-                    sx={{ pl: 4, borderRadius: '0 24px 24px 0', mx: 1, my: 0.5 }}
-                    onClick={() => window.open('https://support.peerai.com', '_blank')}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                      <SupportIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Support" />
-                  </ListItemButton>
-                </List>
-              </Collapse>
-            </List>
-          </MenuSection>
-        )}
-        
-        {/* Support section for guest users */}
-        {isGuestMode && (
-          <MenuSection>
-            <MenuSectionTitle>
-              SUPPORT
-            </MenuSectionTitle>
-            <List>
-              <ListItem disablePadding>
-                <ListItemButton
-                  sx={{
-                    borderRadius: '0 24px 24px 0',
-                    mx: 1,
-                    my: 0.5,
-                  }}
-                  onClick={() => window.open('https://github.com/peerai', '_blank')}
-                >
-                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                    <GitHubIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="GitHub" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  sx={{
-                    borderRadius: '0 24px 24px 0',
-                    mx: 1,
-                    my: 0.5,
-                  }}
-                  onClick={() => window.open('mailto:support@peerai.com', '_blank')}
-                >
-                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                    <SupportIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Contact Support" />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </MenuSection>
-        )}
-        
-        {/* Show a simplified footer for guest mode */}
-        {isGuestMode && (
-          <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
-            <Typography variant="body2" color="text.secondary" align="center">
-              © {new Date().getFullYear()} PeerAI
-            </Typography>
-            <Typography variant="caption" color="text.secondary" align="center" display="block">
-              Powerful AI for developers
-            </Typography>
-          </Box>
-        )}
-        
-        {/* User info section for authenticated users */}
-        {!isGuestMode && user && (
-          <Box
-            sx={{
-              p: 2,
-              mt: 'auto',
-              borderTop: '1px solid rgba(0, 0, 0, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Avatar
-              sx={{
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                width: 40,
-                height: 40,
-              }}
-            >
-              {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
-            </Avatar>
-            <Box sx={{ ml: 2, overflow: 'hidden' }}>
-              <Typography variant="body2" noWrap>
-                {user.name || user.email}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {user.email}
-              </Typography>
-            </Box>
-          </Box>
-        )}
+            );
+          })}
+        </List>
       </Drawer>
       
       <Main open={open}>
