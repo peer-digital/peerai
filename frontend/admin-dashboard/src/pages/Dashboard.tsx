@@ -37,6 +37,8 @@ import { Permission, Role, hasPermission } from '../types/rbac';
 interface UsageStats {
   totalRequests: number;
   totalTokens: number;
+  tokenLimit: number;
+  tokenUsagePercentage: number;
   activeUsers: number;
   averageLatency: number;
   requestsChange: number;
@@ -248,6 +250,42 @@ const Dashboard: React.FC = () => {
             />
           </Grid>
         </Grid>
+
+        {/* Token Usage Progress Bar */}
+        {viewType === 'personal' && (
+          <Paper sx={{ p: 3, mb: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Token Usage
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
+                {stats.totalTokens.toLocaleString()} / {stats.tokenLimit.toLocaleString()} tokens
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                ({stats.tokenUsagePercentage.toFixed(1)}%)
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(stats.tokenUsagePercentage, 100)} 
+              sx={{ 
+                height: 8,
+                borderRadius: 1,
+                bgcolor: 'rgba(0,0,0,0.05)',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 1,
+                  bgcolor: stats.tokenUsagePercentage >= 90 ? 'error.main' : 
+                           stats.tokenUsagePercentage >= 75 ? 'warning.main' : 'primary.main',
+                }
+              }}
+            />
+            {stats.tokenUsagePercentage >= 90 && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                You are approaching your token limit. Please contact info@peerdigital.se to increase your limit.
+              </Alert>
+            )}
+          </Paper>
+        )}
 
         <Grid container spacing={3}>
           {/* Usage Trends */}

@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic import BaseModel, Field, validator
+from core.roles import Role
 
 
 class RateLimitSettings(BaseModel):
@@ -72,6 +73,18 @@ class UserResponse(BaseModel):
     is_active: bool
     is_superuser: bool
     created_at: datetime
+    token_limit: int = 10000  # Default token limit of 10,000
+
+    class Config:
+        from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    """User update model."""
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    role: Optional[Role] = None
+    token_limit: Optional[int] = None
 
     class Config:
         from_attributes = True

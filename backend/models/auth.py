@@ -48,6 +48,7 @@ class User(Base):
     role = Column(SQLEnum(Role), default=Role.USER, nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    token_limit = Column(Integer, default=10000)  # Default token limit of 10,000
 
     # Relationships
     api_keys = relationship(

@@ -49,6 +49,7 @@ export interface User {
     role: Role;
     team_id?: number;
     created_at: string;
+    token_limit: number;  // Default is 10000
 }
 
 // Role-permission mapping

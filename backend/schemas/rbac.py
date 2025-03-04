@@ -25,6 +25,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     is_active: bool = True
+    token_limit: int = 10000  # Default token limit of 10,000
 
 
 class UserCreate(UserBase):
@@ -40,6 +41,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     role: Optional[Role] = None
     team_id: Optional[int] = None
+    token_limit: Optional[int] = None
 
 
 class User(UserBase):

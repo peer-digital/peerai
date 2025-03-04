@@ -18,8 +18,9 @@ import time
 import random
 import httpx
 import logging
+from sqlalchemy import func
 
-from models.auth import APIKey
+from models.auth import APIKey, User
 from models.usage import UsageRecord
 from database import get_db
 from config import settings
@@ -160,6 +161,22 @@ async def check_rate_limits(api_key: APIKey, db: Session):
     # Skip rate limiting for test key
     if api_key.key == "test_key_123":
         return
+
+    # Get the user's token limit
+    user = db.query(User).filter(User.id == api_key.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if user has exceeded their token limit
+    total_tokens = db.query(func.sum(UsageRecord.tokens_used)).filter(
+        UsageRecord.user_id == user.id
+    ).scalar() or 0
+
+    if total_tokens >= user.token_limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Token limit exceeded. Please contact info@peerdigital.se to increase your limit."
+        )
 
     # Check daily limit
     today = datetime.utcnow().date()

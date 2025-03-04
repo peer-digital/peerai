@@ -13,7 +13,7 @@ from models.auth import User, APIKey, DBSystemSettings
 from models.usage import UsageRecord
 from models.models import ModelProvider, AIModel, ModelRequestMapping
 from core.security import get_current_user
-from schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures
+from schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures, UserUpdate
 from core.roles import Permission, has_permission
 from services.analytics import (
     get_analytics_data,
@@ -577,6 +577,8 @@ async def get_personal_usage(
     return {
         "totalRequests": current_requests,
         "totalTokens": current_tokens,
+        "tokenLimit": current_user.token_limit,
+        "tokenUsagePercentage": (current_tokens / current_user.token_limit * 100) if current_user.token_limit > 0 else 0,
         "activeUsers": current_api_keys,  # Using API keys instead of sessions
         "averageLatency": float(current_latency or 0),
         "requestsChange": float(requests_change),
@@ -1383,3 +1385,34 @@ async def admin_delete_parameter_mapping(
     db.commit()
     
     return {"message": f"Parameter mapping for '{mapping.peer_param}' deleted successfully"}
+
+
+@router.patch("/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: int,
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a user's information"""
+    if not has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Get the user
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update fields if provided
+    if user_update.full_name is not None:
+        user.full_name = user_update.full_name
+    if user_update.is_active is not None:
+        user.is_active = user_update.is_active
+    if user_update.role is not None:
+        user.role = user_update.role
+    if user_update.token_limit is not None:
+        user.token_limit = user_update.token_limit
+
+    db.commit()
+    db.refresh(user)
+    return user

@@ -47,11 +47,13 @@ interface User {
   is_active: boolean;
   created_at: string;
   last_login?: string;
+  token_limit: number;
 }
 
 interface EditUserData {
   name?: string;
   role?: Role;
+  token_limit?: number;
 }
 
 const formatDate = (date: string | null): string => {
@@ -134,6 +136,7 @@ const Users: React.FC = () => {
     setEditData({
       name: user.name,
       role: user.role,
+      token_limit: user.token_limit,
     });
     setEditDialogOpen(true);
   };
@@ -215,6 +218,7 @@ const Users: React.FC = () => {
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Token Limit</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell>Last Login</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -243,6 +247,11 @@ const Users: React.FC = () => {
                           size="small"
                           sx={{ fontWeight: 500 }}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {user.token_limit.toLocaleString()}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Tooltip title={formatDate(user.created_at)} arrow>
@@ -344,6 +353,17 @@ const Users: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+            <TextField
+              fullWidth
+              label="Token Limit"
+              type="number"
+              value={editData.token_limit || 10000}
+              onChange={(e) => setEditData({ ...editData, token_limit: parseInt(e.target.value) })}
+              size="small"
+              InputProps={{
+                inputProps: { min: 0 }
+              }}
+            />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
