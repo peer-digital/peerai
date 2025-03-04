@@ -16,13 +16,12 @@ class ReferralService:
     """Service for managing user referrals."""
 
     REFERRAL_BONUS_TOKENS = 10000  # Number of tokens given to both referrer and referee
-    REFERRAL_CODE_LENGTH = 8  # Length of the referral code
 
     @staticmethod
-    def generate_referral_code() -> str:
-        """Generate a unique referral code."""
-        alphabet = string.ascii_uppercase + string.digits
-        return ''.join(secrets.choice(alphabet) for _ in range(ReferralService.REFERRAL_CODE_LENGTH))
+    def get_referral_code(referrer_id: int) -> str:
+        """Get a referral code for a user based on their ID."""
+        # Use the referrer_id as the referral code, encoded in base36 for shorter representation
+        return str(referrer_id)
 
     @staticmethod
     def create_referral(db: Session, referrer: User) -> Referral:
@@ -36,15 +35,11 @@ class ReferralService:
         if existing_referral:
             return existing_referral
 
-        # Generate a unique referral code
-        referral_code = ReferralService.generate_referral_code()
-        while db.query(Referral).filter(Referral.referral_code == referral_code).first():
-            referral_code = ReferralService.generate_referral_code()
-
+        # Create a new referral with a temporary referee_id (using referrer's ID as placeholder)
         referral = Referral(
             referrer_id=referrer.id,
-            status="pending",
-            referral_code=referral_code
+            referee_id=referrer.id,  # Temporary referee_id, will be updated when used
+            status="pending"
         )
         db.add(referral)
         db.commit()
@@ -59,12 +54,15 @@ class ReferralService:
         if not referral:
             referral = ReferralService.create_referral(db, referrer)
 
+        # Generate referral code from referrer ID
+        referral_code = ReferralService.get_referral_code(referrer.id)
+
         # Send invitation email
         try:
             EmailService.send_referral_invitation(
                 referrer_email=referrer.email,
                 referee_email=referee_email,
-                referral_code=referral.referral_code,
+                referral_code=referral_code,
                 referrer_name=referrer.full_name or referrer.email.split('@')[0]
             )
             return True
@@ -97,7 +95,7 @@ class ReferralService:
         # Update referral status
         referral.status = "completed"
         referral.completed_at = datetime.utcnow()
-        referral.referee_id = referee.id
+        referral.referee_id = referee.id  # Update with actual referee_id
 
         # Award bonus tokens to both users
         referrer.token_limit += ReferralService.REFERRAL_BONUS_TOKENS
@@ -138,8 +136,7 @@ class ReferralService:
         referrals = ReferralService.get_user_referrals(db, user)
         
         # Get the current referral code
-        pending_referral = ReferralService.get_pending_referral(db, user)
-        referral_code = pending_referral.referral_code if pending_referral else None
+        referral_code = ReferralService.get_referral_code(user.id)
 
         # Calculate statistics
         total_referrals = len(referrals)

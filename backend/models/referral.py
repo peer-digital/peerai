@@ -14,8 +14,7 @@ class Referral(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    referee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    referral_code = Column(String(8), unique=True, nullable=False)
+    referee_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String(20), nullable=False, default="pending")
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
