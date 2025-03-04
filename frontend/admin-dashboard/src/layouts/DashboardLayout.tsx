@@ -46,7 +46,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Permission, hasAnyPermission, Role } from '../types/rbac';
+import { Permission, Role } from '../types/rbac';
+import { hasAnyPermission } from '../utils/rbac';
 import ThemeToggle from '../components/ui/ThemeToggle';
 
 const drawerWidth = 260;
@@ -162,8 +163,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   // Check if user has any of the required permissions
   const hasRequiredPermissions = (requiredPermissions: Permission[]): boolean => {
     if (isGuestMode) return false;
-    if (!user || !user.role) return false;
-    return hasAnyPermission(user.role as Role, requiredPermissions);
+    if (!user) return false;
+    return hasAnyPermission(user, requiredPermissions);
   };
   
   // Close drawer on mobile by default
@@ -376,7 +377,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
         <List>
           {menuItems.map((item) => {
             // Skip menu items that require permissions the user doesn't have
-            if (item.requiredPermissions && !hasAnyPermission(user?.role || Role.GUEST, item.requiredPermissions)) {
+            if (item.requiredPermissions && !hasRequiredPermissions(item.requiredPermissions)) {
               return null;
             }
             // Skip menu items that aren't guest accessible in guest mode

@@ -32,7 +32,8 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import api from '../api/config';
 import { useAuth } from '../contexts/AuthContext';
-import { Permission, Role, hasPermission } from '../types/rbac';
+import { Permission, Role } from '../types/rbac';
+import { hasAnyPermission } from '../utils/rbac';
 
 interface UsageStats {
   totalRequests: number;
@@ -130,9 +131,11 @@ const Dashboard: React.FC = () => {
 
   // Determine the view type based on user role
   useEffect(() => {
-    if (hasPermission(user?.role || Role.USER, Permission.VIEW_ALL_USAGE)) {
+    if (!user) return;
+    
+    if (hasAnyPermission(user, [Permission.VIEW_ALL_USAGE])) {
       setViewType('all');
-    } else if (hasPermission(user?.role || Role.USER, Permission.VIEW_TEAM_USAGE)) {
+    } else if (hasAnyPermission(user, [Permission.VIEW_TEAM_USAGE])) {
       setViewType('team');
     } else {
       setViewType('personal');
@@ -252,7 +255,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Token Usage Progress Bar */}
-        {viewType === 'personal' && (
+        {viewType === 'personal' && stats.tokenLimit !== undefined && (
           <Paper sx={{ p: 3, mb: 4 }}>
             <Typography variant="h6" gutterBottom>
               Token Usage
@@ -262,24 +265,24 @@ const Dashboard: React.FC = () => {
                 {stats.totalTokens.toLocaleString()} / {stats.tokenLimit.toLocaleString()} tokens
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                ({stats.tokenUsagePercentage.toFixed(1)}%)
+                ({stats.tokenUsagePercentage?.toFixed(1) || 0}%)
               </Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
-              value={Math.min(stats.tokenUsagePercentage, 100)} 
+              value={Math.min(stats.tokenUsagePercentage || 0, 100)} 
               sx={{ 
                 height: 8,
                 borderRadius: 1,
                 bgcolor: 'rgba(0,0,0,0.05)',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 1,
-                  bgcolor: stats.tokenUsagePercentage >= 90 ? 'error.main' : 
-                           stats.tokenUsagePercentage >= 75 ? 'warning.main' : 'primary.main',
+                  bgcolor: (stats.tokenUsagePercentage || 0) >= 90 ? 'error.main' : 
+                           (stats.tokenUsagePercentage || 0) >= 75 ? 'warning.main' : 'primary.main',
                 }
               }}
             />
-            {stats.tokenUsagePercentage >= 90 && (
+            {(stats.tokenUsagePercentage || 0) >= 90 && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 You are approaching your token limit. Please contact info@peerdigital.se to increase your limit.
               </Alert>
