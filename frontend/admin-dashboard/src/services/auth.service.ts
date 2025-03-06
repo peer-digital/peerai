@@ -55,6 +55,7 @@ class AuthService {
           role: string;
           is_active: boolean;
           full_name?: string;
+          token_limit?: number;
         };
       }>(
         '/api/v1/auth/login',
@@ -67,6 +68,7 @@ class AuthService {
       );
 
       console.log('Login response:', response.data); // Debug log
+      console.log('User token limit from login:', response.data.user?.token_limit); // Add detailed token limit log
 
       // Store the access token
       localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
@@ -79,7 +81,8 @@ class AuthService {
           email: response.data.user.email,
           is_active: response.data.user.is_active ?? true,
           role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
-          name: response.data.user.full_name
+          name: response.data.user.full_name,
+          token_limit: response.data.user.token_limit ?? 10000
         };
       } else {
         // Otherwise get user data from validation endpoint
@@ -111,56 +114,46 @@ class AuthService {
 
   async validateToken(): Promise<User> {
     try {
-      const response = await api.get<{
+      const validateResponse = await api.get<{
         id: number;
         email: string;
         is_active: boolean;
         role: string;
         full_name?: string;
-        token_limit?: number;
+        token_limit: number;
       }>('/api/v1/auth/validate');
 
       console.log('Token validation response:', {
-        rawData: response.data,
-        role: response.data.role,
-        roleType: typeof response.data.role,
+        rawData: validateResponse.data,
+        role: validateResponse.data.role,
+        roleType: typeof validateResponse.data.role,
         roleMapping: ROLE_MAPPING,
-        mappedRole: ROLE_MAPPING[response.data.role as keyof typeof ROLE_MAPPING]
+        mappedRole: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING],
+        tokenLimit: validateResponse.data.token_limit
       });
 
       // Ensure we have the required fields
-      if (!response.data?.email || !response.data?.role) {
+      if (!validateResponse.data?.email || !validateResponse.data?.role) {
         console.error('Missing required fields:', {
-          hasEmail: !!response.data?.email,
-          hasRole: !!response.data?.role,
-          data: response.data
+          hasEmail: !!validateResponse.data?.email,
+          hasRole: !!validateResponse.data?.role,
+          data: validateResponse.data
         });
         // Clear invalid auth state without making additional API calls
         this.clearAuthState();
         throw new Error('Invalid user data received from server');
       }
 
-      // Log the role before mapping
-      console.log('Role before mapping:', {
-        rawRole: response.data.role,
-        roleType: typeof response.data.role
-      });
-
       const userData: User = {
-        id: response.data.id?.toString() || '0',
-        email: response.data.email,
-        is_active: response.data.is_active ?? true,
-        role: ROLE_MAPPING[response.data.role as keyof typeof ROLE_MAPPING] || Role.USER,
-        name: response.data.full_name,
-        token_limit: response.data.token_limit || 2500  // Default to 2500 if not provided
+        id: validateResponse.data.id.toString(),
+        email: validateResponse.data.email,
+        is_active: validateResponse.data.is_active ?? true,
+        role: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING] || Role.USER,
+        name: validateResponse.data.full_name,
+        token_limit: validateResponse.data.token_limit
       };
 
-      console.log('Mapped user data:', userData); // Debug log
-      console.log('Role mapping:', {
-        received: response.data.role,
-        mapped: userData.role,
-        availableMappings: ROLE_MAPPING
-      });
+      console.log('Mapped user data:', userData);
 
       this.currentUser = userData;
       this.setUser(userData);
@@ -204,6 +197,7 @@ class AuthService {
       if (!userData) return null;
       
       const parsedUser = JSON.parse(userData);
+      console.log('Retrieved user from storage:', parsedUser); // Add storage retrieval log
       // Map the role string to enum value without assuming case
       return {
         ...parsedUser,
@@ -221,6 +215,7 @@ class AuthService {
       ...user,
       role: user.role.toString()
     };
+    console.log('Storing user in localStorage:', userData); // Add storage log
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
 
@@ -256,6 +251,7 @@ class AuthService {
           role: string;
           is_active: boolean;
           full_name?: string;
+          token_limit?: number;
         };
       }>(
         '/api/v1/auth/register',
@@ -275,7 +271,8 @@ class AuthService {
           email: response.data.user.email,
           is_active: response.data.user.is_active ?? true,
           role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
-          name: response.data.user.full_name
+          name: response.data.user.full_name,
+          token_limit: response.data.user.token_limit ?? 10000
         };
       } else {
         // Otherwise get user data from validation endpoint
