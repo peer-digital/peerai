@@ -16,6 +16,8 @@ import {
   Tabs,
   Tab,
   Button,
+  Snackbar,
+  IconButton,
 } from '@mui/material';
 import {
   BarChart,
@@ -31,6 +33,7 @@ import {
 } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import CloseIcon from '@mui/icons-material/Close';
 import api from '../api/config';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
@@ -127,6 +130,7 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [viewType, setViewType] = useState<'personal' | 'team' | 'all'>('personal');
+  const [showReferralBanner, setShowReferralBanner] = useState(true);
 
   // Determine the view type based on user role
   useEffect(() => {
@@ -216,6 +220,56 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box p={3}>
+      {showReferralBanner && (
+        <Paper 
+          elevation={0}
+          sx={{ 
+            mb: 3,
+            p: 2,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'primary.main',
+            borderRadius: 1,
+            position: 'relative'
+          }}
+        >
+          <IconButton
+            size="small"
+            aria-label="close"
+            onClick={() => setShowReferralBanner(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'text.secondary'
+            }}
+          >
+            <CloseIcon fontSize="inherit" />
+          </IconButton>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 2,
+            pr: 4
+          }}>
+            <Typography variant="body1" color="text.primary">
+              🎁 Refer a friend and get 10,000 free tokens each!
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              href="/referrals"
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+            >
+              Refer Now
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
       <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 600 }}>
         {getDashboardTitle()}
       </Typography>
