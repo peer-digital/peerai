@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Box,
   Typography,
   Paper,
-  Alert,
   CircularProgress,
 } from '@mui/material';
-import { Email as EmailIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useSnackbar } from '../contexts/SnackbarContext';
-import { useAuth } from '../contexts/AuthContext';
 
 interface ReferralModalProps {
   open: boolean;
@@ -24,10 +21,7 @@ interface ReferralModalProps {
 }
 
 const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
-  const [referralEmail, setReferralEmail] = useState('');
-  const queryClient = useQueryClient();
   const { showSnackbar } = useSnackbar();
-  const { user } = useAuth();
 
   // Fetch referral code
   const { data: stats, isLoading: isLoadingStats } = useQuery({
@@ -37,34 +31,6 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
       return response.data;
     },
   });
-
-  // Email referral mutation
-  const emailReferralMutation = useMutation({
-    mutationFn: async (email: string) => {
-      const response = await api.post('/referrals/invite', { email });
-      return response.data;
-    },
-    onSuccess: () => {
-      showSnackbar('Referral invitation sent successfully!', 'success');
-      setReferralEmail('');
-      queryClient.invalidateQueries({ queryKey: ['referralStats'] });
-    },
-    onError: (error: any) => {
-      if (error.response?.status === 401) {
-        window.location.href = '/login';
-      } else {
-        showSnackbar(error.response?.data?.detail || 'Failed to send referral invitation', 'error');
-      }
-    },
-  });
-
-  // Handle email referral submission
-  const handleSubmitEmailReferral = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (referralEmail.trim()) {
-      emailReferralMutation.mutate(referralEmail.trim());
-    }
-  };
 
   // Handle copying referral code
   const handleCopyCode = () => {
@@ -79,7 +45,7 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
       <DialogTitle>Refer a Friend</DialogTitle>
       <DialogContent>
         <Typography variant="body1" color="textSecondary" paragraph>
-          Invite friends to Peer AI and earn tokens for both you and your referrals!
+          Share your referral code with friends to earn tokens! When they sign up using your code, both you and your friend will receive 10,000 tokens.
         </Typography>
 
         {/* Referral Code Box */}
@@ -120,34 +86,9 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
           </Box>
         </Paper>
 
-        {/* Email Referral Form */}
-        <Typography variant="h6" gutterBottom>
-          Refer by Email
-        </Typography>
         <Typography variant="body2" color="textSecondary" paragraph>
-          Send a referral invitation directly to your friend's email address.
+          Share this code with your friends. When they sign up using your code, both you and your friend will receive 10,000 tokens as a welcome bonus!
         </Typography>
-        <form onSubmit={handleSubmitEmailReferral}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              fullWidth
-              label="Friend's Email"
-              type="email"
-              value={referralEmail}
-              onChange={(e) => setReferralEmail(e.target.value)}
-              placeholder="friend@example.com"
-              disabled={emailReferralMutation.isPending}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<EmailIcon />}
-              disabled={!referralEmail.trim() || emailReferralMutation.isPending}
-            >
-              {emailReferralMutation.isPending ? 'Sending...' : 'Send'}
-            </Button>
-          </Box>
-        </form>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

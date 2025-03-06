@@ -55,30 +55,6 @@ class ReferralService:
         return referral
 
     @staticmethod
-    def send_referral_invitation(db: Session, referrer: User, referee_email: str) -> bool:
-        """Send a referral invitation email to a friend."""
-        # Get or create a referral code for the referrer
-        referral = ReferralService.get_pending_referral(db, referrer)
-        if not referral:
-            referral = ReferralService.create_referral(db, referrer)
-
-        # Generate referral code from referrer ID
-        referral_code = ReferralService.get_referral_code(referrer.id)
-
-        # Send invitation email
-        try:
-            EmailService.send_referral_invitation(
-                referrer_email=referrer.email,
-                referee_email=referee_email,
-                referral_code=referral_code,
-                referrer_name=referrer.full_name or referrer.email.split('@')[0]
-            )
-            return True
-        except Exception as e:
-            print(f"Failed to send referral invitation email: {str(e)}")
-            return False
-
-    @staticmethod
     def use_referral(db: Session, referrer: User, referee: User) -> Referral:
         """Use a referral and award bonus tokens to both users."""
         # Validate that referee is not the same as referrer

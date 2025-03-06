@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import string
-from pydantic import BaseModel, EmailStr
 
 from database import get_db
 from models.auth import User
@@ -14,11 +13,6 @@ from services.referral import ReferralService
 from core.security import get_current_user
 
 router = APIRouter()
-
-
-class ReferralInvitation(BaseModel):
-    """Schema for referral invitation."""
-    email: EmailStr
 
 
 @router.post("/referrals", response_model=ReferralSchema)
@@ -40,26 +34,6 @@ async def create_referral(
         )
 
     return ReferralService.create_referral(db, current_user)
-
-
-@router.post("/referrals/invite", response_model=bool)
-async def send_referral_invitation(
-    invitation: ReferralInvitation,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Send a referral invitation email to a friend."""
-    success = ReferralService.send_referral_invitation(
-        db=db,
-        referrer=current_user,
-        referee_email=invitation.email
-    )
-    if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to send referral invitation"
-        )
-    return success
 
 
 @router.get("/referrals", response_model=list[ReferralSchema])
