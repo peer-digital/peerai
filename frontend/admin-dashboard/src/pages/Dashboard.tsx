@@ -126,11 +126,15 @@ const EmptyState = () => (
   </Box>
 );
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  isReferralModalOpen: boolean;
+  onReferralModalClose: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralModalClose }) => {
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [viewType, setViewType] = useState<'personal' | 'team' | 'all'>('personal');
-  const [showReferralBanner, setShowReferralBanner] = useState(true);
 
   // Determine the view type based on user role
   useEffect(() => {
@@ -220,56 +224,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box p={3}>
-      {showReferralBanner && (
-        <Paper 
-          elevation={0}
-          sx={{ 
-            mb: 3,
-            p: 2,
-            bgcolor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'primary.main',
-            borderRadius: 1,
-            position: 'relative'
-          }}
-        >
-          <IconButton
-            size="small"
-            aria-label="close"
-            onClick={() => setShowReferralBanner(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'text.secondary'
-            }}
-          >
-            <CloseIcon fontSize="inherit" />
-          </IconButton>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            gap: 2,
-            pr: 4
-          }}>
-            <Typography variant="body1" color="text.primary">
-              🎁 Refer a friend and get 10,000 free tokens each!
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              href="/referrals"
-              target="_blank"
-              rel="noopener noreferrer"
-              size="small"
-            >
-              Refer Now
-            </Button>
-          </Box>
-        </Paper>
-      )}
-
       <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 600 }}>
         {getDashboardTitle()}
       </Typography>
@@ -280,26 +234,15 @@ const Dashboard: React.FC = () => {
           severity="warning" 
           sx={{ mb: 3 }}
           action={
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                href="mailto:info@peerdigital.se?subject=Token%20Request"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Get New Tokens
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                href="/referrals"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Refer a Friend
-              </Button>
-            </Stack>
+            <Button
+              variant="contained"
+              color="primary"
+              href="mailto:info@peerdigital.se?subject=Token%20Request"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get New Tokens
+            </Button>
           }
         >
           You have reached your token limit. Please contact us to get more tokens.

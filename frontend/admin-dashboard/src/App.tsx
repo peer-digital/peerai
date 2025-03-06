@@ -42,6 +42,8 @@ const queryClient = new QueryClient({
 // const userRole: Role = Role.USER_ADMIN; // Example role, replace with actual user role
 
 function App() {
+  const [isReferralModalOpen, setIsReferralModalOpen] = React.useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -61,7 +63,7 @@ function App() {
                   <Route
                     element={
                       <PrivateRoute>
-                        <DashboardLayout>
+                        <DashboardLayout onOpenReferralModal={() => setIsReferralModalOpen(true)}>
                           <Outlet />
                         </DashboardLayout>
                       </PrivateRoute>
@@ -72,7 +74,7 @@ function App() {
                     {/* Dashboard - different views based on role */}
                     <Route path="/dashboard" element={
                       <PermissionGuard requiredPermissions={[Permission.VIEW_OWN_USAGE, Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]}>
-                        <Dashboard />
+                        <Dashboard isReferralModalOpen={isReferralModalOpen} onReferralModalClose={() => setIsReferralModalOpen(false)} />
                       </PermissionGuard>
                     } />
                     

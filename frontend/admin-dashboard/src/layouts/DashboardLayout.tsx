@@ -145,9 +145,10 @@ const MenuSectionTitle = styled(Typography)(({ theme }) => ({
 interface DashboardLayoutProps {
   children: React.ReactNode;
   isGuestMode?: boolean;
+  onOpenReferralModal?: () => void;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode = false }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode = false, onOpenReferralModal }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -221,7 +222,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
     { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
-    { text: 'Referrals', icon: <ShareIcon />, path: '/referrals' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     // Only show these items for super admins
     ...(user?.role === Role.SUPER_ADMIN ? [
@@ -272,7 +272,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                   variant="outlined"
                   color="inherit"
                   startIcon={<PersonAddIcon />}
-                  onClick={() => setIsReferralModalOpen(true)}
+                  onClick={() => {
+                    setIsReferralModalOpen(true);
+                    onOpenReferralModal?.();
+                  }}
                   sx={{ mr: 1 }}
                 >
                   Refer a Friend
@@ -426,7 +429,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
       {/* Referral Modal */}
       <ReferralModal
         open={isReferralModalOpen}
-        onClose={() => setIsReferralModalOpen(false)}
+        onClose={() => {
+          setIsReferralModalOpen(false);
+          onOpenReferralModal?.();
+        }}
       />
     </Box>
   );
