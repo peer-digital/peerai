@@ -226,15 +226,26 @@ const Dashboard: React.FC = () => {
           severity="warning" 
           sx={{ mb: 3 }}
           action={
-            <Button
-              variant="contained"
-              color="primary"
-              href="mailto:info@peerdigital.se?subject=Token%20Request"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get New Tokens
-            </Button>
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                href="mailto:info@peerdigital.se?subject=Token%20Request"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Get New Tokens
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                href="/referrals"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Refer a Friend
+              </Button>
+            </Stack>
           }
         >
           You have reached your token limit. Please contact us to get more tokens.
