@@ -20,6 +20,8 @@ from services.analytics import (
     get_user_stats,
     export_analytics_data,
 )
+from models.referral import Referral
+from services.referral import ReferralService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -198,7 +200,36 @@ async def get_users(
     if not has_permission(current_user.role, Permission.MANAGE_ALL_TEAMS):
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Get all users
     users = db.query(User).order_by(desc(User.created_at)).all()
+
+    # Calculate referral stats for each user
+    for user in users:
+        # Get the user's referral code
+        referral_code = ReferralService.get_referral_code(user.id)
+        
+        # Find all successful referrals where this user's code was used
+        successful_referrals = db.query(Referral).filter(
+            Referral.referrer_id == user.id,
+            Referral.status == "completed"  # Use string status
+        ).all()
+        
+        # Calculate stats
+        total_successful = len(successful_referrals)
+        total_tokens = total_successful * ReferralService.REFERRAL_BONUS_TOKENS
+        
+        user.referral_stats = {
+            "total_referrals": total_successful,  # Total equals successful since we only track used codes
+            "successful_referrals": total_successful,
+            "pending_referrals": 0,  # No pending referrals in the new system
+            "total_tokens_earned": total_tokens,
+            "referral_code": referral_code
+        }
+
+        # Handle last_login (will be None in response if not present)
+        if not hasattr(user, 'last_login'):
+            setattr(user, 'last_login', None)
+
     return users
 
 

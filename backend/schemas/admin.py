@@ -72,8 +72,17 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     is_active: bool
     is_superuser: bool
+    role: Role
     created_at: datetime
+    last_login: Optional[datetime] = None  # Default to None if not present
     token_limit: int = 10000  # Default token limit of 10,000
+    referral_stats: Optional[dict] = {
+        "total_referrals": 0,
+        "successful_referrals": 0,
+        "pending_referrals": 0,
+        "total_tokens_earned": 0,
+        "referral_code": ""
+    }
 
     class Config:
         from_attributes = True

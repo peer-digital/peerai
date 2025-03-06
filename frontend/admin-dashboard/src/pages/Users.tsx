@@ -42,7 +42,7 @@ import { Role } from '../types/rbac';
 interface User {
   id: string;
   email: string;
-  name?: string;
+  full_name?: string;
   role: Role;
   is_active: boolean;
   created_at: string;
@@ -53,6 +53,7 @@ interface User {
     successful_referrals: number;
     pending_referrals: number;
     total_tokens_earned: number;
+    referral_code: string;
   };
 }
 
@@ -103,7 +104,7 @@ const Users: React.FC = () => {
   // Filter users based on search query
   const filteredUsers = users?.filter(user => 
     !searchQuery || (
-      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   ) || [];
@@ -140,7 +141,7 @@ const Users: React.FC = () => {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditData({
-      name: user.name,
+      name: user.full_name,
       role: user.role,
       token_limit: user.token_limit,
     });
@@ -225,6 +226,7 @@ const Users: React.FC = () => {
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Token Limit</TableCell>
+                <TableCell>Referral Code</TableCell>
                 <TableCell>Referrals</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell>Last Login</TableCell>
@@ -237,7 +239,7 @@ const Users: React.FC = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow key={user.id} hover>
-                      <TableCell>{user.name || 'N/A'}</TableCell>
+                      <TableCell>{user.full_name || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Chip
@@ -261,12 +263,26 @@ const Users: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: 'monospace',
+                            bgcolor: 'grey.100',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            display: 'inline-block'
+                          }}
+                        >
+                          {user.referral_stats?.referral_code || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
                         <Tooltip 
                           title={
                             <Box>
                               <Typography variant="body2">Total: {user.referral_stats?.total_referrals || 0}</Typography>
                               <Typography variant="body2">Successful: {user.referral_stats?.successful_referrals || 0}</Typography>
-                              <Typography variant="body2">Pending: {user.referral_stats?.pending_referrals || 0}</Typography>
                               <Typography variant="body2">Tokens Earned: {(user.referral_stats?.total_tokens_earned || 0).toLocaleString()}</Typography>
                             </Box>
                           } 
@@ -274,19 +290,11 @@ const Users: React.FC = () => {
                         >
                           <Box>
                             <Chip
-                              label={`${user.referral_stats?.successful_referrals || 0}/${user.referral_stats?.total_referrals || 0}`}
+                              label={`${user.referral_stats?.successful_referrals || 0} referrals`}
                               color={(user.referral_stats?.successful_referrals || 0) > 0 ? 'success' : 'default'}
                               size="small"
                               sx={{ fontWeight: 500 }}
                             />
-                            {(user.referral_stats?.pending_referrals || 0) > 0 && (
-                              <Chip
-                                label={`${user.referral_stats?.pending_referrals || 0} pending`}
-                                color="warning"
-                                size="small"
-                                sx={{ ml: 1 }}
-                              />
-                            )}
                           </Box>
                         </Tooltip>
                       </TableCell>
