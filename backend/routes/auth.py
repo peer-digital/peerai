@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import secrets
+import string
 
 from models.auth import User, APIKey
 from database import get_db
@@ -98,11 +99,24 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Handle referral code if provided
     if user.referral_code:
         try:
-            referrer_id = int(user.referral_code)
+            # Convert the referral code back to user ID using base36
+            code = user.referral_code.lower().lstrip('0')  # Remove leading zeros
+            if not code:  # If all zeros, use '0'
+                code = '0'
+                
+            alphabet = string.digits + string.ascii_lowercase
+            referrer_id = 0
+            for char in code:
+                referrer_id = referrer_id * 36 + alphabet.index(char)
+            
             referrer = db.query(User).filter(User.id == referrer_id).first()
             if referrer and referrer.id != db_user.id:
+                # Create a new referral first
+                referral = ReferralService.create_referral(db, referrer)
+                # Then use it
                 ReferralService.use_referral(db, referrer, db_user)
-        except (ValueError, TypeError):
+        except Exception as e:
+            print(f"Error processing referral code: {str(e)}")
             # Invalid referral code format, but don't fail registration
             pass
 

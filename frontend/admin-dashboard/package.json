@@ -36,7 +36,8 @@
     "react-toastify": "^10.0.4",
     "recharts": "^2.12.1",
     "redoc": "^2.4.0",
-    "swagger-ui-react": "^5.19.0"
+    "swagger-ui-react": "^5.19.0",
+    "use-debounce": "^10.0.4"
   },
   "devDependencies": {
     "@cypress/webpack-preprocessor": "^6.0.0",

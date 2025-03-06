@@ -48,6 +48,12 @@ interface User {
   created_at: string;
   last_login?: string;
   token_limit: number;
+  referral_stats?: {
+    total_referrals: number;
+    successful_referrals: number;
+    pending_referrals: number;
+    total_tokens_earned: number;
+  };
 }
 
 interface EditUserData {
@@ -219,6 +225,7 @@ const Users: React.FC = () => {
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Token Limit</TableCell>
+                <TableCell>Referrals</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell>Last Login</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -252,6 +259,36 @@ const Users: React.FC = () => {
                         <Typography variant="body2">
                           {user.token_limit.toLocaleString()}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip 
+                          title={
+                            <Box>
+                              <Typography variant="body2">Total: {user.referral_stats?.total_referrals || 0}</Typography>
+                              <Typography variant="body2">Successful: {user.referral_stats?.successful_referrals || 0}</Typography>
+                              <Typography variant="body2">Pending: {user.referral_stats?.pending_referrals || 0}</Typography>
+                              <Typography variant="body2">Tokens Earned: {(user.referral_stats?.total_tokens_earned || 0).toLocaleString()}</Typography>
+                            </Box>
+                          } 
+                          arrow
+                        >
+                          <Box>
+                            <Chip
+                              label={`${user.referral_stats?.successful_referrals || 0}/${user.referral_stats?.total_referrals || 0}`}
+                              color={(user.referral_stats?.successful_referrals || 0) > 0 ? 'success' : 'default'}
+                              size="small"
+                              sx={{ fontWeight: 500 }}
+                            />
+                            {(user.referral_stats?.pending_referrals || 0) > 0 && (
+                              <Chip
+                                label={`${user.referral_stats?.pending_referrals || 0} pending`}
+                                color="warning"
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </Box>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         <Tooltip title={formatDate(user.created_at)} arrow>

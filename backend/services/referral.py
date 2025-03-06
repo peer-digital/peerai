@@ -133,6 +133,12 @@ class ReferralService:
                 referee_email=referee.email,
                 tokens_earned=ReferralService.REFERRAL_BONUS_TOKENS
             )
+            # Send admin notification
+            EmailService.send_referral_admin_notification(
+                referrer_email=referrer.email,
+                referee_email=referee.email,
+                tokens_earned=ReferralService.REFERRAL_BONUS_TOKENS
+            )
         except Exception as e:
             # Log the error but don't fail the referral process
             print(f"Failed to send referral notification emails: {str(e)}")

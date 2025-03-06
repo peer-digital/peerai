@@ -161,4 +161,36 @@ class EmailService:
             <p style="color: #666;">Best regards,<br>The Peer AI Team</p>
         </div>
         """
-        return cls.send_email(referee_email, subject, body, html) 
+        return cls.send_email(referee_email, subject, body, html)
+
+    @classmethod
+    def send_referral_admin_notification(
+        cls,
+        referrer_email: str,
+        referee_email: str,
+        tokens_earned: int
+    ) -> bool:
+        """Send notification email to admin about a successful referral."""
+        admin_email = "info@peerdigital.se"
+        subject = "New Peer AI Referral Completed"
+        body = f"""
+        A new referral has been completed:
+
+        Referrer: {referrer_email}
+        Referee: {referee_email}
+        Tokens Awarded: {tokens_earned:,} (to each)
+
+        This is an automated notification from the Peer AI referral system.
+        """
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">New Peer AI Referral Completed</h2>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Referrer:</strong> {referrer_email}</p>
+                <p><strong>Referee:</strong> {referee_email}</p>
+                <p><strong>Tokens Awarded:</strong> {tokens_earned:,} (to each)</p>
+            </div>
+            <p style="color: #666;">This is an automated notification from the Peer AI referral system.</p>
+        </div>
+        """
+        return cls.send_email(admin_email, subject, body, html) 
