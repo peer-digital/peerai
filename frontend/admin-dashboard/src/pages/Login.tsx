@@ -34,12 +34,12 @@ const Login: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const navigate = useNavigate();
   const { login, register } = useAuth();
-  const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string }>();
+  const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string }>();
 
   // Check if we're in development mode
   const isDevelopment = import.meta.env.VITE_DEV_MODE === 'true';
 
-  const onSubmit = async (credentials: LoginCredentials & { full_name?: string }) => {
+  const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string }) => {
     try {
       setError(null);
       setIsLoading(true);
@@ -153,21 +153,36 @@ const Login: React.FC = () => {
             sx={{ width: '100%' }}
           >
             {mode === 'register' && (
-              <TextField
-                margin="normal"
-                fullWidth
-                id="full_name"
-                label="Full Name"
-                autoComplete="name"
-                error={!!errors.full_name}
-                helperText={errors.full_name?.message}
-                {...registerForm('full_name', {
-                  required: 'Full name is required',
-                })}
-                inputProps={{
-                  'aria-invalid': !!errors.full_name,
-                }}
-              />
+              <>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  id="full_name"
+                  label="Full Name"
+                  autoComplete="name"
+                  error={!!errors.full_name}
+                  helperText={errors.full_name?.message}
+                  {...registerForm('full_name', {
+                    required: 'Full name is required',
+                  })}
+                  inputProps={{
+                    'aria-invalid': !!errors.full_name,
+                  }}
+                />
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  id="referral_code"
+                  label="Referral Code (Optional)"
+                  autoComplete="off"
+                  error={!!errors.referral_code}
+                  helperText={errors.referral_code?.message || "Enter a referral code if you have one"}
+                  {...registerForm('referral_code')}
+                  inputProps={{
+                    'aria-invalid': !!errors.referral_code,
+                  }}
+                />
+              </>
             )}
             <TextField
               margin="normal"

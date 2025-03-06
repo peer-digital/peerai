@@ -11,6 +11,7 @@ from models.auth import User, APIKey
 from database import get_db
 from config import settings
 from core.security import verify_password, get_password_hash
+from services.referral import ReferralService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -36,6 +37,7 @@ class UserCreate(BaseModel):
     email: str
     password: str
     full_name: Optional[str] = None
+    referral_code: Optional[str] = None
 
 
 class APIKeyCreate(BaseModel):
@@ -92,6 +94,17 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Handle referral code if provided
+    if user.referral_code:
+        try:
+            referrer_id = int(user.referral_code)
+            referrer = db.query(User).filter(User.id == referrer_id).first()
+            if referrer and referrer.id != db_user.id:
+                ReferralService.use_referral(db, referrer, db_user)
+        except (ValueError, TypeError):
+            # Invalid referral code format, but don't fail registration
+            pass
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
