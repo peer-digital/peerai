@@ -25,7 +25,6 @@ const GetStarted = React.lazy(() => import('./pages/GetStarted'));
 const TeamManagement = React.lazy(() => import('./pages/TeamManagement'));
 const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
-const Referrals = React.lazy(() => import('./pages/Referrals'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
@@ -125,12 +124,6 @@ function App() {
                         <Playground />
                       </PermissionGuard>
                     } />
-
-                    {/* Referrals - accessible to all authenticated users */}
-                    <Route
-                      path="/referrals"
-                      element={<Referrals />}
-                    />
                   </Route>
 
                   {/* Catch all route */}

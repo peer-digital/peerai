@@ -1,6 +1,6 @@
 """Service for handling user referrals."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
@@ -16,12 +16,20 @@ class ReferralService:
     """Service for managing user referrals."""
 
     REFERRAL_BONUS_TOKENS = 10000  # Number of tokens given to both referrer and referee
+    MAX_REFERRALS_PER_DAY = 2  # Maximum number of times a referral code can be used per day
 
     @staticmethod
     def get_referral_code(referrer_id: int) -> str:
         """Get a referral code for a user based on their ID."""
-        # Use the referrer_id as the referral code, encoded in base36 for shorter representation
-        return str(referrer_id)
+        # Convert the user ID to base36 (using digits 0-9 and letters a-z)
+        # This gives us a shorter, more readable code
+        alphabet = string.digits + string.ascii_lowercase
+        code = ''
+        while referrer_id:
+            referrer_id, i = divmod(referrer_id, 36)
+            code = alphabet[i] + code
+        # Pad with zeros to ensure consistent length
+        return code.zfill(4).upper()
 
     @staticmethod
     def create_referral(db: Session, referrer: User) -> Referral:
@@ -78,6 +86,20 @@ class ReferralService:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot use your own referral code"
+            )
+
+        # Check daily usage limit for the referral code
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_usage = db.query(Referral).filter(
+            Referral.referrer_id == referrer.id,
+            Referral.status == "completed",
+            Referral.completed_at >= today_start
+        ).count()
+
+        if daily_usage >= ReferralService.MAX_REFERRALS_PER_DAY:
+            raise HTTPException(
+                status_code=429,
+                detail=f"This referral code has reached the maximum usage limit of {ReferralService.MAX_REFERRALS_PER_DAY} times per day"
             )
 
         # Find a pending referral from the referrer

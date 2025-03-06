@@ -44,12 +44,14 @@ import {
   GitHub as GitHubIcon,
   Science as ScienceIcon,
   Share as ShareIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
 import ThemeToggle from '../components/ui/ThemeToggle';
+import ReferralModal from '../components/ReferralModal';
 
 const drawerWidth = 260;
 
@@ -151,6 +153,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   const location = useLocation();
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   
   // Determine which logo to use based on theme mode
   // @important: Keep using SVG logos for the dashboard UI
@@ -263,6 +266,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
           {/* Only show these controls for authenticated users */}
           {!isGuestMode && (
             <>
+              {/* Refer a Friend button */}
+              <Tooltip title="Refer a Friend">
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  startIcon={<PersonAddIcon />}
+                  onClick={() => setIsReferralModalOpen(true)}
+                  sx={{ mr: 1 }}
+                >
+                  Refer a Friend
+                </Button>
+              </Tooltip>
+
               <Tooltip title="Notifications">
                 <IconButton 
                   color="inherit" 
@@ -406,6 +422,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
         <DrawerHeader />
         {children}
       </Main>
+
+      {/* Referral Modal */}
+      <ReferralModal
+        open={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+      />
     </Box>
   );
 };

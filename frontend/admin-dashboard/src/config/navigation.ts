@@ -8,7 +8,6 @@ import {
   Group as TeamIcon,
   Person as UserIcon,
   SmartToy as ModelIcon,
-  Share as ReferralIcon,
 } from '@mui/icons-material';
 import { Permission } from '../types/rbac';
 
@@ -37,12 +36,6 @@ export const navigation: NavItem[] = [
     path: '/analytics',
     icon: AnalyticsIcon,
     requiredPermissions: [Permission.VIEW_ANALYTICS],
-  },
-  {
-    title: 'Referrals',
-    path: '/referrals',
-    icon: ReferralIcon,
-    requiredPermissions: [Permission.VIEW_REFERRALS],
   },
   {
     title: 'Team',
