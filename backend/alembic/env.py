@@ -1,10 +1,15 @@
 from logging.config import fileConfig
 import os
+import sys
+from pathlib import Path
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+
+# Add the parent directory to Python path
+sys.path.append(str(Path(__file__).parent.parent))
 
 from models.base import Base
 

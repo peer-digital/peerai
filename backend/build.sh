@@ -9,6 +9,13 @@ pip install -r requirements.txt
 # Run database migrations
 echo "Running database migrations..."
 export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# First, stamp the current version to ensure we're in a known state
+echo "Stamping current version..."
+alembic stamp head || true
+
+# Then run the migrations
+echo "Running migrations..."
 alembic upgrade head
 
 # Create admin and test users
