@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,11 +9,14 @@ import {
   Typography,
   Paper,
   CircularProgress,
+  TextField,
+  Alert,
 } from '@mui/material';
-import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import { ContentCopy as ContentCopyIcon, Email as EmailIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useSnackbar } from '../contexts/SnackbarContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ReferralModalProps {
   open: boolean;
@@ -22,6 +25,10 @@ interface ReferralModalProps {
 
 const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  const [emailAddress, setEmailAddress] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Fetch referral code
   const { data: stats, isLoading: isLoadingStats } = useQuery({
@@ -41,6 +48,28 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
     if (referralUrl) {
       navigator.clipboard.writeText(referralUrl);
       showSnackbar('Referral link copied to clipboard!', 'success');
+    }
+  };
+
+  // Handle sending referral email
+  const handleSendEmail = async () => {
+    if (!emailAddress || !stats?.referral_code || !user?.name) return;
+
+    setIsSendingEmail(true);
+    setEmailError(null);
+
+    try {
+      await api.post('/referrals/send-invitation', {
+        referee_email: emailAddress,
+        referral_code: stats.referral_code,
+        referrer_name: user.name,
+      });
+      showSnackbar('Referral invitation sent successfully!', 'success');
+      setEmailAddress('');
+    } catch (error: any) {
+      setEmailError(error.response?.data?.detail || 'Failed to send invitation email');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -87,6 +116,33 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
               disabled={isLoadingStats}
             >
               Copy
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* Email Invitation Box */}
+        <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            Send Invitation via Email
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="Friend's Email"
+              type="email"
+              value={emailAddress}
+              onChange={(e) => setEmailAddress(e.target.value)}
+              error={!!emailError}
+              helperText={emailError}
+              disabled={isSendingEmail}
+            />
+            <Button
+              startIcon={<EmailIcon />}
+              onClick={handleSendEmail}
+              variant="contained"
+              disabled={!emailAddress || isSendingEmail}
+            >
+              {isSendingEmail ? <CircularProgress size={24} /> : 'Send Invitation'}
             </Button>
           </Box>
         </Paper>

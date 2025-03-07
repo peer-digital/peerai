@@ -4,15 +4,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import string
+from pydantic import BaseModel
 
 from database import get_db
 from models.auth import User
 from models.referral import Referral
 from schemas.referral import Referral as ReferralSchema, ReferralCreate, ReferralStats
 from services.referral import ReferralService
+from services.email import EmailService
 from core.security import get_current_user
 
 router = APIRouter()
+
+
+class ReferralInvitation(BaseModel):
+    referee_email: str
+    referral_code: str
+    referrer_name: str
 
 
 @router.post("/referrals", response_model=ReferralSchema)
@@ -136,4 +144,35 @@ async def validate_referral_code(
         return {"valid": True, "message": "Valid referral code"}
     except Exception as e:
         print(f"Error validating referral code: {str(e)}")  # Add logging
-        return {"valid": False, "message": "Invalid referral code"} 
+        return {"valid": False, "message": "Invalid referral code"}
+
+
+@router.post("/referrals/send-invitation")
+async def send_referral_invitation(
+    invitation: ReferralInvitation,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send a referral invitation email."""
+    # Validate the referral code
+    validation = await validate_referral_code(invitation.referral_code, db)
+    if not validation["valid"]:
+        raise HTTPException(
+            status_code=400,
+            detail=validation["message"]
+        )
+
+    # Send the invitation email
+    try:
+        EmailService.send_referral_invitation(
+            referrer_email=current_user.email,
+            referee_email=invitation.referee_email,
+            referral_code=invitation.referral_code,
+            referrer_name=invitation.referrer_name
+        )
+        return {"message": "Invitation sent successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send invitation email: {str(e)}"
+        ) 

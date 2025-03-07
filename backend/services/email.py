@@ -16,6 +16,7 @@ class EmailService:
     SMTP_USERNAME = os.getenv("GMAIL_USERNAME")  # Your Google Workspace email
     SMTP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")  # App-specific password
     FROM_EMAIL = os.getenv("GMAIL_USERNAME", "noreply@peerai.com")
+    BASE_URL = os.getenv("BASE_URL", "http://localhost:3000")  # Default to localhost for development
 
     @classmethod
     def send_email(
@@ -128,13 +129,9 @@ class EmailService:
         Hi there!
 
         {referrer_name} has invited you to join Peer AI, a powerful AI platform for developers and businesses.
-        When you sign up using their referral code, you'll both receive 10,000 tokens as a welcome bonus!
+        When you sign up using their referral link, you'll both receive 10,000 tokens as a welcome bonus!
 
-        To get started:
-        1. Visit https://app.peerdigital.se/signup
-        2. Enter the referral code: {referral_code}
-        3. Create your account
-        4. Start using our powerful AI models!
+        Click here to get started: {cls.BASE_URL}/login/{referral_code}
 
         Best regards,
         The Peer AI Team
@@ -143,20 +140,14 @@ class EmailService:
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">{referrer_name} invited you to join Peer AI!</h2>
             <p><strong>{referrer_name}</strong> has invited you to join Peer AI, a powerful AI platform for developers and businesses.</p>
-            <p>When you sign up using their referral code, you'll both receive <strong>10,000 tokens</strong> as a welcome bonus!</p>
+            <p>When you sign up using their referral link, you'll both receive <strong>10,000 tokens</strong> as a welcome bonus!</p>
             
-            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>Your Referral Code:</strong></p>
-                <p style="font-family: monospace; font-size: 1.2em; margin: 10px 0;">{referral_code}</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{cls.BASE_URL}/login/{referral_code}" 
+                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                    Get Started
+                </a>
             </div>
-
-            <p><strong>To get started:</strong></p>
-            <ol>
-                <li>Visit <a href="https://app.peerdigital.se/signup">https://app.peerdigital.se/signup</a></li>
-                <li>Enter the referral code above</li>
-                <li>Create your account</li>
-                <li>Start using our powerful AI models!</li>
-            </ol>
 
             <p style="color: #666;">Best regards,<br>The Peer AI Team</p>
         </div>
