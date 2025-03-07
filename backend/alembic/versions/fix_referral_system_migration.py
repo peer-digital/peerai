@@ -1,8 +1,8 @@
-"""Add referrals table
+"""Fix referral system migration chain
 
-Revision ID: 9b359a119dfc
+Revision ID: add_referral_system
 Revises: 160b9131b424
-Create Date: 2024-03-19 12:00:00.000000
+Create Date: 2024-03-19 14:00:00.000000
 
 """
 from alembic import op
@@ -10,14 +10,14 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9b359a119dfc'
+revision = 'add_referral_system'
 down_revision = '160b9131b424'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    # Create referrals table
+    # Create referrals table - same as in 9b359a119dfc_add_referrals_table.py
     op.create_table(
         'referrals',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -38,4 +38,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Drop referrals table
     op.drop_index(op.f('ix_referrals_id'), table_name='referrals')
-    op.drop_table('referrals')
+    op.drop_table('referrals') 
