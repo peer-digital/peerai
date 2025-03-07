@@ -1,14 +1,24 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { api } from '../services/api';
+import { useParams } from 'react-router-dom';
 
 const SignUp: React.FC = () => {
-  const [referralCode, setReferralCode] = useState("");
+  const { referralCode: urlReferralCode } = useParams();
+  const [referralCode, setReferralCode] = useState(urlReferralCode || "");
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [isValidCode, setIsValidCode] = useState<boolean | null>(null);
   const [validationMessage, setValidationMessage] = useState("");
 
   const [debouncedReferralCode] = useDebounce(referralCode, 500);
+
+  // Validate referral code when component mounts or URL changes
+  useEffect(() => {
+    if (urlReferralCode) {
+      setReferralCode(urlReferralCode);
+      validateReferralCode(urlReferralCode);
+    }
+  }, [urlReferralCode]);
 
   const validateReferralCode = useCallback(async (code: string) => {
     if (!code) {

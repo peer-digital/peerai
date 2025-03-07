@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -36,13 +36,14 @@ const TEST_USERS = [
 type AuthMode = 'login' | 'register';
 
 const Login: React.FC = () => {
+  const { referralCode: urlReferralCode } = useParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
   const navigate = useNavigate();
   const { login, register } = useAuth();
   const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string }>();
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(urlReferralCode || "");
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [isValidCode, setIsValidCode] = useState<boolean | null>(null);
   const [validationMessage, setValidationMessage] = useState("");
@@ -71,6 +72,16 @@ const Login: React.FC = () => {
       setIsValidatingCode(false);
     }
   }, []);
+
+  // Handle URL referral code
+  useEffect(() => {
+    if (urlReferralCode) {
+      setReferralCode(urlReferralCode);
+      setMode('register');
+      setValue('referral_code', urlReferralCode);
+      validateReferralCode(urlReferralCode);
+    }
+  }, [urlReferralCode, setValue, validateReferralCode]);
 
   // Update validation when debounced value changes
   useEffect(() => {

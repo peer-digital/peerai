@@ -32,11 +32,15 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
     },
   });
 
-  // Handle copying referral code
-  const handleCopyCode = () => {
-    if (stats?.referral_code) {
-      navigator.clipboard.writeText(stats.referral_code);
-      showSnackbar('Referral code copied to clipboard!', 'success');
+  // Get the base URL for the referral link
+  const baseUrl = window.location.origin;
+  const referralUrl = stats?.referral_code ? `${baseUrl}/login/${stats.referral_code}` : '';
+
+  // Handle copying referral URL
+  const handleCopyUrl = () => {
+    if (referralUrl) {
+      navigator.clipboard.writeText(referralUrl);
+      showSnackbar('Referral link copied to clipboard!', 'success');
     }
   };
 
@@ -45,17 +49,17 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
       <DialogTitle>Refer a Friend</DialogTitle>
       <DialogContent>
         <Typography variant="body1" color="textSecondary" paragraph>
-          Share your referral code with friends to earn tokens! When they sign up using your code, both you and your friend will receive 10,000 tokens.
+          Share your referral link with friends to earn tokens! When they sign up using your link, both you and your friend will receive 10,000 tokens.
         </Typography>
 
-        {/* Referral Code Box */}
+        {/* Referral URL Box */}
         <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
           <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-            Your Referral Code
+            Your Referral Link
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography
-              variant="h6"
+              variant="body2"
               sx={{
                 fontFamily: 'monospace',
                 bgcolor: 'background.paper',
@@ -63,6 +67,7 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
                 py: 1,
                 borderRadius: 1,
                 flex: 1,
+                wordBreak: 'break-all',
               }}
             >
               {isLoadingStats ? (
@@ -71,12 +76,12 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
                   <span>Loading...</span>
                 </Box>
               ) : (
-                stats?.referral_code || 'Error loading code'
+                referralUrl || 'Error loading URL'
               )}
             </Typography>
             <Button
               startIcon={<ContentCopyIcon />}
-              onClick={handleCopyCode}
+              onClick={handleCopyUrl}
               variant="outlined"
               size="small"
               disabled={isLoadingStats}
@@ -87,7 +92,7 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
         </Paper>
 
         <Typography variant="body2" color="textSecondary" paragraph>
-          Share this code with your friends. When they sign up using your code, both you and your friend will receive 10,000 tokens as a welcome bonus!
+          Share this link with your friends. When they sign up using your link, both you and your friend will receive 10,000 tokens as a welcome bonus!
         </Typography>
       </DialogContent>
       <DialogActions>
