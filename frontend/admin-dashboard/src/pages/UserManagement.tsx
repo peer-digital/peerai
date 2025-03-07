@@ -33,7 +33,8 @@ const UserManagement: React.FC = () => {
         full_name: 'John Doe',
         is_active: true,
         role: Role.USER,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        token_limit: 10000
       },
       {
         id: 2,
@@ -42,7 +43,8 @@ const UserManagement: React.FC = () => {
         is_active: true,
         role: Role.USER_ADMIN,
         team_id: 1,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        token_limit: 10000
       }
     ]);
     setLoading(false);
