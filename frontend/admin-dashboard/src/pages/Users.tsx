@@ -225,6 +225,7 @@ const Users: React.FC = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell>Email Verified</TableCell>
                 <TableCell>Token Limit</TableCell>
                 <TableCell>Referral Code</TableCell>
