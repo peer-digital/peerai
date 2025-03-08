@@ -5,12 +5,12 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
-from backend.config import settings
-from backend.models.base import Base
+from config import settings
+from models.base import Base
 
 # Create SQLAlchemy engine with proper pooling configuration
 engine = create_engine(
-    settings.get_database_url(),
+    settings.DATABASE_URL,
     poolclass=QueuePool,
     pool_size=5,
     max_overflow=10,

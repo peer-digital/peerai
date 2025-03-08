@@ -34,6 +34,12 @@ class Settings(BaseSettings):
         default="http://localhost:3000", description="CORS allowed origin"
     )
 
+    # Frontend URL for email verification and other client-side links
+    FE_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL for email verification and other client-side links",
+    )
+
     # @important: JWT settings for authentication
     # @url: https://jwt.io/
     JWT_SECRET_KEY: str = Field(

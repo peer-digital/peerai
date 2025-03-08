@@ -49,6 +49,9 @@ class User(Base):
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     token_limit = Column(Integer, default=10000)  # Default token limit of 10,000
+    email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String, unique=True, nullable=True)
+    email_verification_sent_at = Column(DateTime, nullable=True)
 
     # Relationships
     api_keys = relationship(

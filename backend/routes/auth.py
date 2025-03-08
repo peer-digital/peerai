@@ -13,6 +13,7 @@ from database import get_db
 from config import settings
 from core.security import verify_password, get_password_hash
 from services.referral import ReferralService
+from services.email import EmailService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -79,6 +80,11 @@ async def get_current_user(
     return user
 
 
+def generate_verification_token() -> str:
+    """Generate a random verification token."""
+    return secrets.token_urlsafe(32)
+
+
 @router.post("/register", response_model=Token)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
@@ -89,8 +95,14 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     hashed_password = get_password_hash(user.password)
+    verification_token = generate_verification_token()
+    
     db_user = User(
-        email=user.email, hashed_password=hashed_password, full_name=user.full_name
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name,
+        email_verification_token=verification_token,
+        email_verification_sent_at=datetime.utcnow()
     )
     db.add(db_user)
     db.commit()
@@ -119,6 +131,44 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             print(f"Error processing referral code: {str(e)}")
             # Invalid referral code format, but don't fail registration
             pass
+
+    # Send verification email
+    verification_url = f"{settings.FE_URL}/verify-email/{verification_token}"
+    try:
+        EmailService.send_email(
+            to_email=user.email,
+            subject="Verify your Peer AI account",
+            body=f"""
+            Welcome to Peer AI!
+            
+            Please verify your email address by clicking the link below:
+            {verification_url}
+            
+            If you didn't create an account with us, you can safely ignore this email.
+            
+            Best regards,
+            The Peer AI Team
+            """,
+            html_body=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563eb;">Welcome to Peer AI!</h2>
+                <p>Please verify your email address by clicking the button below:</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}" 
+                       style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                        Verify Email
+                    </a>
+                </div>
+
+                <p style="color: #666;">If you didn't create an account with us, you can safely ignore this email.</p>
+                <p style="color: #666;">Best regards,<br>The Peer AI Team</p>
+            </div>
+            """
+        )
+    except Exception as e:
+        print(f"Failed to send verification email: {str(e)}")
+        # Don't fail registration if email sending fails
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -218,4 +268,44 @@ async def validate_token(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "full_name": current_user.full_name,
         "token_limit": current_user.token_limit,
+    }
+
+
+@router.get("/verify-email/{token}")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Verify user's email address."""
+    # First try to find user by token
+    user = db.query(User).filter(User.email_verification_token == token).first()
+    
+    if not user:
+        # If token not found, check if any user was verified with this token
+        user = db.query(User).filter(
+            User.email_verified == True,
+            User.email_verification_token == None
+        ).order_by(User.email_verification_sent_at.desc()).first()
+        
+        if user:
+            return {
+                "message": "Email already verified. You can proceed to login.",
+                "status": "already_verified"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification token"
+            )
+    
+    if user.email_verified:
+        return {
+            "message": "Email already verified. You can proceed to login.",
+            "status": "already_verified"
+        }
+    
+    user.email_verified = True
+    user.email_verification_token = None  # Clear the token after use
+    db.commit()
+    
+    return {
+        "message": "Email verified successfully",
+        "status": "verified"
     }

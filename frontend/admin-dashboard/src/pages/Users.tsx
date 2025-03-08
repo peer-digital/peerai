@@ -48,6 +48,7 @@ interface User {
   created_at: string;
   last_login?: string;
   token_limit: number;
+  email_verified: boolean;
   referral_stats?: {
     total_referrals: number;
     successful_referrals: number;
@@ -225,6 +226,7 @@ const Users: React.FC = () => {
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Email Verified</TableCell>
                 <TableCell>Token Limit</TableCell>
                 <TableCell>Referral Code</TableCell>
                 <TableCell>Referrals</TableCell>
@@ -253,6 +255,14 @@ const Users: React.FC = () => {
                         <Chip
                           label={user.is_active ? 'Active' : 'Blocked'}
                           color={user.is_active ? 'success' : 'error'}
+                          size="small"
+                          sx={{ fontWeight: 500 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.email_verified ? 'Verified' : 'Unverified'}
+                          color={user.email_verified ? 'success' : 'warning'}
                           size="small"
                           sx={{ fontWeight: 500 }}
                         />

@@ -20,6 +20,7 @@ const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Login = React.lazy(() => import('./pages/Login'));
 const SignUp = React.lazy(() => import('./pages/SignUp'));
+const EmailVerification = React.lazy(() => import('./pages/EmailVerification'));
 const Playground = React.lazy(() => import('./pages/Playground'));
 const DeveloperDocs = React.lazy(() => import('./pages/DeveloperDocs'));
 const GetStarted = React.lazy(() => import('./pages/GetStarted'));
@@ -57,6 +58,7 @@ function App() {
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/login/:referralCode" element={<Login />} />
+                  <Route path="/verify-email/:token" element={<EmailVerification />} />
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />
                   <Route path="/get-started" element={<GetStarted />} />
