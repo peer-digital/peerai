@@ -16,7 +16,7 @@ class EmailService:
     SMTP_USERNAME = os.getenv("GMAIL_USERNAME")  # Your Google Workspace email
     SMTP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")  # App-specific password
     FROM_EMAIL = os.getenv("GMAIL_USERNAME", "noreply@peerai.com")
-    BASE_URL = os.getenv("BASE_URL", "http://localhost:3000")  # Default to localhost for development
+    BASE_URL = os.getenv("FE_URL", "http://localhost:3000")  # Default to localhost for development
 
     @classmethod
     def send_email(
