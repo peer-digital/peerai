@@ -225,7 +225,6 @@ const Users: React.FC = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
                 <TableCell>Email Verified</TableCell>
                 <TableCell>Token Limit</TableCell>
                 <TableCell>Referral Code</TableCell>
@@ -247,14 +246,6 @@ const Users: React.FC = () => {
                         <Chip
                           label={user.role}
                           color={user.role === Role.SUPER_ADMIN ? 'primary' : 'default'}
-                          size="small"
-                          sx={{ fontWeight: 500 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={user.is_active ? 'Active' : 'Blocked'}
-                          color={user.is_active ? 'success' : 'error'}
                           size="small"
                           sx={{ fontWeight: 500 }}
                         />
