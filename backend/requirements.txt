@@ -42,4 +42,10 @@ email-validator==2.2.0
 # @url: https://requests.readthedocs.io/
 requests==2.31.0
 # @url: https://www.python-httpx.org/
-httpx==0.26.0 
+httpx==0.26.0
+
+# Google API
+# @url: https://github.com/googleapis/google-auth-library-python
+google-auth==2.28.1
+# @url: https://github.com/googleapis/google-api-python-client
+google-api-python-client==2.120.0 
