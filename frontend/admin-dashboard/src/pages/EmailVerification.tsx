@@ -30,8 +30,13 @@ const EmailVerification: React.FC = () => {
         setMessage(response.data.message);
         setStatus('success');
         setHasAttemptedVerification(true);
-        // Invalidate users query to trigger a refresh
-        queryClient.invalidateQueries({ queryKey: ['users'] });
+        
+        // Add a small delay before invalidating the cache to ensure the backend has updated
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          // Force refetch to ensure we get fresh data
+          queryClient.refetchQueries({ queryKey: ['users'] });
+        }, 1000);
       } catch (error: any) {
         setMessage(error.response?.data?.detail || 'Failed to verify email');
         setStatus('error');

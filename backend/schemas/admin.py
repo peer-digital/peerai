@@ -76,6 +76,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     last_login: Optional[datetime] = None  # Default to None if not present
     token_limit: int = 10000  # Default token limit of 10,000
+    email_verified: Optional[bool] = False  # Make email_verified optional with default False
     referral_stats: Optional[dict] = {
         "total_referrals": 0,
         "successful_referrals": 0,
