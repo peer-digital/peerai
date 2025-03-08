@@ -1,22 +1,61 @@
 """Service for sending email notifications."""
 
-import smtplib
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional
+import base64
+import json
 import os
+from typing import Optional
 from fastapi import HTTPException
 
 
 class EmailService:
     """Service for sending email notifications."""
 
-    SMTP_SERVER = "smtp.gmail.com"
-    SMTP_PORT = 587
-    SMTP_USERNAME = os.getenv("GMAIL_USERNAME")  # Your Google Workspace email
-    SMTP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")  # App-specific password
-    FROM_EMAIL = os.getenv("GMAIL_USERNAME", "noreply@peerai.com")
+    # Gmail API configuration
+    SCOPES = [
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.compose'
+    ]
+    FROM_EMAIL = os.getenv("NOTIFICATION_EMAIL_ALIAS", "notifications@peerdigital.se")
     BASE_URL = os.getenv("FE_URL", "http://localhost:3000")  # Default to localhost for development
+
+    @classmethod
+    def _get_gmail_service(cls):
+        """Get authenticated Gmail service."""
+        try:
+            # Get and decode service account credentials
+            creds_base64 = os.getenv('GOOGLE_SERVICE_ACCOUNT_CREDS')
+            if not creds_base64:
+                raise ValueError("GOOGLE_SERVICE_ACCOUNT_CREDS environment variable not set")
+
+            # Decode base64 to JSON string
+            creds_json = base64.b64decode(creds_base64).decode('utf-8')
+            
+            # Create a temporary file with the credentials
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+                temp_file.write(creds_json)
+                temp_path = temp_file.name
+
+            try:
+                credentials = service_account.Credentials.from_service_account_file(
+                    temp_path,
+                    scopes=cls.SCOPES,
+                    subject=os.getenv('GOOGLE_WORKSPACE_ADMIN_EMAIL', 'adam.falkenberg@peerdigital.se')
+                )
+                return build('gmail', 'v1', credentials=credentials)
+            finally:
+                # Clean up the temporary file
+                os.unlink(temp_path)
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to initialize Gmail service: {str(e)}"
+            )
 
     @classmethod
     def send_email(
@@ -27,30 +66,30 @@ class EmailService:
         html_body: Optional[str] = None
     ) -> bool:
         """Send an email to the specified recipient."""
-        if not cls.SMTP_USERNAME or not cls.SMTP_PASSWORD:
-            raise HTTPException(
-                status_code=500,
-                detail="Email service not configured. Please set GMAIL_USERNAME and GMAIL_APP_PASSWORD environment variables."
-            )
-
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = cls.FROM_EMAIL
-            msg["To"] = to_email
+            service = cls._get_gmail_service()
+            
+            # Create message
+            message = MIMEMultipart('alternative')
+            message['to'] = to_email
+            message['from'] = f"Peer AI <{cls.FROM_EMAIL}>"
+            message['subject'] = subject
 
             # Add plain text body
-            msg.attach(MIMEText(body, "plain"))
+            message.attach(MIMEText(body, 'plain'))
 
             # Add HTML body if provided
             if html_body:
-                msg.attach(MIMEText(html_body, "html"))
+                message.attach(MIMEText(html_body, 'html'))
 
-            # Send email using Gmail SMTP
-            with smtplib.SMTP(cls.SMTP_SERVER, cls.SMTP_PORT) as server:
-                server.starttls()
-                server.login(cls.SMTP_USERNAME, cls.SMTP_PASSWORD)
-                server.send_message(msg)
+            # Encode the message for Gmail API
+            raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+            
+            # Send the email
+            service.users().messages().send(
+                userId='me',
+                body={'raw': raw}
+            ).execute()
 
             return True
 
