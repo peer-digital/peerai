@@ -29,7 +29,7 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const completionsExample = {
-    curl: `curl -X POST ${API_BASE_URL}/api/v1/completions \\
+    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -52,7 +52,7 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const chatExample = {
-    curl: `curl -X POST ${API_BASE_URL}/api/v1/completions \\
+    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -77,7 +77,7 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const visionExample = {
-    curl: `curl -X POST ${API_BASE_URL}/api/v1/vision \\
+    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/vision \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -97,7 +97,7 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const audioExample = {
-    curl: `curl -X POST ${API_BASE_URL}/api/v1/audio \\
+    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/audio \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -120,77 +120,169 @@ const DeveloperDocs: React.FC = () => {
     html: `<!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Chat App</title>
+    <title>PeerAI Chat App</title>
     <style>
-        .chat-container { max-width: 600px; margin: 20px auto; }
-        .message { margin: 10px; padding: 10px; border-radius: 5px; }
-        .user { background: #e3f2fd; }
-        .assistant { background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .chat-container { 
+            max-width: 600px; 
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #chat-messages { 
+            height: 400px; 
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .message { 
+            margin: 10px 0; 
+            padding: 10px 15px; 
+            border-radius: 15px; 
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .user { 
+            background: #e3f2fd; 
+            margin-left: auto;
+        }
+        .assistant { 
+            background: #f5f5f5; 
+            margin-right: auto;
+        }
+        .input-container {
+            display: flex;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #ccc;
+        }
+        .loading {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div id="chat-messages"></div>
-        <input type="text" id="user-input" placeholder="Type your message...">
-        <button onclick="sendMessage()">Send</button>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()" id="send-button">Send</button>
+        </div>
     </div>
+
+    <script>
+    const API_KEY = 'YOUR_API_KEY';
+    const API_URL = 'https://peerai-be.onrender.com/api/v1/completions';
+
+    let conversationHistory = [
+        { role: 'system', content: 'You are a helpful assistant.' }
+    ];
+
+    // Handle Enter key
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const message = input.value.trim();
+        if (!message) return;
+
+        // Disable input and button while processing
+        input.disabled = true;
+        sendButton.disabled = true;
+
+        // Add user message to chat
+        addMessageToChat('user', message);
+        input.value = '';
+
+        // Add to conversation history
+        conversationHistory.push({ role: 'user', content: message });
+
+        // Show loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading';
+        loadingDiv.textContent = 'AI is typing...';
+        document.getElementById('chat-messages').appendChild(loadingDiv);
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': API_KEY
+                },
+                body: JSON.stringify({
+                    messages: conversationHistory,
+                    model: 'mistral-small-latest',
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
+
+            const data = await response.json();
+            
+            // Remove loading indicator
+            loadingDiv.remove();
+
+            // Add assistant's response to chat
+            addMessageToChat('assistant', data.content);
+            conversationHistory.push({ 
+                role: 'assistant', 
+                content: data.content 
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            loadingDiv.remove();
+            addMessageToChat('assistant', 'Sorry, there was an error processing your request.');
+        } finally {
+            // Re-enable input and button
+            input.disabled = false;
+            sendButton.disabled = false;
+            input.focus();
+        }
+    }
+
+    function addMessageToChat(role, content) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = \`message \${role}\`;
+        messageDiv.textContent = content;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    </script>
 </body>
 </html>`,
-    javascript: `const API_KEY = 'YOUR_API_KEY';
-const API_URL = '${API_BASE_URL}/api/v1/completions';
-
-let conversationHistory = [
-    { role: 'system', content: 'You are a helpful assistant.' }
-];
-
-async function sendMessage() {
-    const input = document.getElementById('user-input');
-    const message = input.value.trim();
-    if (!message) return;
-
-    // Add user message to chat
-    addMessageToChat('user', message);
-    input.value = '';
-
-    // Add to conversation history
-    conversationHistory.push({ role: 'user', content: message });
-
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': API_KEY
-            },
-            body: JSON.stringify({
-                messages: conversationHistory,
-                model: 'mistral-small-latest',
-                temperature: 0.7
-            })
-        });
-
-        const data = await response.json();
-        
-        // Add assistant's response to chat
-        addMessageToChat('assistant', data.content);
-        conversationHistory.push({ 
-            role: 'assistant', 
-            content: data.content 
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        addMessageToChat('assistant', 'Sorry, there was an error processing your request.');
-    }
-}
-
-function addMessageToChat(role, content) {
-    const chatMessages = document.getElementById('chat-messages');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = \`message \${role}\`;
-    messageDiv.textContent = content;
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}`
+    javascript: `// The JavaScript code is now included directly in the HTML file above
+// This makes it easier to copy and use the complete solution`
   };
 
   const CodeBlock = ({ title, curl, response }: { title: string, curl: string, response: string }) => (

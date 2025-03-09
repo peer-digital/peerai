@@ -8,6 +8,15 @@ from backend.core.security import get_current_user
 from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
 
+# Define allowed origins for admin/auth endpoints
+ADMIN_ALLOWED_ORIGINS = [
+    "https://peerai-fe.onrender.com",
+    "https://peerai-be.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://app.peerdigital.se",
+]
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -18,16 +27,30 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# @important: CORS configuration for production and development
+# Create a sub-application for LLM API endpoints with its own CORS settings
+llm_app = FastAPI(
+    title="PeerAI LLM API",
+    version=settings.VERSION,
+)
+
+# CORS for LLM API endpoints - allow all origins
+llm_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["POST", "OPTIONS"],  # LLM API only needs POST
+    allow_headers=[
+        "Content-Type",
+        "X-API-Key",
+    ],
+    expose_headers=["*"],
+    max_age=3600,
+)
+
+# CORS for main app - restricted origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://peerai-fe.onrender.com",
-        "https://peerai-be.onrender.com",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://app.peerdigital.se",
-    ],
+    allow_origins=ADMIN_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
@@ -42,6 +65,14 @@ app.add_middleware(
     max_age=3600,
 )
 
+# Import LLM routes
+from backend.routes import inference
+
+# Mount LLM routes on the sub-application
+llm_app.include_router(inference.router)
+
+# Mount the LLM sub-application under the main app
+app.mount(f"{settings.API_V1_PREFIX}", llm_app)
 
 def custom_openapi():
     if app.openapi_schema:
@@ -70,7 +101,6 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-
 @app.get(f"{settings.API_V1_PREFIX}/openapi.json")
 async def get_openapi_schema(current_user: User = Depends(get_current_user)):
     """Get OpenAPI schema - protected endpoint requiring VIEW_API_DOCS permission"""
@@ -80,38 +110,25 @@ async def get_openapi_schema(current_user: User = Depends(get_current_user)):
         )
     return custom_openapi()
 
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok"}
-
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
+# Import and include other routers (admin, auth, etc.)
+from backend.routes import auth, admin, rbac, referral, admin_models
 
-# Import and include routers
-from backend.routes import inference, auth, admin, rbac, referral
-from backend.routes import admin_models  # Use the correct import path with backend prefix
-
-app.include_router(inference.router, prefix=settings.API_V1_PREFIX)
+# Include all non-LLM routes in the main app
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
-
-# TODO: Admin router is under development and will be enabled in a future PR
-# Features planned:
-# - User management
-# - Usage analytics
-# - System configuration
-# from routes import admin
-# app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
-
 
 @app.get("/")
 async def root():
