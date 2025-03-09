@@ -65,15 +65,6 @@ app.add_middleware(
     max_age=3600,
 )
 
-# Import LLM routes
-from backend.routes import inference
-
-# Mount LLM routes on the sub-application
-llm_app.include_router(inference.router)
-
-# Mount the LLM sub-application under the main app
-app.mount(f"{settings.API_V1_PREFIX}", llm_app)
-
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -120,15 +111,19 @@ async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-# Import and include other routers (admin, auth, etc.)
-from backend.routes import auth, admin, rbac, referral, admin_models
+# Import routers
+from backend.routes import inference, auth, admin, rbac, referral, admin_models
 
-# Include all non-LLM routes in the main app
+# Include all non-LLM routes in the main app first
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
+
+# Import LLM routes and mount them on a specific prefix
+llm_app.include_router(inference.router)
+app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)  # Mount under /api/v1/llm instead of taking over all /api/v1
 
 @app.get("/")
 async def root():

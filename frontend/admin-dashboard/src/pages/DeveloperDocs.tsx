@@ -29,7 +29,11 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const completionsExample = {
-    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/completions \\
+    curl: `# Note: In production, store your API key in environment variables or secrets management
+# export PEERAI_API_KEY=your-api-key
+# curl ... -H "X-API-Key: $PEERAI_API_KEY"
+
+curl -X POST https://peerai-be.onrender.com/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -52,7 +56,11 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const chatExample = {
-    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/completions \\
+    curl: `# Note: In production, store your API key in environment variables or secrets management
+# export PEERAI_API_KEY=your-api-key
+# curl ... -H "X-API-Key: $PEERAI_API_KEY"
+
+curl -X POST https://peerai-be.onrender.com/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -77,7 +85,11 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const visionExample = {
-    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/vision \\
+    curl: `# Note: In production, store your API key in environment variables or secrets management
+# export PEERAI_API_KEY=your-api-key
+# curl ... -H "X-API-Key: $PEERAI_API_KEY"
+
+curl -X POST https://peerai-be.onrender.com/api/v1/llm/vision \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -97,7 +109,11 @@ const DeveloperDocs: React.FC = () => {
   };
 
   const audioExample = {
-    curl: `curl -X POST https://peerai-be.onrender.com/api/v1/audio \\
+    curl: `# Note: In production, store your API key in environment variables or secrets management
+# export PEERAI_API_KEY=your-api-key
+# curl ... -H "X-API-Key: $PEERAI_API_KEY"
+
+curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -192,8 +208,11 @@ const DeveloperDocs: React.FC = () => {
     </div>
 
     <script>
-    const API_KEY = 'YOUR_API_KEY';
-    const API_URL = 'https://peerai-be.onrender.com/api/v1/completions';
+    // SECURITY NOTE: In a production environment, never hardcode API keys in frontend code.
+    // Instead, implement proper backend authentication and proxy the API calls through your server,
+    // or use secure environment variables and build-time configuration.
+    const API_KEY = 'YOUR_API_KEY';  // Replace with secure key management in production
+    const API_URL = 'https://peerai-be.onrender.com/api/v1/llm/completions';
 
     let conversationHistory = [
         { role: 'system', content: 'You are a helpful assistant.' }
@@ -435,7 +454,13 @@ const DeveloperDocs: React.FC = () => {
           </Typography>
           <Paper sx={{ p: 2, mb: 4, bgcolor: theme.palette.error.main + '10' }}>
             <Typography variant="body2" color="error">
-              🔒 Never share your API key or commit it to version control. Always use environment variables or secure secrets management.
+              🔒 Security Best Practices:
+              <ul>
+                <li>Never hardcode API keys in your code or commit them to version control</li>
+                <li>Use environment variables or secure secrets management in production</li>
+                <li>For frontend applications, proxy API calls through your backend to keep keys secure</li>
+                <li>Regularly rotate your API keys and monitor usage for any suspicious activity</li>
+              </ul>
             </Typography>
           </Paper>
 

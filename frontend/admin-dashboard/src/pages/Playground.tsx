@@ -78,7 +78,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   completions: {
     method: 'POST',
-    path: '/api/v1/completions',
+    path: '/api/v1/llm/completions',
     requiresBody: true,
     supportedModels: ['hosted-llm', 'mistral-tiny', 'mistral-small', 'mistral-medium'],
     defaultBody: JSON.stringify({
@@ -91,7 +91,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   vision: {
     method: 'POST',
-    path: '/api/v1/vision',
+    path: '/api/v1/llm/vision',
     requiresBody: true,
     defaultBody: JSON.stringify({
       image_url: "https://example.com/image.jpg",
@@ -101,7 +101,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   audio: {
     method: 'POST',
-    path: '/api/v1/audio',
+    path: '/api/v1/llm/audio',
     requiresBody: true,
     defaultBody: JSON.stringify({
       audio_url: "https://example.com/audio.mp3",
@@ -111,7 +111,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   models: {
     method: 'GET',
-    path: '/api/v1/models',
+    path: '/api/v1/llm/models',
     requiresBody: false,
     defaultBody: '',
   },
@@ -255,7 +255,7 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/models`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/llm/models`, {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
