@@ -138,97 +138,177 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
 <head>
     <title>PeerAI Chat App</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
         .chat-container { 
-            max-width: 600px; 
+            max-width: 800px; 
             margin: 20px auto;
-            border: 1px solid #ddd;
+            background: white;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        #chat-messages { 
-            height: 400px; 
-            overflow-y: auto;
+        .chat-header {
+            background: #1976d2;
+            color: white;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .chat-content {
             padding: 20px;
-            background: #f9f9f9;
+        }
+        .message-container {
+            margin-bottom: 20px;
         }
         .message { 
-            margin: 10px 0; 
-            padding: 10px 15px; 
-            border-radius: 15px; 
-            max-width: 80%;
-            word-wrap: break-word;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.5;
         }
         .user { 
-            background: #e3f2fd; 
-            margin-left: auto;
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
         }
         .assistant { 
-            background: #f5f5f5; 
-            margin-right: auto;
+            background: #f5f5f5;
+            border: 1px solid #eeeeee;
+            white-space: pre-wrap;
         }
         .input-container {
-            display: flex;
             padding: 20px;
-            background: white;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
         }
         #user-input {
             flex: 1;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            margin-right: 10px;
+            font-size: 14px;
         }
-        button {
-            padding: 10px 20px;
-            background: #2196f3;
+        .button {
+            padding: 12px 24px;
+            background: #1976d2;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
-        button:disabled {
+        .button:hover {
+            background: #1565c0;
+        }
+        .button:disabled {
             background: #ccc;
+        }
+        .button.secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .button.secondary:hover {
+            background: #eeeeee;
         }
         .loading {
             text-align: center;
-            padding: 10px;
+            padding: 15px;
             color: #666;
+            font-style: italic;
         }
         .error {
-            color: #f44336;
-            text-align: center;
-            padding: 10px;
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .response-details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <div id="chat-messages"></div>
-        <div class="input-container">
+        <div class="chat-header">
+            PeerAI Chat Example
+        </div>
+        <div class="chat-content">
+            <div class="message-container" id="message-container"></div>
+            <div class="response-details hidden" id="response-details"></div>
+        </div>
+        <div class="input-container" id="input-section">
             <input type="text" id="user-input" placeholder="Type your message...">
-            <button onclick="sendMessage()" id="send-button">Send</button>
+            <button onclick="sendMessage()" id="send-button" class="button">Send</button>
+        </div>
+        <div class="input-container hidden" id="reset-section">
+            <button onclick="resetChat()" class="button">Send Another Message</button>
         </div>
     </div>
 
     <script>
-    // SECURITY NOTE: In a production environment, never hardcode API keys in frontend code.
-    // Instead, implement proper backend authentication and proxy the API calls through your server,
-    // or use secure environment variables and build-time configuration.
     const API_KEY = 'YOUR_API_KEY';  // Replace with secure key management in production
     const API_URL = 'https://peerai-be.onrender.com/api/v1/llm/completions';
 
-    let conversationHistory = [
-        { role: 'system', content: 'You are a helpful assistant.' }
-    ];
+    function showElement(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
 
-    // Handle Enter key
-    document.getElementById('user-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
+    function hideElement(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    function addMessageToChat(role, content) {
+        const container = document.getElementById('message-container');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = \`message \${role}\`;
+        messageDiv.textContent = content;
+        container.appendChild(messageDiv);
+    }
+
+    function showResponseDetails(data) {
+        const details = document.getElementById('response-details');
+        details.innerHTML = \`
+            <strong>Response Details:</strong><br>
+            Model: \${data.model}<br>
+            Provider: \${data.provider}<br>
+            Latency: \${data.latency_ms}ms<br>
+            Usage: \${JSON.stringify(data.usage, null, 2)}
+        \`;
+        showElement('response-details');
+    }
+
+    function resetChat() {
+        document.getElementById('message-container').innerHTML = '';
+        document.getElementById('user-input').value = '';
+        const input = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        input.disabled = false;
+        sendButton.disabled = false;
+        hideElement('response-details');
+        hideElement('reset-section');
+        showElement('input-section');
+        input.focus();
+    }
 
     async function sendMessage() {
         const input = document.getElementById('user-input');
@@ -242,16 +322,12 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
 
         // Add user message to chat
         addMessageToChat('user', message);
-        input.value = '';
-
-        // Add to conversation history
-        conversationHistory.push({ role: 'user', content: message });
 
         // Show loading indicator
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'loading';
-        loadingDiv.textContent = 'AI is typing...';
-        document.getElementById('chat-messages').appendChild(loadingDiv);
+        loadingDiv.textContent = 'AI is thinking...';
+        document.getElementById('message-container').appendChild(loadingDiv);
 
         try {
             const response = await fetch(API_URL, {
@@ -261,9 +337,10 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
                     'X-API-Key': API_KEY
                 },
                 body: JSON.stringify({
-                    messages: conversationHistory,
+                    prompt: message,
                     model: 'mistral-small-latest',
-                    temperature: 0.7
+                    temperature: 0.7,
+                    max_tokens: 500
                 })
             });
 
@@ -276,14 +353,15 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             // Remove loading indicator
             loadingDiv.remove();
 
-            if (data.content) {
-                // Add assistant's response to chat
-                addMessageToChat('assistant', data.content);
-                // Add to conversation history
-                conversationHistory.push({ 
-                    role: 'assistant', 
-                    content: data.content 
-                });
+            // Add assistant's response to chat
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const assistantMessage = data.choices[0].message.content;
+                addMessageToChat('assistant', assistantMessage);
+                showResponseDetails(data);
+                
+                // Show reset button, hide input section
+                hideElement('input-section');
+                showElement('reset-section');
             } else {
                 throw new Error('Invalid response format');
             }
@@ -294,24 +372,21 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error';
             errorDiv.textContent = 'Sorry, there was an error processing your request.';
-            document.getElementById('chat-messages').appendChild(errorDiv);
-            setTimeout(() => errorDiv.remove(), 5000); // Remove error message after 5 seconds
-        } finally {
-            // Re-enable input and button
+            document.getElementById('message-container').appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+            
+            // Re-enable input and button on error
             input.disabled = false;
             sendButton.disabled = false;
-            input.focus();
         }
     }
 
-    function addMessageToChat(role, content) {
-        const chatMessages = document.getElementById('chat-messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = \`message \${role}\`;
-        messageDiv.textContent = content;
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    // Handle Enter key
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
     </script>
 </body>
 </html>`,
@@ -365,18 +440,19 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
   const CookbookSection = () => (
     <Box>
       <Typography variant="h5" gutterBottom>
-        Building a Simple Chat App
+        Building a Simple Chat Demo
       </Typography>
       <Typography paragraph>
-        Follow this guide to create a basic chat application using PeerAI's API. This example demonstrates how to build
-        a web-based chat interface that maintains conversation history.
+        Follow this guide to create a basic chat demo using PeerAI's API. This example demonstrates how to build
+        a simple web interface that lets users send a message to the AI and view its response, along with detailed
+        information about the API call including token usage, latency, and model details.
       </Typography>
 
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-        Step 1: Set up the HTML
+        Step 1: Create the Chat Interface
       </Typography>
       <Typography paragraph>
-        Create an HTML file with a basic chat interface:
+        Create an HTML file with the complete chat interface and functionality:
       </Typography>
       <Box sx={{ position: 'relative' }}>
         <Tooltip title="Copy HTML" placement="top">
@@ -394,28 +470,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
       </Box>
 
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-        Step 2: Add the JavaScript
-      </Typography>
-      <Typography paragraph>
-        Add this JavaScript code to handle the chat functionality:
-      </Typography>
-      <Box sx={{ position: 'relative' }}>
-        <Tooltip title="Copy JavaScript" placement="top">
-          <IconButton
-            onClick={() => handleCopy(chatAppExample.javascript)}
-            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
-            size="small"
-          >
-            <ContentCopyIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <SyntaxHighlighter language="javascript" style={atomDark}>
-          {chatAppExample.javascript}
-        </SyntaxHighlighter>
-      </Box>
-
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-        Step 3: Test the Chat
+        Step 2: Test the Chat
       </Typography>
       <Typography paragraph>
         1. Replace 'YOUR_API_KEY' with your actual API key
@@ -424,20 +479,11 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
         2. Open the HTML file in a web browser
       </Typography>
       <Typography paragraph>
-        3. Start chatting with the AI!
-      </Typography>
-
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-        Example Chat Request
+        3. Send a message and see the AI's response along with detailed API information
       </Typography>
       <Typography paragraph>
-        Here's how the API handles a chat message:
+        4. Use the "Send Another Message" button to start a new conversation
       </Typography>
-      <CodeBlock 
-        title="Chat Completion" 
-        curl={chatExample.curl}
-        response={chatExample.response}
-      />
     </Box>
   );
 
