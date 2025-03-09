@@ -38,10 +38,13 @@ llm_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["POST", "OPTIONS"],  # LLM API only needs POST
+    allow_methods=["GET", "POST", "OPTIONS"],  # Added GET for preflight
     allow_headers=[
         "Content-Type",
         "X-API-Key",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
     ],
     expose_headers=["*"],
     max_age=3600,
