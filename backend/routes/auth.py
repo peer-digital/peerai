@@ -154,7 +154,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
                 <h2 style="color: #2563eb;">Welcome to Peer AI!</h2>
                 <p>Please verify your email address by clicking the button below:</p>
                 
-                <div style="text-align: center; margin: 30px 0;">
+                <div style="text-align: left; margin: 30px 0;">
                     <a href="{verification_url}" 
                        style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                         Verify Email

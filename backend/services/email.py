@@ -181,7 +181,7 @@ class EmailService:
             <p><strong>{referrer_name}</strong> has invited you to join Peer AI, a powerful AI platform for developers and businesses.</p>
             <p>When you sign up using their referral link, you'll both receive <strong>10,000 tokens</strong> as a welcome bonus!</p>
             
-            <div style="text-align: center; margin: 30px 0;">
+            <div style="text-align: left; margin: 30px 0;">
                 <a href="{cls.BASE_URL}/login/{referral_code}" 
                    style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Get Started
