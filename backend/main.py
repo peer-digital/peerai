@@ -38,7 +38,7 @@ llm_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["GET", "POST", "OPTIONS"],  # Added GET for preflight
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=[
         "Content-Type",
         "X-API-Key",
@@ -50,11 +50,11 @@ llm_app.add_middleware(
     max_age=3600,
 )
 
-# CORS for main app - restricted origins
+# CORS for main app - restricted origins but also allow all origins for LLM endpoints
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ADMIN_ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if settings.DEBUG else ADMIN_ALLOWED_ORIGINS + ["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins contains "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
         "Content-Type",
