@@ -50,11 +50,11 @@ llm_app.add_middleware(
     max_age=3600,
 )
 
-# CORS for main app - restricted origins but also allow all origins for LLM endpoints
+# CORS for main app - allow both admin origins and all origins for LLM endpoints
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.DEBUG else ADMIN_ALLOWED_ORIGINS + ["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when allow_origins contains "*"
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when using "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
         "Content-Type",
@@ -67,6 +67,20 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
+
+# Add a middleware to handle CORS for admin routes specifically
+@app.middleware("http")
+async def admin_cors_middleware(request: Request, call_next):
+    if not request.url.path.startswith(f"{settings.API_V1_PREFIX}/llm"):
+        # For non-LLM routes, check if origin is in allowed admin origins
+        origin = request.headers.get("Origin")
+        if origin and origin in ADMIN_ALLOWED_ORIGINS:
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Origin"] = origin
+            return response
+    
+    return await call_next(request)
 
 def custom_openapi():
     if app.openapi_schema:

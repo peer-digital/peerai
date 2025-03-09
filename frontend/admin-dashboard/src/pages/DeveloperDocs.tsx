@@ -196,6 +196,11 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             padding: 10px;
             color: #666;
         }
+        .error {
+            color: #f44336;
+            text-align: center;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -263,7 +268,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             });
 
             if (!response.ok) {
-                throw new Error('API request failed');
+                throw new Error(\`API request failed: \${response.status}\`);
             }
 
             const data = await response.json();
@@ -271,16 +276,26 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             // Remove loading indicator
             loadingDiv.remove();
 
-            // Add assistant's response to chat
-            addMessageToChat('assistant', data.content);
-            conversationHistory.push({ 
-                role: 'assistant', 
-                content: data.content 
-            });
+            if (data.content) {
+                // Add assistant's response to chat
+                addMessageToChat('assistant', data.content);
+                // Add to conversation history
+                conversationHistory.push({ 
+                    role: 'assistant', 
+                    content: data.content 
+                });
+            } else {
+                throw new Error('Invalid response format');
+            }
+
         } catch (error) {
             console.error('Error:', error);
             loadingDiv.remove();
-            addMessageToChat('assistant', 'Sorry, there was an error processing your request.');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'Sorry, there was an error processing your request.';
+            document.getElementById('chat-messages').appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000); // Remove error message after 5 seconds
         } finally {
             // Re-enable input and button
             input.disabled = false;
