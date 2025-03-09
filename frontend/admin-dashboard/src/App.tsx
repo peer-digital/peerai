@@ -130,6 +130,13 @@ function App() {
                         <Playground />
                       </PermissionGuard>
                     } />
+
+                    {/* Developer Documentation */}
+                    <Route path="/docs" element={
+                      <PermissionGuard requiredPermissions={[Permission.VIEW_DOCS]}>
+                        <DeveloperDocs />
+                      </PermissionGuard>
+                    } />
                   </Route>
 
                   {/* Catch all route */}

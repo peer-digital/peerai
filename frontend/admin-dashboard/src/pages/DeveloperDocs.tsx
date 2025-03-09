@@ -1,593 +1,395 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
   Paper,
+  Divider,
+  Button,
+  useTheme,
+  IconButton,
+  Tooltip,
   Tabs,
   Tab,
-  Divider,
-  Link,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Chip,
-  useTheme,
-  useMediaQuery,
-  AppBar,
-  Toolbar,
+  Stack,
 } from '@mui/material';
-import CodeIcon from '@mui/icons-material/Code';
-import DescriptionIcon from '@mui/icons-material/Description';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ApiIcon from '@mui/icons-material/Api';
-import SecurityIcon from '@mui/icons-material/Security';
+import { Link as RouterLink } from 'react-router-dom';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import SwaggerUI from 'swagger-ui-react';
-import 'swagger-ui-react/swagger-ui.css';
-import { Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { toast } from 'react-toastify';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+const DeveloperDocs: React.FC = () => {
+  const theme = useTheme();
+  const [selectedTab, setSelectedTab] = React.useState(0);
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`docs-tabpanel-${index}`}
-      aria-labelledby={`docs-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: { xs: 2, md: 3 } }}>{children}</Box>}
+  const completionsExample = {
+    curl: `curl -X POST ${API_BASE_URL}/api/v1/completions \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Explain quantum computing",
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "model": "mistral-small-latest"
+  }'`,
+    response: `{
+  "content": "Quantum computing is a form of computing that harnesses quantum mechanics...",
+  "model": "mistral-small-latest",
+  "provider": "mistral",
+  "usage": {
+    "total_tokens": 150,
+    "prompt_tokens": 50,
+    "completion_tokens": 100
+  },
+  "latency_ms": 1234
+}`
+  };
+
+  const chatExample = {
+    curl: `curl -X POST ${API_BASE_URL}/api/v1/completions \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant"},
+      {"role": "user", "content": "What is the capital of France?"}
+    ],
+    "model": "mistral-small-latest",
+    "temperature": 0.7
+  }'`,
+    response: `{
+  "content": "The capital of France is Paris.",
+  "model": "mistral-small-latest",
+  "provider": "mistral",
+  "usage": {
+    "total_tokens": 120,
+    "prompt_tokens": 40,
+    "completion_tokens": 80
+  },
+  "latency_ms": 890
+}`
+  };
+
+  const visionExample = {
+    curl: `curl -X POST ${API_BASE_URL}/api/v1/vision \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "image_url": "https://example.com/image.jpg",
+    "prompt": "Describe this image",
+    "model": "mistral-small-latest"
+  }'`,
+    response: `{
+  "content": "The image shows a scenic mountain landscape...",
+  "model": "mistral-small-latest",
+  "provider": "mistral",
+  "usage": {
+    "total_tokens": 100
+  },
+  "latency_ms": 2345
+}`
+  };
+
+  const audioExample = {
+    curl: `curl -X POST ${API_BASE_URL}/api/v1/audio \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "audio_url": "https://example.com/audio.mp3",
+    "task": "transcribe",
+    "model": "mistral-small-latest"
+  }'`,
+    response: `{
+  "content": "This is the transcribed text from the audio file...",
+  "model": "mistral-small-latest",
+  "provider": "mistral",
+  "usage": {
+    "total_tokens": 75
+  },
+  "latency_ms": 3456
+}`
+  };
+
+  const chatAppExample = {
+    html: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Chat App</title>
+    <style>
+        .chat-container { max-width: 600px; margin: 20px auto; }
+        .message { margin: 10px; padding: 10px; border-radius: 5px; }
+        .user { background: #e3f2fd; }
+        .assistant { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-messages"></div>
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
     </div>
-  );
+</body>
+</html>`,
+    javascript: `const API_KEY = 'YOUR_API_KEY';
+const API_URL = '${API_BASE_URL}/api/v1/completions';
+
+let conversationHistory = [
+    { role: 'system', content: 'You are a helpful assistant.' }
+];
+
+async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Add user message to chat
+    addMessageToChat('user', message);
+    input.value = '';
+
+    // Add to conversation history
+    conversationHistory.push({ role: 'user', content: message });
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            },
+            body: JSON.stringify({
+                messages: conversationHistory,
+                model: 'mistral-small-latest',
+                temperature: 0.7
+            })
+        });
+
+        const data = await response.json();
+        
+        // Add assistant's response to chat
+        addMessageToChat('assistant', data.content);
+        conversationHistory.push({ 
+            role: 'assistant', 
+            content: data.content 
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        addMessageToChat('assistant', 'Sorry, there was an error processing your request.');
+    }
 }
 
-// OpenAPI specification endpoint
-const OPENAPI_SPEC_URL = '/api/v1/openapi.json'; // URL to your OpenAPI specification
+function addMessageToChat(role, content) {
+    const chatMessages = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = \`message \${role}\`;
+    messageDiv.textContent = content;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}`
+  };
 
-const IntroContent = () => {
-  const { isAuthenticated } = useAuth();
-  
-  return (
+  const CodeBlock = ({ title, curl, response }: { title: string, curl: string, response: string }) => (
+    <Paper sx={{ p: 3, mb: 4, bgcolor: theme.palette.background.paper }}>
+      <Typography variant="h6" gutterBottom>
+        {title}
+      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+          Request:
+        </Typography>
+        <Tooltip title="Copy request" placement="top">
+          <IconButton
+            onClick={() => handleCopy(curl)}
+            sx={{ position: 'absolute', top: 0, right: 0 }}
+            size="small"
+          >
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <SyntaxHighlighter language="bash" style={atomDark}>
+          {curl}
+        </SyntaxHighlighter>
+      </Box>
+      
+      <Box sx={{ position: 'relative' }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+          Response:
+        </Typography>
+        <Tooltip title="Copy response" placement="top">
+          <IconButton
+            onClick={() => handleCopy(response)}
+            sx={{ position: 'absolute', top: 0, right: 0 }}
+            size="small"
+          >
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <SyntaxHighlighter language="json" style={atomDark}>
+          {response}
+        </SyntaxHighlighter>
+      </Box>
+    </Paper>
+  );
+
+  const CookbookSection = () => (
     <Box>
       <Typography variant="h5" gutterBottom>
-        Welcome to PeerAI API Documentation
+        Building a Simple Chat App
       </Typography>
       <Typography paragraph>
-        PeerAI provides a powerful API for integrating AI capabilities into your applications.
-        Our platform offers state-of-the-art language models and tools to help you build
-        intelligent features with minimal effort.
+        Follow this guide to create a basic chat application using PeerAI's API. This example demonstrates how to build
+        a web-based chat interface that maintains conversation history.
       </Typography>
-      
-      <Divider sx={{ my: 3 }} />
-      
-      <Typography variant="h6" gutterBottom>
-        Key Features
-      </Typography>
-      
-      <List>
-        <ListItem>
-          <ListItemIcon>
-            <ApiIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText 
-            primary="RESTful API" 
-            secondary="Simple and consistent API design following REST principles"
-          />
-        </ListItem>
-        <ListItem>
-          <ListItemIcon>
-            <SecurityIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText 
-            primary="Secure Authentication" 
-            secondary="API key authentication with role-based access control"
-          />
-        </ListItem>
-        <ListItem>
-          <ListItemIcon>
-            <CodeIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText 
-            primary="Multiple SDKs" 
-            secondary="Official client libraries for Python, JavaScript, and more"
-          />
-        </ListItem>
-      </List>
-      
-      <Divider sx={{ my: 3 }} />
-      
-      <Typography variant="h6" gutterBottom>
-        Getting Started
+
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+        Step 1: Set up the HTML
       </Typography>
       <Typography paragraph>
-        To get started with the PeerAI API, you'll need to:
+        Create an HTML file with a basic chat interface:
       </Typography>
-      <ol>
-        <li>
-          <Typography paragraph>
-            <strong>Create an account</strong> - Sign up for PeerAI to get access to the dashboard
-          </Typography>
-        </li>
-        <li>
-          <Typography paragraph>
-            <strong>Generate an API key</strong> - Create an API key in the dashboard
-          </Typography>
-        </li>
-        <li>
-          <Typography paragraph>
-            <strong>Install the SDK</strong> - Use our client libraries for your preferred language
-          </Typography>
-        </li>
-        <li>
-          <Typography paragraph>
-            <strong>Make your first API call</strong> - Follow our quickstart guide to make your first request
-          </Typography>
-        </li>
-      </ol>
-      
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => window.open('https://github.com/peerai/api-examples', '_blank')}
-          startIcon={<CodeIcon />}
-        >
-          View Sample Projects
-        </Button>
-        {!isAuthenticated && (
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            component={RouterLink} 
-            to="/login"
+      <Box sx={{ position: 'relative' }}>
+        <Tooltip title="Copy HTML" placement="top">
+          <IconButton
+            onClick={() => handleCopy(chatAppExample.html)}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+            size="small"
           >
-            Sign Up for API Access
-          </Button>
-        )}
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <SyntaxHighlighter language="html" style={atomDark}>
+          {chatAppExample.html}
+        </SyntaxHighlighter>
       </Box>
+
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+        Step 2: Add the JavaScript
+      </Typography>
+      <Typography paragraph>
+        Add this JavaScript code to handle the chat functionality:
+      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <Tooltip title="Copy JavaScript" placement="top">
+          <IconButton
+            onClick={() => handleCopy(chatAppExample.javascript)}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+            size="small"
+          >
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <SyntaxHighlighter language="javascript" style={atomDark}>
+          {chatAppExample.javascript}
+        </SyntaxHighlighter>
+      </Box>
+
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+        Step 3: Test the Chat
+      </Typography>
+      <Typography paragraph>
+        1. Replace 'YOUR_API_KEY' with your actual API key
+      </Typography>
+      <Typography paragraph>
+        2. Open the HTML file in a web browser
+      </Typography>
+      <Typography paragraph>
+        3. Start chatting with the AI!
+      </Typography>
+
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+        Example Chat Request
+      </Typography>
+      <Typography paragraph>
+        Here's how the API handles a chat message:
+      </Typography>
+      <CodeBlock 
+        title="Chat Completion" 
+        curl={chatExample.curl}
+        response={chatExample.response}
+      />
     </Box>
   );
-};
 
-const QuickstartContent = () => (
-  <Box>
-    <Typography variant="h5" gutterBottom>
-      Quickstart Guide
-    </Typography>
-    <Typography paragraph>
-      Follow these steps to quickly integrate PeerAI into your application.
-    </Typography>
-    
-    <Divider sx={{ my: 3 }} />
-    
-    <Typography variant="h6" gutterBottom>
-      Step 1: Install the SDK
-    </Typography>
-    <Typography paragraph>
-      Choose your preferred language and install our client library:
-    </Typography>
-    
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Python
+  return (
+    <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
+      <Typography variant="h4" gutterBottom>
+        PeerAI API Documentation
       </Typography>
-      <SyntaxHighlighter language="bash" style={atomDark}>
-        pip install peerai-python
-      </SyntaxHighlighter>
-      
-      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
-        JavaScript
+      <Typography variant="body1" color="textSecondary" paragraph>
+        Get started with PeerAI's powerful AI APIs. Below you'll find examples of how to interact with our endpoints using cURL.
       </Typography>
-      <SyntaxHighlighter language="bash" style={atomDark}>
-        npm install peerai-js
-      </SyntaxHighlighter>
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Step 2: Initialize the Client
-    </Typography>
-    <Typography paragraph>
-      Set up the client with your API key:
-    </Typography>
-    
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Python
+
+      <Tabs
+        value={selectedTab}
+        onChange={(_, newValue) => setSelectedTab(newValue)}
+        sx={{ mb: 3 }}
+      >
+        <Tab label="Quick Start" />
+        <Tab label="Cookbook" />
+      </Tabs>
+
+      {selectedTab === 0 ? (
+        <>
+          <Typography variant="h5" gutterBottom>
+            Authentication
+          </Typography>
+          <Typography paragraph>
+            All API requests require an API key sent in the X-API-Key header. You can generate an API key from your dashboard.
+          </Typography>
+          <Paper sx={{ p: 2, mb: 4, bgcolor: theme.palette.error.main + '10' }}>
+            <Typography variant="body2" color="error">
+              🔒 Never share your API key or commit it to version control. Always use environment variables or secure secrets management.
+            </Typography>
+          </Paper>
+
+          <Typography variant="h5" gutterBottom>
+            Quick Start Examples
+          </Typography>
+          
+          <CodeBlock 
+            title="Text Generation" 
+            curl={completionsExample.curl}
+            response={completionsExample.response}
+          />
+
+          <CodeBlock 
+            title="Vision Analysis" 
+            curl={visionExample.curl}
+            response={visionExample.response}
+          />
+
+          <CodeBlock 
+            title="Audio Processing" 
+            curl={audioExample.curl}
+            response={audioExample.response}
+          />
+        </>
+      ) : (
+        <CookbookSection />
+      )}
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="h5" gutterBottom>
+        Try it yourself
       </Typography>
-      <SyntaxHighlighter language="python" style={atomDark}>
-{`from peerai import PeerAI
-
-# Initialize the client with your API key
-client = PeerAI(api_key="your_api_key_here")
-
-# Now you can use the client to make API calls
-response = client.generate_text(
-    prompt="Explain quantum computing in simple terms",
-    model="gpt-4"
-)
-
-print(response.text)`}
-      </SyntaxHighlighter>
-      
-      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
-        JavaScript
+      <Typography paragraph>
+        Head over to our API Playground to test these endpoints interactively and generate cURL commands automatically.
       </Typography>
-      <SyntaxHighlighter language="javascript" style={atomDark}>
-{`import { PeerAI } from 'peerai-js';
-
-// Initialize the client with your API key
-const client = new PeerAI('your_api_key_here');
-
-// Make an API call
-async function generateText() {
-  const response = await client.generateText({
-    prompt: 'Explain quantum computing in simple terms',
-    model: 'gpt-4'
-  });
-  
-  console.log(response.text);
-}
-
-generateText();`}
-      </SyntaxHighlighter>
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Step 3: Explore Available Models
-    </Typography>
-    <Typography paragraph>
-      PeerAI offers access to various models with different capabilities:
-    </Typography>
-    
-    <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-      <Chip label="GPT-4" color="primary" />
-      <Chip label="Claude 3" color="primary" />
-      <Chip label="Llama 3" color="primary" />
-      <Chip label="Mistral" color="primary" />
-      <Chip label="PaLM 2" color="primary" />
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Next Steps
-    </Typography>
-    <Typography paragraph>
-      Now that you've made your first API call, you can:
-    </Typography>
-    
-    <List>
-      <ListItem>
-        <ListItemIcon>
-          <ApiIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Explore the API Reference" 
-          secondary="Learn about all available endpoints and parameters"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemIcon>
-          <CodeIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Check out code examples" 
-          secondary="See examples for common use cases"
-        />
-      </ListItem>
-    </List>
-  </Box>
-);
-
-const CodeExamplesContent = () => (
-  <Box>
-    <Typography variant="h5" gutterBottom>
-      Code Examples
-    </Typography>
-    <Typography paragraph>
-      Learn how to use PeerAI with these code examples.
-    </Typography>
-    
-    <Divider sx={{ my: 3 }} />
-    
-    <Typography variant="h6" gutterBottom>
-      Text Generation
-    </Typography>
-    <Typography paragraph>
-      Generate text based on a prompt:
-    </Typography>
-    
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Python
-      </Typography>
-      <SyntaxHighlighter language="python" style={atomDark}>
-{`from peerai import PeerAI
-
-client = PeerAI(api_key="your_api_key_here")
-
-response = client.generate_text(
-    prompt="Write a short story about a robot learning to paint",
-    model="gpt-4",
-    max_tokens=500,
-    temperature=0.7
-)
-
-print(response.text)`}
-      </SyntaxHighlighter>
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Chat Completion
-    </Typography>
-    <Typography paragraph>
-      Create a conversational AI experience:
-    </Typography>
-    
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        JavaScript
-      </Typography>
-      <SyntaxHighlighter language="javascript" style={atomDark}>
-{`import { PeerAI } from 'peerai-js';
-
-const client = new PeerAI('your_api_key_here');
-
-async function chatExample() {
-  const chatHistory = [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'Hello! Can you help me understand how neural networks work?' }
-  ];
-  
-  const response = await client.createChatCompletion({
-    messages: chatHistory,
-    model: 'claude-3-opus',
-    temperature: 0.5
-  });
-  
-  console.log(response.message.content);
-  
-  // Continue the conversation
-  chatHistory.push(response.message);
-  chatHistory.push({ role: 'user', content: 'Can you give me a simple example?' });
-  
-  const followUpResponse = await client.createChatCompletion({
-    messages: chatHistory,
-    model: 'claude-3-opus',
-    temperature: 0.5
-  });
-  
-  console.log(followUpResponse.message.content);
-}
-
-chatExample();`}
-      </SyntaxHighlighter>
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Error Handling
-    </Typography>
-    <Typography paragraph>
-      Properly handle API errors:
-    </Typography>
-    
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Python
-      </Typography>
-      <SyntaxHighlighter language="python" style={atomDark}>
-{`from peerai import PeerAI, PeerAIError
-
-client = PeerAI(api_key="your_api_key_here")
-
-try:
-    response = client.generate_text(
-        prompt="Explain the theory of relativity",
-        model="gpt-4"
-    )
-    print(response.text)
-except PeerAIError as e:
-    print(f"Error: {e.status_code} - {e.message}")
-    if e.status_code == 401:
-        print("Authentication failed. Check your API key.")
-    elif e.status_code == 429:
-        print("Rate limit exceeded. Please try again later.")`}
-      </SyntaxHighlighter>
-    </Box>
-  </Box>
-);
-
-const AuthenticationContent = () => (
-  <Box>
-    <Typography variant="h5" gutterBottom>
-      Authentication
-    </Typography>
-    <Typography paragraph>
-      Learn how to authenticate with the PeerAI API.
-    </Typography>
-    
-    <Divider sx={{ my: 3 }} />
-    
-    <Typography variant="h6" gutterBottom>
-      API Keys
-    </Typography>
-    <Typography paragraph>
-      All requests to the PeerAI API require authentication using API keys. 
-      You can generate API keys from your dashboard.
-    </Typography>
-    
-    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
-      <Typography variant="subtitle2" color="error">
-        Security Notice
-      </Typography>
-      <Typography variant="body2">
-        Keep your API keys secure and never expose them in client-side code. 
-        If you suspect your API key has been compromised, you should immediately 
-        revoke it and generate a new one.
-      </Typography>
-    </Box>
-    
-    <Typography variant="h6" gutterBottom>
-      Authentication Methods
-    </Typography>
-    <Typography paragraph>
-      There are two ways to authenticate your API requests:
-    </Typography>
-    
-    <Typography variant="subtitle1" gutterBottom>
-      1. Authorization Header (Recommended)
-    </Typography>
-    <Typography paragraph>
-      Include your API key in the Authorization header:
-    </Typography>
-    
-    <SyntaxHighlighter language="bash" style={atomDark}>
-      Authorization: Bearer your_api_key_here
-    </SyntaxHighlighter>
-    
-    <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
-      2. Query Parameter
-    </Typography>
-    <Typography paragraph>
-      Include your API key as a query parameter (less secure, not recommended for production):
-    </Typography>
-    
-    <SyntaxHighlighter language="bash" style={atomDark}>
-      https://api.peerai.com/v1/generate?api_key=your_api_key_here
-    </SyntaxHighlighter>
-    
-    <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-      API Key Management
-    </Typography>
-    <Typography paragraph>
-      Best practices for managing your API keys:
-    </Typography>
-    
-    <List>
-      <ListItem>
-        <ListItemIcon>
-          <SecurityIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Use environment variables" 
-          secondary="Store API keys in environment variables, not in your code"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemIcon>
-          <SecurityIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Rotate keys regularly" 
-          secondary="Periodically generate new API keys and update your applications"
-        />
-      </ListItem>
-      <ListItem>
-        <ListItemIcon>
-          <SecurityIcon color="primary" />
-        </ListItemIcon>
-        <ListItemText 
-          primary="Use different keys for different environments" 
-          secondary="Use separate keys for development, testing, and production"
-        />
-      </ListItem>
-    </List>
-    
-    <Box sx={{ mt: 4 }}>
       <Button 
         variant="contained" 
         color="primary" 
-        component={RouterLink} 
-        to="/login"
-        startIcon={<SecurityIcon />}
+        component={RouterLink}
+        to="/playground"
+        sx={{ mt: 2 }}
       >
-        Manage API Keys
+        Open API Playground
       </Button>
-    </Box>
-  </Box>
-);
-
-const DeveloperDocs: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { isAuthenticated } = useAuth();
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  return (
-    <Box sx={{ flexGrow: 1 }}>
-      {/* Remove custom header for non-authenticated users since we're using DashboardLayout */}
-      
-      {/* Page title for all users */}
-      <Box sx={{ mb: 3, mt: 1 }}>
-        <Typography variant="h4" gutterBottom>
-          Developer Documentation
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Comprehensive guides and references for integrating with the PeerAI API
-        </Typography>
-      </Box>
-
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant={isMobile ? "scrollable" : "fullWidth"}
-          scrollButtons={isMobile ? "auto" : undefined}
-          aria-label="developer documentation tabs"
-        >
-          <Tab icon={<DescriptionIcon />} label="Introduction" iconPosition="start" />
-          <Tab icon={<PlayArrowIcon />} label="Quickstart" iconPosition="start" />
-          <Tab icon={<ApiIcon />} label="API Reference" iconPosition="start" />
-          <Tab icon={<CodeIcon />} label="Code Examples" iconPosition="start" />
-          <Tab icon={<SecurityIcon />} label="Authentication" iconPosition="start" />
-        </Tabs>
-      </Box>
-
-      {/* Introduction Tab */}
-      <TabPanel value={tabValue} index={0}>
-        <IntroContent />
-      </TabPanel>
-
-      {/* Quickstart Tab */}
-      <TabPanel value={tabValue} index={1}>
-        <QuickstartContent />
-      </TabPanel>
-
-      {/* API Reference Tab */}
-      <TabPanel value={tabValue} index={2}>
-        <Typography variant="h5" gutterBottom>
-          API Reference
-        </Typography>
-        <Typography paragraph>
-          Explore our API endpoints using the interactive documentation below.
-        </Typography>
-        <Box sx={{ mt: 3, border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: 1 }}>
-          <SwaggerUI url={OPENAPI_SPEC_URL} />
-        </Box>
-      </TabPanel>
-
-      {/* Code Examples Tab */}
-      <TabPanel value={tabValue} index={3}>
-        <CodeExamplesContent />
-      </TabPanel>
-
-      {/* Authentication Tab */}
-      <TabPanel value={tabValue} index={4}>
-        <AuthenticationContent />
-      </TabPanel>
     </Box>
   );
 };
