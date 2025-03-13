@@ -2,9 +2,10 @@
 set -e
 
 # Define variables
+APP_DIR="/home/ubuntu/peer-ai"
 DB_NAME="peerai_db"
 DB_USER="peerai"
-APP_DIR="/home/ubuntu/peer-ai"
+DB_PASSWORD="peerai_password"  # Added password from deploy.sh
 
 echo "Initializing database with basic data..."
 
@@ -40,9 +41,15 @@ END
 -- Add any other initialization data here
 EOL
 
-# Execute the SQL file
+# Execute the SQL file - try with peerai user first, fall back to postgres if needed
 echo "Executing SQL commands..."
-sudo -u postgres psql -d "$DB_NAME" -f "$TMP_SQL_FILE"
+if PGPASSWORD="$DB_PASSWORD" psql -U "$DB_USER" -d "$DB_NAME" -f "$TMP_SQL_FILE" 2>/dev/null; then
+    echo "Successfully executed SQL commands as $DB_USER user."
+else
+    echo "Could not connect as $DB_USER user, trying with postgres user..."
+    # Try with sudo to postgres user as fallback
+    sudo -u postgres psql -d "$DB_NAME" -f "$TMP_SQL_FILE"
+fi
 
 # Remove the temporary SQL file
 rm "$TMP_SQL_FILE"

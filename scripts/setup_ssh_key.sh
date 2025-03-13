@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e
+
+# Define variables
+SSH_KEY_FILE="$HOME/.ssh/peerai_vm_key"
+
+echo "Setting up SSH key for VM access..."
+
+# Create .ssh directory if it doesn't exist
+mkdir -p "$HOME/.ssh"
+
+# Create the SSH key file
+cat > "$SSH_KEY_FILE" << 'EOL'
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAvIJx7Z2HRCZZYUN80T6GiZNlOkHZv+LeOl8Np9rGvHCZNjiK
++71J9lPGNACYRDqR4JiIX2gq7298Nq5i9jNzp/9mWxBJhDsLg9QREjJwNmVUnhlr
+Bxcki82fHS72QOgMIoMvOF+HGzXHAncDtmsQ5TfNihJ5jnrTBC38KgZTsrjir+Da
+Tl+OXWIrw91vBMw9GnOcpZ24yFzQdcKRdb9YiS+mBNXVyNgR/dnY0SvGITJI5/Y7
+1eOQiG+reuT8Yx0ifyRIHz0fd+XqhdtQ+lORkTmYp6gVV//CUsFmh12yw0Y0Pu57
+ctFV295b0v7Oqb+oo3WNa+vWiW6fnheFbHoc5wIDAQABAoIBAFc+W/Hn1SGSSg18
+yXih4mwrnk7fCSMIoWcMdOp5kz7FMfNpKdGmYmOxk+qfV9lD7h2vGnZlZHGZ/Dfm
+b4CYgW+AAWQl3pBnL0Yc0KXGWC6kqQveoa0PZeeaC4jbIjcZ7fvPEPybIZFTSz51
+zG8RkCk1sVe0gzOQ3rZxfeIJOZVdtSgPWQ1PIpgNLtQEWq+1nB7frZ6T0aDarhjp
+OAy5U6uQ6gSw1zUE4ELU639+1DJIfjtY/BCuhXN+1GhmiuohN0GL+7rx+cIg+TmP
+eXgy+fXjGo0kWvIroIiwgz1NM493DTRvNkjwxLNBRifSVoNKdgq57xG4ym3WIZL7
+bEcFWrkCgYEA95nwKYE+Gb/qek++P+XDRm3pmeT1qT64ZU88BQL4Ej1uriC1TCUs
+shlLPifbG3Mw4fkCUv1tRV+r3IYPRHv1M7X8ZH+m29EooHL6pig0r49s7Yfvrkd6
+JKCAiYSNWMrvTH4M8+eBap+nNSvod82sL+NT41D33/RQize3SwKddKUCgYEAwudh
+Nu10ggzjfhfeaHArEmeInSwn3no8fHknDnHn6NjI5a40K6Iql2xkas1I1jjIMsyx
+L6uQS/gnxEK9BzFrmDvBRU+cKp3ldjYm2xWsHIyqbD4FfqaGYvVNUDAKjmlzMxyq
+LCkm767Zv4eGcHhsN7m+ElyV0eEQ86JRex7w+ZsCgYAx8ChSFrERvHVsSd0TQiIK
+eGyfD2DEy9OhC0QNtrWV6DIEiLBINU84dIWKebtlY+w+B10Co/5/+XXOOnOl2mJw
+FYpcMqrStvK8ubP4Ay/tIL5Vgg9DVUM7U+vY0JU5jWSKRvoRz2V4vc6ZmMuALklG
+N1FaDaCQ2NPN4GTlihd7yQKBgBVjfu+gL2D2OSDlTar4ZEGoyv00k0t+7pRaV0bm
+iSSsZZ+O9nqzWSk04/A0hwG7SX0JqYgps7Qij3qiOExJyBz0sckBa4nhugS2/Jye
+TDz10t3+EGxNqgHCGbHrE719JP8+7g3alkNHVO4H2WEOVhHneExbjLVzlYCnF3oD
+cz5xAoGAfd95CwABCBFH6YuoBlUEYMGeb66Fvqt8PhnY8IvxAmKetqx5IVYTT4zY
+Qd/BG89A1vhOOOUJVtD6XNZWRFZz5TOIKxX29258H22N9Etp7J2otEiGx9U275Z9
+ROlZkXKBhVb/utLHA9tgSa7+xfYx47ylW8H0ZHjhawTbsMgjM60=
+-----END RSA PRIVATE KEY-----
+EOL
+
+# Set correct permissions for the SSH key
+chmod 600 "$SSH_KEY_FILE"
+
+# Add the VM host to known_hosts
+ssh-keyscan -H 158.174.210.91 >> "$HOME/.ssh/known_hosts" 2>/dev/null
+
+echo "SSH key setup complete. You can now use the following command to SSH into the VM:"
+echo "ssh -i $SSH_KEY_FILE ubuntu@158.174.210.91" 

@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     # @url: https://www.postgresql.org/
     # @important: Database configuration - override with environment variables
     DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/peerai",
+        default="postgresql://peerai:peerai_password@localhost:5432/peerai_db",
         description="Main database URL",
     )
     TEST_DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/peerai_test",
+        default="postgresql://peerai:peerai_password@localhost:5432/peerai_test",
         description="Test database URL",
     )
 

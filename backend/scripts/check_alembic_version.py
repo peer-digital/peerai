@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine, text
 
 # Get the database URL from environment variable
-database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/peerai')
+database_url = os.getenv('DATABASE_URL', 'postgresql://peerai:peerai_password@localhost:5432/peerai_db')
 
 # Create engine
 engine = create_engine(database_url)

@@ -64,8 +64,8 @@ jobs:
       # Step 7: Run integration tests
       - name: Run integration tests
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db  # @note: Test database URL - must match DATABASE_URL for CI
+          DATABASE_URL: postgresql://peerai:peerai_password@localhost:5432/test_db
+          TEST_DATABASE_URL: postgresql://peerai:peerai_password@localhost:5432/test_db  # @note: Test database URL - must match DATABASE_URL for CI
         run: |
           alembic upgrade head  # Run migrations before tests
           pytest tests/test_db_integration.py tests/test_api_integration.py -v --cov=api --cov-append --cov-report=xml
