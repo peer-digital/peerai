@@ -23,9 +23,13 @@ jobs:
       - name: Create SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          # Ensure the SSH key is properly formatted with newlines
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+          # Add verbose flag for debugging
+          ssh-keyscan -v -H 158.174.210.91 >> ~/.ssh/known_hosts
+          # Test SSH connection with verbose output
+          ssh -v -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/id_rsa ubuntu@158.174.210.91 echo "SSH connection successful"
       
       - name: Deploy to VM
         env:
