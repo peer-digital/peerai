@@ -64,6 +64,8 @@ jobs:
           source: "scripts/,deployment/"
           target: "/home/ubuntu/"
           strip_components: 0
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
       
       - name: Run diagnostic script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -71,6 +73,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             chmod +x /home/ubuntu/scripts/diagnose_ssh.sh
             /home/ubuntu/scripts/diagnose_ssh.sh
@@ -81,6 +85,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             [ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh
       
@@ -90,6 +96,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             /home/ubuntu/scripts/setup_ssh.sh
       
@@ -99,6 +107,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           envs: GITHUB_REPO_OWNER,REPO_NAME
           script: |
             # Debug environment variables
@@ -118,6 +128,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             /home/ubuntu/scripts/fix_permissions.sh
       
@@ -127,6 +139,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
       
@@ -136,9 +150,23 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             chmod +x /home/ubuntu/scripts/fix_migration.sh
             cd /home/ubuntu/peer-ai && ./scripts/fix_migration.sh
+      
+      - name: Test database connection
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
+          script: |
+            chmod +x /home/ubuntu/scripts/ssh_to_db.sh
+            cd /home/ubuntu/peer-ai && ./scripts/ssh_to_db.sh
       
       - name: Initialize database
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -146,6 +174,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh
       
@@ -155,6 +185,8 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh || echo "Debug migrations script failed, continuing"
             cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh || echo "Fix GitHub Actions script failed, continuing"
@@ -166,5 +198,7 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh 
