@@ -29,11 +29,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Create SSH key
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0  # @note: GitHub-recommended SSH agent action - do not change URL
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Add host key to known hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
       
       - name: Make scripts executable
@@ -91,11 +94,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Create SSH key
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0  # @note: GitHub-recommended SSH agent action - do not change URL
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Add host key to known hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
       
       - name: Deploy backend
@@ -205,11 +211,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Create SSH key
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0  # @note: GitHub-recommended SSH agent action - do not change URL
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Add host key to known hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
       
       - name: Deploy frontend
@@ -324,11 +333,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Create SSH key
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0  # @note: GitHub-recommended SSH agent action - do not change URL
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Add host key to known hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
       
       - name: Check deployment status
