@@ -1,115 +1,58 @@
 #!/bin/bash
 set -e
 
-# Define variables
-VM_IP="158.174.210.91"
-VM_USER="ubuntu"
-SSH_KEY_FILE="$HOME/.ssh/peerai_vm_key"
+echo "=== Database Migration Fix Tool ==="
+echo "Running on: $(hostname)"
+echo "Date: $(date)"
+echo "User: $(whoami)"
+echo ""
 
-# Check if SSH key exists, if not, set it up
-if [ ! -f "$SSH_KEY_FILE" ]; then
-    echo "SSH key not found. Setting up SSH key..."
-    ./scripts/setup_ssh_key.sh
+APP_DIR="/home/ubuntu/peer-ai"
+BACKEND_DIR="$APP_DIR/backend"
+VENV_DIR="$BACKEND_DIR/venv"
+ALEMBIC_DIR="$BACKEND_DIR/alembic"
+VERSIONS_DIR="$ALEMBIC_DIR/versions"
+
+# Check if the backend directory exists
+if [ ! -d "$BACKEND_DIR" ]; then
+    echo "Error: Backend directory not found at $BACKEND_DIR"
+    exit 1
 fi
 
-echo "Fixing migration issue on VM at $VM_IP..."
+# Activate virtual environment
+echo "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
 
-# SSH into the VM and fix the migration issue
-ssh -i "$SSH_KEY_FILE" $VM_USER@$VM_IP << 'EOF'
-cd /home/ubuntu/peer-ai/backend
-source venv/bin/activate
+# Check if the problematic migration file exists
+MIGRATION_FILE="$VERSIONS_DIR/16e5e60f9836_add_email_verification_fields.py"
+if [ ! -f "$MIGRATION_FILE" ]; then
+    echo "Error: Migration file not found at $MIGRATION_FILE"
+    exit 1
+fi
 
-# Set the correct DATABASE_URL
-export DATABASE_URL="postgresql://peerai:peerai_password@localhost:5432/peerai_db"
+echo "Creating backup of the migration file..."
+cp "$MIGRATION_FILE" "${MIGRATION_FILE}.bak"
 
-# Create a Python script to fix the migration
-cat > fix_migration.py << 'PYEOF'
-from sqlalchemy import create_engine, text
-import os
+echo "Modifying the migration file to handle missing constraint..."
+# Use sed to modify the migration file to check if constraint exists before dropping it
+sed -i 's/op.drop_constraint(.uq_referrals_referee_id., .referrals., type_=.unique.)/# Check if constraint exists before dropping it\n    conn = op.get_bind()\n    result = conn.execute("SELECT 1 FROM pg_constraint WHERE conname = \x27uq_referrals_referee_id\x27").fetchone()\n    if result:\n        op.drop_constraint(\x27uq_referrals_referee_id\x27, \x27referrals\x27, type_=\x27unique\x27)\n    else:\n        print("Constraint uq_referrals_referee_id does not exist, skipping")/g' "$MIGRATION_FILE"
 
-# Get the database URL from environment variable
-database_url = os.getenv('DATABASE_URL', 'postgresql://peerai:peerai_password@localhost:5432/peerai_db')
+echo "Modified migration file. Now attempting to run migrations..."
 
-# Create engine
-engine = create_engine(database_url)
+# Run migrations
+cd "$BACKEND_DIR"
+alembic upgrade head
 
-# Connect to the database
-with engine.connect() as connection:
-    # Begin a transaction
-    with connection.begin():
-        # Update the alembic_version table to skip the problematic migration
-        connection.execute(text("UPDATE alembic_version SET version_num = '16e5e60f9836'"))
-        
-        # Check if the referrals table exists
-        result = connection.execute(text(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'referrals')"
-        )).fetchone()
-        
-        if result[0]:
-            # Check if the constraint exists
-            result = connection.execute(text(
-                "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'uq_referrals_referee_id'"
-            )).fetchone()
-            
-            if result[0] > 0:
-                # Drop the constraint if it exists
-                connection.execute(text("ALTER TABLE referrals DROP CONSTRAINT uq_referrals_referee_id"))
-                print("Dropped constraint 'uq_referrals_referee_id'")
-            else:
-                print("Constraint 'uq_referrals_referee_id' does not exist, skipping")
-                
-            # Add email verification fields to users table if they don't exist
-            result = connection.execute(text(
-                "SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email_verified')"
-            )).fetchone()
-            
-            if not result[0]:
-                connection.execute(text(
-                    "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"
-                ))
-                print("Added 'email_verified' column to users table")
-                
-            result = connection.execute(text(
-                "SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'verification_token')"
-            )).fetchone()
-            
-            if not result[0]:
-                connection.execute(text(
-                    "ALTER TABLE users ADD COLUMN verification_token VARCHAR(255)"
-                ))
-                print("Added 'verification_token' column to users table")
-                
-            result = connection.execute(text(
-                "SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'verification_token_expires_at')"
-            )).fetchone()
-            
-            if not result[0]:
-                connection.execute(text(
-                    "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP"
-                ))
-                print("Added 'verification_token_expires_at' column to users table")
-        else:
-            print("Table 'referrals' does not exist, skipping constraint drop")
+if [ $? -eq 0 ]; then
+    echo "✅ Migrations completed successfully!"
+else
+    echo "❌ Migrations failed. Restoring original migration file..."
+    cp "${MIGRATION_FILE}.bak" "$MIGRATION_FILE"
+    echo "Original migration file restored. Please check the database manually."
+    exit 1
+fi
 
-print("Migration fix completed successfully")
-PYEOF
+echo "Cleaning up backup files..."
+rm -f "${MIGRATION_FILE}.bak"
 
-# Run the Python script
-echo "Running migration fix script..."
-python fix_migration.py
-
-# Run migrations again to continue from the fixed point
-echo "Running remaining migrations..."
-python -m alembic upgrade head
-
-# Verify migrations were applied
-echo "Verifying migrations..."
-python -c "from sqlalchemy import create_engine, text; engine = create_engine('$DATABASE_URL'); result = engine.connect().execute(text('SELECT version_num FROM alembic_version')).fetchone(); print(f'New alembic version: {result[0] if result else \"No version found\"}')"
-
-# List tables in the database
-echo "Tables in the database:"
-python -c "from sqlalchemy import create_engine, inspect; engine = create_engine('$DATABASE_URL'); print('\n'.join(inspect(engine).get_table_names()))"
-
-# Clean up
-rm fix_migration.py
-EOF 
+echo "=== Database Migration Fix Complete ===" 

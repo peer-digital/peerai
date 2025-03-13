@@ -130,6 +130,16 @@ jobs:
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
       
+      - name: Fix database migrations
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            chmod +x /home/ubuntu/scripts/fix_migration.sh
+            cd /home/ubuntu/peer-ai && ./scripts/fix_migration.sh
+      
       - name: Initialize database
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
