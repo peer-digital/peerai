@@ -38,28 +38,16 @@ jobs:
       
       - name: Verify GitHub token
         run: |
-          # Test GitHub API access with the token
-          echo "Testing GitHub API access..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/user)
-          echo "GitHub API HTTP Status: $HTTP_STATUS"
-          
-          if [ "$HTTP_STATUS" -eq 200 ]; then
-            echo "✅ GitHub token is valid"
-          else
-            echo "❌ GitHub token is invalid or has insufficient permissions"
-            echo "Please check your GH_PAT secret in the repository settings"
-            exit 1
-          fi
-          
-          # Test repository access with the hardcoded repository path
+          # For public repositories, we don't need to verify repository access with a token
+          # Just check if the repository exists
           echo "Testing repository access..."
           REPO_PATH="${{ env.GITHUB_REPO_OWNER }}/${{ env.REPO_NAME }}"
           echo "Checking access to repository: $REPO_PATH"
-          if curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
+          if curl -s "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
             echo "✅ Repository access confirmed"
           else
-            echo "❌ Cannot access repository with the provided token"
-            echo "Please ensure the token has 'repo' scope and the repository exists"
+            echo "❌ Cannot access repository"
+            echo "Please ensure the repository exists at https://github.com/${REPO_PATH}"
             exit 1
           fi
       
@@ -111,20 +99,16 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GH_PAT,GITHUB_REPO_OWNER,REPO_NAME
+          envs: GITHUB_REPO_OWNER,REPO_NAME
           script: |
             # Debug environment variables
             echo "GITHUB_REPO_OWNER: ${GITHUB_REPO_OWNER}"
             echo "REPO_NAME: ${REPO_NAME}"
             
             # Use explicit environment variables with the correct repository information
-            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
-            
-            # Verify GitHub authentication
-            chmod +x /home/ubuntu/scripts/verify_github_auth.sh
-            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/verify_github_auth.sh
+            # No token needed for public repositories
+            GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
           GITHUB_REPO_OWNER: ${{ env.GITHUB_REPO_OWNER }}
           REPO_NAME: ${{ env.REPO_NAME }}
       
