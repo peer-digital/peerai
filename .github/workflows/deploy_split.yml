@@ -82,7 +82,6 @@ jobs:
           ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/fix_permissions.sh"
 
   deploy_backend:
-    name: Deploy Backend
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
@@ -196,7 +195,6 @@ jobs:
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/check_backend.sh" || echo "Backend service check failed"
 
   deploy_frontend:
-    name: Deploy Frontend
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
@@ -315,7 +313,6 @@ jobs:
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/check_frontend.sh" || echo "Frontend service check failed"
 
   final_check:
-    name: Final Check
     needs: [deploy_backend, deploy_frontend]
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
