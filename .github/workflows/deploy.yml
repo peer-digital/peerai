@@ -44,12 +44,22 @@ jobs:
           chmod +x ./scripts/restore_db.sh
           chmod +x ./scripts/check_deployment.sh
           chmod +x ./scripts/setup_github_auth.sh
+          chmod +x ./scripts/fix_permissions.sh
+          chmod +x ./scripts/copy_backup_to_vm.sh
           
           # Transfer deployment scripts
           scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
           
           # Transfer scripts
           scp -r ./scripts ubuntu@158.174.210.91:/home/ubuntu/
+          
+          # Transfer backup file if it exists
+          if [ -f "server_dump.backup" ]; then
+            echo "Copying backup file to VM..."
+            scp server_dump.backup ubuntu@158.174.210.91:/home/ubuntu/peer-ai/
+            # Set correct permissions on the backup file
+            ssh ubuntu@158.174.210.91 "sudo chown ubuntu:ubuntu /home/ubuntu/peer-ai/server_dump.backup && sudo chmod 644 /home/ubuntu/peer-ai/server_dump.backup"
+          fi
           
           # Run setup script if this is the first deployment
           ssh ubuntu@158.174.210.91 "[ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh"
@@ -59,6 +69,9 @@ jobs:
           
           # Set up GitHub authentication
           ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh"
+          
+          # Fix permissions
+          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/fix_permissions.sh"
           
           # Run deployment script
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/deploy.sh"

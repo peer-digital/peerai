@@ -15,6 +15,18 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 1
 fi
 
+# Fix permissions on the backup file
+echo "Setting correct permissions on backup file..."
+sudo chown ubuntu:ubuntu "$BACKUP_FILE"
+sudo chmod 644 "$BACKUP_FILE"
+
+# Verify the backup file is readable
+if [ ! -r "$BACKUP_FILE" ]; then
+    echo "Error: Backup file exists but is not readable. Check permissions."
+    ls -la "$BACKUP_FILE"
+    exit 1
+fi
+
 # Restore database
 echo "Restoring database from backup..."
 sudo -u postgres pg_restore --clean --if-exists --no-owner --no-privileges --dbname="$DB_NAME" "$BACKUP_FILE"

@@ -48,8 +48,12 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Restore database from backup if it exists
+# Check if backup file exists and fix permissions if needed
 if [ -f "$APP_DIR/server_dump.backup" ]; then
+    echo "Backup file found, setting correct permissions..."
+    sudo chown ubuntu:ubuntu "$APP_DIR/server_dump.backup"
+    sudo chmod 644 "$APP_DIR/server_dump.backup"
+    
     echo "Restoring database from backup..."
     # Make the restore script executable
     chmod +x "$APP_DIR/scripts/restore_db.sh"

@@ -105,7 +105,14 @@ This script will check if the repository exists and is accessible.
    ./scripts/setup_ssh.sh
    ```
 
-5. **Run the deployment script**:
+5. **Fix file permissions**:
+   ```
+   # Run on VM
+   chmod +x scripts/fix_permissions.sh
+   ./scripts/fix_permissions.sh
+   ```
+
+6. **Run the deployment script**:
    ```
    # Run on VM
    cd /home/ubuntu/peer-ai
@@ -194,17 +201,25 @@ sudo systemctl restart postgresql
    - Make sure you're using the correct repository name without any duplicated parts
    - The correct format is: `https://github.com/username/repo.git`
 
-3. **Backend service fails to start**:
+3. **Permission Denied Errors**:
+   - If you see errors like `Permission denied` when accessing files, run the fix permissions script:
+     ```
+     ./scripts/fix_permissions.sh
+     ```
+   - This script will set the correct ownership and permissions for all files in the repository
+   - For specific files, you can use: `sudo chown ubuntu:ubuntu filename && sudo chmod 644 filename`
+
+4. **Backend service fails to start**:
    - Check logs: `sudo journalctl -u peerai.service -f`
    - Verify database connection: `psql -U peerai -d peerai_db -h localhost`
    - Check environment variables: `cat /home/ubuntu/peer-ai/backend/.env`
 
-4. **Frontend not loading**:
+5. **Frontend not loading**:
    - Check Nginx configuration: `sudo nginx -t`
    - Verify build files exist: `ls -la /home/ubuntu/peer-ai/frontend/admin-dashboard/dist`
    - Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
 
-5. **Database connection issues**:
+6. **Database connection issues**:
    - Check PostgreSQL status: `sudo systemctl status postgresql`
    - Verify database exists: `sudo -u postgres psql -c "\l"`
    - Check user permissions: `sudo -u postgres psql -c "\du"`
