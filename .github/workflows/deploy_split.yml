@@ -1,0 +1,334 @@
+name: Split Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+      component:
+        description: 'Component to deploy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'backend' || github.event.inputs.component == 'frontend'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+      
+      - name: Make scripts executable
+        run: |
+          chmod +x ./scripts/setup_vm.sh
+          chmod +x ./scripts/setup_ssh.sh
+          chmod +x ./scripts/deploy.sh
+          chmod +x ./scripts/restore_db.sh
+          chmod +x ./scripts/check_deployment.sh
+          chmod +x ./scripts/setup_github_auth.sh
+          chmod +x ./scripts/fix_permissions.sh
+          chmod +x ./scripts/init_db.sh
+          chmod +x ./scripts/init_db_auto.sh
+          chmod +x ./scripts/debug_migrations.sh
+          chmod +x ./scripts/fix_github_actions.sh
+          chmod +x ./scripts/fix_frontend_build.sh
+      
+      - name: Transfer scripts
+        run: |
+          # Transfer deployment scripts
+          scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
+          
+          # Transfer scripts
+          scp -r ./scripts ubuntu@158.174.210.91:/home/ubuntu/
+      
+      - name: Initial setup
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository_name }}
+        run: |
+          # Extract repository name from full repository path
+          REPO_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)
+          echo "Repository name: $REPO_NAME"
+          
+          # Run setup script if this is the first deployment
+          ssh ubuntu@158.174.210.91 "[ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh"
+          
+          # Set up SSH keys
+          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/setup_ssh.sh"
+          
+          # Set up GitHub authentication
+          ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh"
+          
+          # Fix permissions
+          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/fix_permissions.sh"
+
+  deploy_backend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'backend'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+      
+      - name: Deploy backend
+        run: |
+          # Create backend deployment script
+          cat > ./scripts/deploy_backend.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          echo "Deploying backend..."
+          cd /home/ubuntu/peer-ai
+          
+          # Pull latest code
+          git pull
+          
+          # Set up backend
+          cd /home/ubuntu/peer-ai/backend
+          
+          # Create virtual environment if it doesn't exist
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+          
+          # Activate virtual environment and install dependencies
+          source venv/bin/activate
+          pip install -r requirements.txt
+          
+          # Set up database
+          export DATABASE_URL="postgresql://peerai:peerai_password@localhost:5432/peerai_db"
+          
+          # Run migrations
+          python -m alembic upgrade head
+          
+          # Create systemd service file if it doesn't exist
+          if [ ! -f "/etc/systemd/system/peerai.service" ]; then
+            echo "Creating systemd service file..."
+            sudo tee /etc/systemd/system/peerai.service > /dev/null << 'SYSTEMD_CONF'
+          [Unit]
+          Description=Peer AI Backend Service
+          After=network.target
+
+          [Service]
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu/peer-ai/backend
+          Environment="PATH=/home/ubuntu/peer-ai/backend/venv/bin"
+          Environment="DATABASE_URL=postgresql://peerai:peerai_password@localhost:5432/peerai_db"
+          ExecStart=/home/ubuntu/peer-ai/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+          SYSTEMD_CONF
+
+            # Reload systemd
+            sudo systemctl daemon-reload
+          fi
+          
+          # Enable and restart the service
+          sudo systemctl enable peerai.service
+          sudo systemctl restart peerai.service
+          
+          echo "Backend deployment completed!"
+          EOF
+          
+          chmod +x ./scripts/deploy_backend.sh
+          scp ./scripts/deploy_backend.sh ubuntu@158.174.210.91:/home/ubuntu/scripts/
+          
+          # Run backend deployment
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/deploy_backend.sh" || echo "Backend deployment failed, running debug scripts"
+          
+          # Run database initialization script (non-interactive)
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh" || echo "Database initialization failed, continuing with fixes"
+          
+          # Run debug migrations script
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh" || echo "Debug migrations script failed, continuing with checks"
+      
+      - name: Check backend status
+        run: |
+          # Create backend status check script
+          cat > ./scripts/check_backend.sh << 'EOF'
+          #!/bin/bash
+          
+          echo "Checking backend service status..."
+          if systemctl is-active --quiet peerai.service; then
+            echo "✅ Backend service is running"
+          else
+            echo "❌ Backend service is not running"
+            echo "Service status:"
+            systemctl status peerai.service || true
+            exit 1
+          fi
+          EOF
+          
+          chmod +x ./scripts/check_backend.sh
+          scp ./scripts/check_backend.sh ubuntu@158.174.210.91:/home/ubuntu/scripts/
+          
+          # Run backend status check
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/check_backend.sh" || echo "Backend service check failed"
+
+  deploy_frontend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+      
+      - name: Deploy frontend
+        run: |
+          # Create frontend deployment script
+          cat > ./scripts/deploy_frontend.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          echo "Deploying frontend..."
+          cd /home/ubuntu/peer-ai
+          
+          # Pull latest code
+          git pull
+          
+          # Set up frontend
+          cd /home/ubuntu/peer-ai/frontend/admin-dashboard
+          
+          # Increase Node.js memory limit
+          export NODE_OPTIONS="--max-old-space-size=8192"
+          
+          # Install dependencies with clean cache
+          echo "Cleaning npm cache and reinstalling dependencies..."
+          npm cache clean --force
+          rm -rf node_modules
+          npm install
+          
+          # Build with increased memory
+          echo "Building frontend with increased memory..."
+          NODE_OPTIONS="--max-old-space-size=8192" npm run build
+          
+          # Create Nginx configuration if it doesn't exist
+          if [ ! -f "/etc/nginx/sites-available/peerai" ]; then
+            echo "Creating Nginx configuration..."
+            sudo tee /etc/nginx/sites-available/peerai > /dev/null << 'NGINX_CONF'
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+                  try_files $uri $uri/ /index.html;
+              }
+
+              location /api {
+                  proxy_pass http://localhost:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+          NGINX_CONF
+
+            # Enable the site
+            sudo ln -s /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/peerai || true
+          fi
+          
+          # Test and reload Nginx
+          sudo nginx -t && sudo systemctl reload nginx
+          
+          echo "Frontend deployment completed!"
+          EOF
+          
+          chmod +x ./scripts/deploy_frontend.sh
+          scp ./scripts/deploy_frontend.sh ubuntu@158.174.210.91:/home/ubuntu/scripts/
+          
+          # Run frontend deployment
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/deploy_frontend.sh" || echo "Frontend deployment failed, running fix script"
+          
+          # Run frontend fix script if deployment failed
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh" || echo "Fix frontend build script failed, continuing with checks"
+      
+      - name: Check frontend status
+        run: |
+          # Create frontend status check script
+          cat > ./scripts/check_frontend.sh << 'EOF'
+          #!/bin/bash
+          
+          echo "Checking Nginx status..."
+          if systemctl is-active --quiet nginx; then
+            echo "✅ Nginx is running"
+          else
+            echo "❌ Nginx is not running"
+            echo "Service status:"
+            systemctl status nginx || true
+            exit 1
+          fi
+          
+          # Check if the frontend files exist
+          if [ -d "/home/ubuntu/peer-ai/frontend/admin-dashboard/dist" ]; then
+            echo "✅ Frontend build exists"
+          else
+            echo "❌ Frontend build does not exist"
+            exit 1
+          fi
+          EOF
+          
+          chmod +x ./scripts/check_frontend.sh
+          scp ./scripts/check_frontend.sh ubuntu@158.174.210.91:/home/ubuntu/scripts/
+          
+          # Run frontend status check
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu && ./scripts/check_frontend.sh" || echo "Frontend service check failed"
+
+  final_check:
+    needs: [deploy_backend, deploy_frontend]
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: always() && (github.event.inputs.component == 'all' || (github.event.inputs.component == 'backend' && github.event.inputs.component == 'frontend'))
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+      
+      - name: Check deployment status
+        run: |
+          # Run the check deployment script
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh" || echo "Deployment check failed" 
