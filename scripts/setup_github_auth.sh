@@ -33,10 +33,16 @@ if [ -z "$GITHUB_REPO" ]; then
     exit 1
 fi
 
+# Print debug information
+echo "Debug information:"
+echo "GITHUB_USER: $GITHUB_USER"
+echo "GITHUB_REPO: $GITHUB_REPO"
+echo "GITHUB_TOKEN: [hidden for security]"
+
 # Configure Git to use the token for HTTPS authentication
 echo "Configuring Git credentials..."
 git config --global credential.helper store
-echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+echo "https://${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 chmod 600 ~/.git-credentials
 
 # Set Git user information
@@ -51,9 +57,11 @@ if [ -d "$APP_DIR" ]; then
     rm -rf "$APP_DIR"
 fi
 
-# Use the correct repository URL format
-REPO_URL="https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
-echo "Cloning repository from: $REPO_URL"
+# Use the token directly in the URL for authentication
+REPO_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
+echo "Cloning repository from: https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git (token hidden)"
+
+# Try cloning with token authentication
 git clone "$REPO_URL" "$APP_DIR"
 
 if [ $? -eq 0 ]; then
@@ -61,8 +69,18 @@ if [ $? -eq 0 ]; then
     echo "Repository cloned to $APP_DIR"
 else
     echo "❌ Failed to clone the repository. Please check your token and repository name."
-    echo "Attempted to clone from: $REPO_URL"
-    exit 1
+    echo "Attempted to clone from: https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git (token hidden)"
+    
+    # Try alternative authentication method
+    echo "Trying alternative authentication method..."
+    git clone "https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git" "$APP_DIR"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Alternative authentication method succeeded!"
+    else
+        echo "❌ All authentication methods failed."
+        exit 1
+    fi
 fi
 
 echo "GitHub authentication setup completed successfully!" 

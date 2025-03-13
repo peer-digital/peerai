@@ -20,6 +20,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
+      - name: Extract repository name
+        run: |
+          # Extract repository name from full repository path
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Full repository: ${{ github.repository }}"
+          echo "Repository name: $REPO_NAME"
+          # Export to GitHub environment for use in other steps
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+      
+      - name: Verify GitHub token
+        run: |
+          # Test GitHub API access with the token
+          echo "Testing GitHub API access..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/user)
+          echo "GitHub API HTTP Status: $HTTP_STATUS"
+          
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ GitHub token is valid"
+          else
+            echo "❌ GitHub token is invalid or has insufficient permissions"
+            echo "Please check your GH_PAT secret in the repository settings"
+            exit 1
+          fi
+          
+          # Test repository access
+          echo "Testing repository access..."
+          if curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/repos/${{ github.repository }} | grep -q "\"name\":"; then
+            echo "✅ Repository access confirmed"
+          else
+            echo "❌ Cannot access repository with the provided token"
+            echo "Please ensure the token has 'repo' scope and the repository exists"
+            exit 1
+          fi
+      
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/*.sh
@@ -70,11 +105,20 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GH_PAT,GITHUB_USERNAME,REPO_NAME
           script: |
-            GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh
+            # Debug environment variables
+            echo "GITHUB_USERNAME: ${GITHUB_USERNAME}"
+            echo "REPO_NAME: ${REPO_NAME}"
+            
+            # Use explicit environment variables
+            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_USERNAME}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
+            
+            # Verify GitHub authentication
+            chmod +x /home/ubuntu/scripts/verify_github_auth.sh
+            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_USERNAME}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/verify_github_auth.sh
         env:
           GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
           GITHUB_USERNAME: ${{ github.repository_owner }}
-          REPO_NAME: ${{ github.event.repository.name }}
+          REPO_NAME: ${{ env.REPO_NAME }}
       
       - name: Fix permissions
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
