@@ -1,17 +1,25 @@
 #!/bin/bash
 set -e
 
-echo "=== Database Migration Fix Tool ==="
-echo "Running on: $(hostname)"
+echo "=== Migration Fix Tool ==="
 echo "Date: $(date)"
 echo "User: $(whoami)"
 echo ""
 
+# Define variables
 APP_DIR="/home/ubuntu/peer-ai"
 BACKEND_DIR="$APP_DIR/backend"
-VENV_DIR="$BACKEND_DIR/venv"
 ALEMBIC_DIR="$BACKEND_DIR/alembic"
 VERSIONS_DIR="$ALEMBIC_DIR/versions"
+MIGRATION_FILE="$VERSIONS_DIR/16e5e60f9836_add_email_verification_fields.py"
+BACKUP_FILE="$MIGRATION_FILE.bak"
+
+# Check if we're on the VM
+if [[ "$(hostname)" != *"ubuntu"* ]] && [[ "$(whoami)" != "ubuntu" ]]; then
+    echo "This script must be run on the VM."
+    echo "Please connect to the VM first using ./scripts/connect_to_vm.sh"
+    exit 1
+fi
 
 # Check if the backend directory exists
 if [ ! -d "$BACKEND_DIR" ]; then
@@ -19,41 +27,29 @@ if [ ! -d "$BACKEND_DIR" ]; then
     exit 1
 fi
 
-# Activate virtual environment
-echo "Activating virtual environment..."
-source "$VENV_DIR/bin/activate"
-
-# Find the problematic migration file
-MIGRATION_FILE="$VERSIONS_DIR/16e5e60f9836_add_email_verification_fields.py"
-
+# Check if the migration file exists
 if [ ! -f "$MIGRATION_FILE" ]; then
-    echo "Looking for the migration file..."
-    MIGRATION_FILE=$(find "$VERSIONS_DIR" -type f -name "*_add_email_verification_fields.py")
-    
-    if [ -z "$MIGRATION_FILE" ]; then
-        echo "Error: Could not find the migration file for add_email_verification_fields"
-        exit 1
-    fi
-    
-    echo "Found migration file: $MIGRATION_FILE"
+    echo "Error: Migration file not found at $MIGRATION_FILE"
+    exit 1
 fi
 
-# Create a backup of the original file
-echo "Creating backup of the migration file..."
-cp "$MIGRATION_FILE" "${MIGRATION_FILE}.bak"
+# Create a backup of the original migration file
+echo "Creating backup of original migration file..."
+cp "$MIGRATION_FILE" "$BACKUP_FILE"
 
-# Create a new version of the migration file with the fix
-echo "Creating fixed version of the migration file..."
+# Modify the migration file to check if the constraint exists before dropping it
+echo "Modifying migration file to check if constraint exists before dropping it..."
 cat > "$MIGRATION_FILE" << 'EOF'
 """add_email_verification_fields
 
 Revision ID: 16e5e60f9836
 Revises: add_referral_system
-Create Date: 2025-03-13 21:00:00.000000
+Create Date: 2023-05-15 12:00:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 
 # revision identifiers, used by Alembic.
@@ -63,64 +59,66 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
-    # Check if constraint exists before trying to drop it
+def constraint_exists(constraint_name, table_name):
+    """Check if a constraint exists in the database."""
     conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    
-    # Get all constraints for the referrals table
-    constraints = []
-    try:
-        # This will fail if the table doesn't exist
-        constraints = inspector.get_unique_constraints('referrals')
-    except Exception as e:
-        print(f"Could not get constraints for referrals table: {e}")
-    
-    # Check if the constraint exists
-    constraint_exists = False
+    inspector = Inspector.from_engine(conn)
+    constraints = inspector.get_unique_constraints(table_name)
     for constraint in constraints:
-        if constraint.get('name') == 'uq_referrals_referee_id':
-            constraint_exists = True
-            break
+        if constraint['name'] == constraint_name:
+            return True
     
-    # Only drop the constraint if it exists
-    if constraint_exists:
-        print("Dropping constraint uq_referrals_referee_id")
-        op.drop_constraint('uq_referrals_referee_id', 'referrals', type_='unique')
-    else:
-        print("Constraint uq_referrals_referee_id does not exist, skipping")
+    # Also check in pg_constraint directly
+    result = conn.execute(sa.text(
+        "SELECT COUNT(*) FROM pg_constraint WHERE conname = :constraint_name"
+    ), {"constraint_name": constraint_name}).scalar()
     
-    # Add email verification fields
-    op.add_column('users', sa.Column('email_verified', sa.Boolean(), nullable=True, server_default='false'))
+    return result > 0
+
+
+def upgrade():
+    # Add email verification fields to users table
+    op.add_column('users', sa.Column('email_verified', sa.Boolean(), nullable=False, server_default='false'))
     op.add_column('users', sa.Column('verification_token', sa.String(length=255), nullable=True))
     op.add_column('users', sa.Column('verification_token_expires_at', sa.DateTime(), nullable=True))
+    
+    # Try to drop the unique constraint on referee_id if it exists
+    if constraint_exists('uq_referrals_referee_id', 'referrals'):
+        op.drop_constraint('uq_referrals_referee_id', 'referrals', type_='unique')
+        print("Dropped constraint 'uq_referrals_referee_id'")
+    else:
+        print("Constraint 'uq_referrals_referee_id' does not exist, skipping")
 
 
 def downgrade():
+    # Remove email verification fields from users table
     op.drop_column('users', 'verification_token_expires_at')
     op.drop_column('users', 'verification_token')
     op.drop_column('users', 'email_verified')
     
-    # Only add the constraint back in downgrade if we're sure it existed
-    # For safety, we'll skip this in the downgrade
+    # Add back the unique constraint on referee_id
+    op.create_unique_constraint('uq_referrals_referee_id', 'referrals', ['referee_id'])
 EOF
 
-echo "Fixed migration file created."
+echo "Migration file modified successfully."
 
-# Run migrations
-echo "Running migrations..."
+# Run the migration
+echo "Running the migration..."
 cd "$BACKEND_DIR"
+source venv/bin/activate
 alembic upgrade head
 
 if [ $? -eq 0 ]; then
-    echo "✅ Migrations completed successfully!"
-    # Remove the backup file if successful
-    rm -f "${MIGRATION_FILE}.bak"
+    echo "✅ Migration completed successfully!"
 else
-    echo "❌ Migrations failed. Restoring original migration file..."
-    mv "${MIGRATION_FILE}.bak" "$MIGRATION_FILE"
-    echo "Original migration file restored. Please check the database manually."
+    echo "❌ Migration failed."
+    echo "Restoring original migration file..."
+    cp "$BACKUP_FILE" "$MIGRATION_FILE"
     exit 1
 fi
 
-echo "=== Database Migration Fix Complete ===" 
+# Clean up
+echo "Cleaning up..."
+rm -f "$BACKUP_FILE"
+
+echo "=== Migration Fix Complete ===" 

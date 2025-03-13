@@ -154,7 +154,7 @@ jobs:
           use_insecure_cipher: true
           script: |
             chmod +x /home/ubuntu/scripts/fix_migration.sh
-            cd /home/ubuntu/peer-ai && ./scripts/fix_migration.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/fix_migration.sh
       
       - name: Test database connection
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -166,7 +166,9 @@ jobs:
           use_insecure_cipher: true
           script: |
             chmod +x /home/ubuntu/scripts/ssh_to_db.sh
-            cd /home/ubuntu/peer-ai && ./scripts/ssh_to_db.sh
+            chmod +x /home/ubuntu/scripts/test_db.sh
+            chmod +x /home/ubuntu/scripts/test_db_connection.py
+            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/test_db.sh
       
       - name: Initialize database
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
