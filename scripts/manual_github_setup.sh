@@ -34,6 +34,10 @@ if [ -z "$GITHUB_REPO" ]; then
     exit 1
 fi
 
+# Validate repository name (remove any trailing slashes or .git)
+GITHUB_REPO=$(echo "$GITHUB_REPO" | sed 's/\/.*$//' | sed 's/\.git$//')
+echo "Using repository name: $GITHUB_REPO"
+
 # Copy the GitHub authentication script to the VM
 echo "Copying GitHub authentication script to VM..."
 scp scripts/setup_github_auth.sh "$VM_USER@$VM_IP:/home/$VM_USER/"

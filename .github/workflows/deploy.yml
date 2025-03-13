@@ -31,8 +31,12 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
           GITHUB_USERNAME: ${{ github.repository_owner }}
-          GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+          GITHUB_REPOSITORY: ${{ github.repository_name }}
         run: |
+          # Extract repository name from full repository path
+          REPO_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)
+          echo "Repository name: $REPO_NAME"
+          
           # Make scripts executable
           chmod +x ./scripts/setup_vm.sh
           chmod +x ./scripts/setup_ssh.sh
@@ -54,7 +58,7 @@ jobs:
           ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/setup_ssh.sh"
           
           # Set up GitHub authentication
-          ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$GITHUB_REPOSITORY' /home/ubuntu/scripts/setup_github_auth.sh"
+          ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh"
           
           # Run deployment script
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/deploy.sh"

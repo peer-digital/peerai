@@ -54,6 +54,20 @@ Since GitHub requires two-factor authentication (2FA), you need to create a Pers
    - `SSH_PRIVATE_KEY`: The contents of the `PrivateKey.rsa` file
    - `GH_PAT`: The Personal Access Token you created in the previous step
 
+### 3. Verify Repository Information
+
+Before deploying, make sure you have the correct repository information:
+
+1. **Organization/Username**: Your GitHub username or organization name (e.g., `peer-digital`)
+2. **Repository Name**: The exact name of your repository (e.g., `peer-ai`)
+
+You can verify your repository information by running:
+```bash
+./scripts/diagnose_github_repo.sh
+```
+
+This script will check if the repository exists and is accessible.
+
 ## Deployment Methods
 
 ### Method 1: GitHub Actions (Recommended)
@@ -165,22 +179,32 @@ sudo systemctl restart postgresql
 1. **GitHub Authentication Issues**:
    - Check if your Personal Access Token is valid and has the correct permissions
    - Verify that the token has access to the repository
+   - Make sure you're using the correct repository name format (without duplicated organization names)
+   - Run the GitHub repository diagnosis script:
+     ```
+     GITHUB_USER=your_username GITHUB_REPO=peer-ai GITHUB_TOKEN=your_token ./scripts/diagnose_github_repo.sh
+     ```
    - Run the GitHub authentication setup script manually:
      ```
      GITHUB_TOKEN=your_token GITHUB_USER=your_username GITHUB_REPO=peer-ai ./scripts/setup_github_auth.sh
      ```
 
-2. **Backend service fails to start**:
+2. **Repository Not Found Error**:
+   - If you see an error like `fatal: repository 'https://github.com/username/username/repo.git/' not found`, it means there's a duplication in the repository path
+   - Make sure you're using the correct repository name without any duplicated parts
+   - The correct format is: `https://github.com/username/repo.git`
+
+3. **Backend service fails to start**:
    - Check logs: `sudo journalctl -u peerai.service -f`
    - Verify database connection: `psql -U peerai -d peerai_db -h localhost`
    - Check environment variables: `cat /home/ubuntu/peer-ai/backend/.env`
 
-3. **Frontend not loading**:
+4. **Frontend not loading**:
    - Check Nginx configuration: `sudo nginx -t`
    - Verify build files exist: `ls -la /home/ubuntu/peer-ai/frontend/admin-dashboard/dist`
    - Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
 
-4. **Database connection issues**:
+5. **Database connection issues**:
    - Check PostgreSQL status: `sudo systemctl status postgresql`
    - Verify database exists: `sudo -u postgres psql -c "\l"`
    - Check user permissions: `sudo -u postgres psql -c "\du"`

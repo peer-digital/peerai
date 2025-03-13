@@ -53,6 +53,56 @@ This guide explains how to set up GitHub authentication for deploying the PeerAI
    - **Value**: Paste the contents of the `PrivateKey.rsa` file
    - Click "Add secret"
 
+## Understanding GitHub Repository Formats
+
+When working with GitHub repositories, it's important to use the correct repository format to avoid errors.
+
+### Correct Repository Format
+
+The correct format for a GitHub repository URL is:
+
+```
+https://github.com/username/repository.git
+```
+
+Where:
+- `username` is your GitHub username or organization name (e.g., `peer-digital`)
+- `repository` is the name of your repository (e.g., `peer-ai`)
+
+### Common Mistakes
+
+1. **Duplicated username/organization**:
+   ```
+   https://github.com/username/username/repository.git
+   ```
+   This is incorrect and will result in a "repository not found" error.
+
+2. **Including subdirectories in the repository name**:
+   ```
+   https://github.com/username/repository/subdirectory.git
+   ```
+   This is incorrect. Subdirectories should be navigated after cloning.
+
+3. **Missing or extra slashes**:
+   ```
+   https://github.com/username//repository.git
+   ```
+   Extra or missing slashes can cause errors.
+
+### Diagnosing Repository Issues
+
+You can use the `diagnose_github_repo.sh` script to check if your repository exists and is accessible:
+
+```bash
+GITHUB_USER=your_username GITHUB_REPO=repository_name GITHUB_TOKEN=your_token ./scripts/diagnose_github_repo.sh
+```
+
+This script will:
+1. Clean up the repository name
+2. Check if the repository exists
+3. Test different URL formats
+4. List available repositories if the specified one is not found
+
 ## Setting Up GitHub Authentication on the VM
 
 ### Method 1: Using GitHub Actions (Recommended)
@@ -100,10 +150,13 @@ If you need to set up GitHub authentication manually:
      GITHUB_TOKEN=your_token GITHUB_USER=your_username GITHUB_REPO=peer-ai ./scripts/setup_github_auth.sh
      ```
 
-3. **"fatal: repository 'https://github.com/username/repo.git/' not found"**
-   - Verify that the repository exists and is spelled correctly
-   - Check that your token has access to the repository
-   - Ensure you're using the correct GitHub username and repository name
+3. **"fatal: repository 'https://github.com/username/username/repo.git/' not found"**
+   - This error indicates a duplicated username in the repository path
+   - Make sure you're using the correct repository name format: `https://github.com/username/repo.git`
+   - Run the diagnosis script to verify the repository exists and is accessible:
+     ```bash
+     GITHUB_USER=your_username GITHUB_REPO=peer-ai GITHUB_TOKEN=your_token ./scripts/diagnose_github_repo.sh
+     ```
 
 ### Testing GitHub Authentication
 

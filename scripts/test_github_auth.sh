@@ -23,19 +23,28 @@ if [ -z "$GITHUB_REPO" ]; then
     exit 1
 fi
 
+# Validate repository name (remove any trailing slashes or .git)
+GITHUB_REPO=$(echo "$GITHUB_REPO" | sed 's/\/.*$//' | sed 's/\.git$//')
+echo "Using repository name: $GITHUB_REPO"
+
 # Create a temporary directory for testing
 TEST_DIR="/tmp/github-auth-test-$(date +%s)"
 mkdir -p "$TEST_DIR"
 cd "$TEST_DIR"
 
+# Use the correct repository URL format
+REPO_URL="https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
+echo "Cloning repository from: $REPO_URL"
+
 echo "Cloning repository to test authentication..."
-git clone "https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
+git clone "$REPO_URL"
 
 if [ $? -eq 0 ]; then
     echo "✅ GitHub authentication is working correctly!"
     echo "Repository cloned to $TEST_DIR/${GITHUB_REPO}"
 else
     echo "❌ GitHub authentication failed. Please check your credentials."
+    echo "Attempted to clone from: $REPO_URL"
     exit 1
 fi
 

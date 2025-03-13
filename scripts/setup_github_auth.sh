@@ -51,13 +51,17 @@ if [ -d "$APP_DIR" ]; then
     rm -rf "$APP_DIR"
 fi
 
-git clone "https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git" "$APP_DIR"
+# Use the correct repository URL format
+REPO_URL="https://github.com/${GITHUB_USER}/${GITHUB_REPO}.git"
+echo "Cloning repository from: $REPO_URL"
+git clone "$REPO_URL" "$APP_DIR"
 
 if [ $? -eq 0 ]; then
     echo "✅ GitHub authentication setup completed successfully!"
     echo "Repository cloned to $APP_DIR"
 else
     echo "❌ Failed to clone the repository. Please check your token and repository name."
+    echo "Attempted to clone from: $REPO_URL"
     exit 1
 fi
 
