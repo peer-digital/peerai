@@ -28,6 +28,10 @@ jobs:
           ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
       
       - name: Deploy to VM
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}  # @note: Personal Access Token for GitHub authentication
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.event.repository.name }}
         run: |
           # Make scripts executable
           chmod +x ./scripts/setup_vm.sh
@@ -35,6 +39,7 @@ jobs:
           chmod +x ./scripts/deploy.sh
           chmod +x ./scripts/restore_db.sh
           chmod +x ./scripts/check_deployment.sh
+          chmod +x ./scripts/setup_github_auth.sh
           
           # Transfer deployment scripts
           scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
@@ -48,12 +53,8 @@ jobs:
           # Set up SSH keys
           ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/setup_ssh.sh"
           
-          # Clone/update repository on VM
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && git pull || git clone https://github.com/${{ github.repository }}.git /home/ubuntu/peer-ai"
-          
-          # Copy scripts to repository
-          ssh ubuntu@158.174.210.91 "mkdir -p /home/ubuntu/peer-ai/scripts"
-          ssh ubuntu@158.174.210.91 "cp /home/ubuntu/scripts/* /home/ubuntu/peer-ai/scripts/"
+          # Set up GitHub authentication
+          ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GITHUB_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$GITHUB_REPOSITORY' /home/ubuntu/scripts/setup_github_auth.sh"
           
           # Run deployment script
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/deploy.sh"
