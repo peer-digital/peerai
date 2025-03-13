@@ -20,69 +20,105 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Create SSH key
+      - name: Make scripts executable
         run: |
-          mkdir -p ~/.ssh
-          # Ensure the SSH key is properly formatted with newlines
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          # Add verbose flag for debugging
-          ssh-keyscan -v -H 158.174.210.91 >> ~/.ssh/known_hosts
-          # Test SSH connection with verbose output
-          ssh -v -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/id_rsa ubuntu@158.174.210.91 echo "SSH connection successful"
+          chmod +x ./scripts/*.sh
       
-      - name: Deploy to VM
+      - name: Transfer scripts via SCP
+        uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts/,deployment/"
+          target: "/home/ubuntu/"
+          strip_components: 0
+      
+      - name: Run diagnostic script
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            chmod +x /home/ubuntu/scripts/diagnose_ssh.sh
+            /home/ubuntu/scripts/diagnose_ssh.sh
+      
+      - name: Setup VM if needed
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            [ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh
+      
+      - name: Setup SSH keys
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            /home/ubuntu/scripts/setup_ssh.sh
+      
+      - name: Setup GitHub authentication
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GH_PAT,GITHUB_USERNAME,REPO_NAME
+          script: |
+            GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh
         env:
           GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
           GITHUB_USERNAME: ${{ github.repository_owner }}
-          GITHUB_REPOSITORY: ${{ github.repository_name }}
-        run: |
-          # Extract repository name from full repository path
-          REPO_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)
-          echo "Repository name: $REPO_NAME"
-          
-          # Make scripts executable
-          chmod +x ./scripts/setup_vm.sh
-          chmod +x ./scripts/setup_ssh.sh
-          chmod +x ./scripts/deploy.sh
-          chmod +x ./scripts/restore_db.sh
-          chmod +x ./scripts/check_deployment.sh
-          chmod +x ./scripts/setup_github_auth.sh
-          chmod +x ./scripts/fix_permissions.sh
-          chmod +x ./scripts/init_db.sh
-          chmod +x ./scripts/init_db_auto.sh
-          chmod +x ./scripts/debug_migrations.sh
-          chmod +x ./scripts/fix_github_actions.sh
-          chmod +x ./scripts/fix_frontend_build.sh
-          
-          # Transfer deployment scripts
-          scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
-          
-          # Transfer scripts
-          scp -r ./scripts ubuntu@158.174.210.91:/home/ubuntu/
-          
-          # Run setup script if this is the first deployment
-          ssh ubuntu@158.174.210.91 "[ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh"
-          
-          # Set up SSH keys
-          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/setup_ssh.sh"
-          
-          # Set up GitHub authentication
-          ssh ubuntu@158.174.210.91 "GITHUB_TOKEN='$GH_PAT' GITHUB_USER='$GITHUB_USERNAME' GITHUB_REPO='$REPO_NAME' /home/ubuntu/scripts/setup_github_auth.sh"
-          
-          # Fix permissions
-          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/fix_permissions.sh"
-          
-          # Run deployment script
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/deploy.sh" || echo "Deployment script failed, continuing with fixes"
-          
-          # Run database initialization script (non-interactive)
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh" || echo "Database initialization failed, continuing with fixes"
-          
-          # Run debug and fix scripts if needed
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh" || echo "Debug migrations script failed, continuing with fixes"
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh" || echo "Fix GitHub Actions script failed, continuing with fixes"
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh" || echo "Fix frontend build script failed, continuing with checks"
-          
-          # Check deployment status
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh" 
+          REPO_NAME: ${{ github.event.repository.name }}
+      
+      - name: Fix permissions
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            /home/ubuntu/scripts/fix_permissions.sh
+      
+      - name: Run deployment script
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
+      
+      - name: Initialize database
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh
+      
+      - name: Run fix scripts
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh || echo "Debug migrations script failed, continuing"
+            cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh || echo "Fix GitHub Actions script failed, continuing"
+            cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh || echo "Fix frontend build script failed, continuing"
+      
+      - name: Check deployment status
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh 
