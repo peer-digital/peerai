@@ -20,15 +20,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Extract repository name
+      - name: Set default repository values
+        run: |
+          # Set hardcoded values for the correct repository
+          echo "GITHUB_REPO_OWNER=peer-digital" >> $GITHUB_ENV
+          echo "REPO_NAME=peerai" >> $GITHUB_ENV
+          echo "Using hardcoded repository: peer-digital/peerai"
+      
+      - name: Extract repository name (for reference only)
         run: |
           # Extract repository name from full repository path
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
           echo "Repository owner: ${{ github.repository_owner }}"
           echo "Full repository: ${{ github.repository }}"
           echo "Repository name: $REPO_NAME"
-          # Export to GitHub environment for use in other steps
-          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          echo "NOTE: Using hardcoded repository peer-digital/peerai for deployment"
       
       - name: Verify GitHub token
         run: |
@@ -45,9 +51,11 @@ jobs:
             exit 1
           fi
           
-          # Test repository access
+          # Test repository access with the hardcoded repository path
           echo "Testing repository access..."
-          if curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" https://api.github.com/repos/${{ github.repository }} | grep -q "\"name\":"; then
+          REPO_PATH="${{ env.GITHUB_REPO_OWNER }}/${{ env.REPO_NAME }}"
+          echo "Checking access to repository: $REPO_PATH"
+          if curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
             echo "✅ Repository access confirmed"
           else
             echo "❌ Cannot access repository with the provided token"
@@ -103,21 +111,21 @@ jobs:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GH_PAT,GITHUB_USERNAME,REPO_NAME
+          envs: GH_PAT,GITHUB_REPO_OWNER,REPO_NAME
           script: |
             # Debug environment variables
-            echo "GITHUB_USERNAME: ${GITHUB_USERNAME}"
+            echo "GITHUB_REPO_OWNER: ${GITHUB_REPO_OWNER}"
             echo "REPO_NAME: ${REPO_NAME}"
             
-            # Use explicit environment variables
-            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_USERNAME}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
+            # Use explicit environment variables with the correct repository information
+            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
             
             # Verify GitHub authentication
             chmod +x /home/ubuntu/scripts/verify_github_auth.sh
-            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_USERNAME}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/verify_github_auth.sh
+            GITHUB_TOKEN="${GH_PAT}" GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/verify_github_auth.sh
         env:
           GH_PAT: ${{ secrets.GH_PAT }}  # @note: Personal Access Token for GitHub authentication
-          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_REPO_OWNER: ${{ env.GITHUB_REPO_OWNER }}
           REPO_NAME: ${{ env.REPO_NAME }}
       
       - name: Fix permissions
