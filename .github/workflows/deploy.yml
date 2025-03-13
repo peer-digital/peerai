@@ -1,0 +1,62 @@
+name: Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts
+      
+      - name: Deploy to VM
+        run: |
+          # Make scripts executable
+          chmod +x ./scripts/setup_vm.sh
+          chmod +x ./scripts/setup_ssh.sh
+          chmod +x ./scripts/deploy.sh
+          chmod +x ./scripts/restore_db.sh
+          chmod +x ./scripts/check_deployment.sh
+          
+          # Transfer deployment scripts
+          scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
+          
+          # Transfer scripts
+          scp -r ./scripts ubuntu@158.174.210.91:/home/ubuntu/
+          
+          # Run setup script if this is the first deployment
+          ssh ubuntu@158.174.210.91 "[ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh"
+          
+          # Set up SSH keys
+          ssh ubuntu@158.174.210.91 "/home/ubuntu/scripts/setup_ssh.sh"
+          
+          # Clone/update repository on VM
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && git pull || git clone https://github.com/${{ github.repository }}.git /home/ubuntu/peer-ai"
+          
+          # Copy scripts to repository
+          ssh ubuntu@158.174.210.91 "mkdir -p /home/ubuntu/peer-ai/scripts"
+          ssh ubuntu@158.174.210.91 "cp /home/ubuntu/scripts/* /home/ubuntu/peer-ai/scripts/"
+          
+          # Run deployment script
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/deploy.sh"
+          
+          # Check deployment status
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh" 
