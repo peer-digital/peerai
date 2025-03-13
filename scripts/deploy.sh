@@ -48,21 +48,20 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Check if backup file exists and fix permissions if needed
-if [ -f "$APP_DIR/server_dump.backup" ]; then
-    echo "Backup file found, setting correct permissions..."
-    sudo chown ubuntu:ubuntu "$APP_DIR/server_dump.backup"
-    sudo chmod 644 "$APP_DIR/server_dump.backup"
-    
-    echo "Restoring database from backup..."
-    # Make the restore script executable
-    chmod +x "$APP_DIR/scripts/restore_db.sh"
-    # Run the restore script
-    "$APP_DIR/scripts/restore_db.sh"
-else
-    echo "No backup file found, running migrations instead..."
-    # Run database migrations
-    python -m alembic upgrade head
+# Skip backup restoration and always use migrations
+echo "Running database migrations..."
+python -m alembic upgrade head
+
+# Option to initialize database with basic data
+if [ -f "$APP_DIR/scripts/init_db.sh" ]; then
+    read -p "Do you want to initialize the database with basic data? (y/n): " init_db
+    if [[ $init_db == "y" || $init_db == "Y" ]]; then
+        echo "Initializing database with basic data..."
+        chmod +x "$APP_DIR/scripts/init_db.sh"
+        "$APP_DIR/scripts/init_db.sh"
+    else
+        echo "Skipping database initialization."
+    fi
 fi
 
 # Create systemd service file

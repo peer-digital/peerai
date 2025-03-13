@@ -78,6 +78,13 @@ This script will check if the repository exists and is accessible.
 4. Select "production" as the environment
 5. Click "Run workflow"
 
+The GitHub Actions workflow will automatically:
+- Set up the VM if it's the first deployment
+- Deploy the application
+- Run database migrations
+- Initialize the database with a default admin user (admin@example.com / password)
+- Check the deployment status
+
 ### Method 2: Manual Deployment
 
 1. **SSH into the VM**:
@@ -133,16 +140,42 @@ cd /home/ubuntu/peer-ai
 
 Backups are stored in `/home/ubuntu/peer-ai/backups/`.
 
-### Restore
+### Database Initialization
 
-To restore from a backup:
+The deployment process uses Alembic migrations to initialize and update the database schema. The database backup restoration has been disabled due to permission issues.
+
+During deployment, you will be prompted if you want to initialize the database with basic data, including a default admin user. This is handled by the `init_db.sh` script.
+
+You can also manually run the database initialization script:
 
 ```
 cd /home/ubuntu/peer-ai
-./scripts/restore_db.sh
+chmod +x scripts/init_db.sh
+./scripts/init_db.sh
 ```
 
-By default, this will restore from the latest backup. To restore from a specific backup, edit the script and update the `BACKUP_FILE` variable.
+This will create a default admin user with the following credentials:
+- Email: admin@example.com
+- Password: password
+
+**Note**: You should change this password immediately after first login.
+
+If you need to manually initialize the database with specific data:
+
+1. Connect to the database:
+   ```
+   sudo -u postgres psql -d peerai_db
+   ```
+
+2. Run SQL commands to insert your data:
+   ```sql
+   INSERT INTO your_table (column1, column2) VALUES ('value1', 'value2');
+   ```
+
+3. Or use a SQL script:
+   ```
+   sudo -u postgres psql -d peerai_db -f your_script.sql
+   ```
 
 ## Monitoring and Maintenance
 
