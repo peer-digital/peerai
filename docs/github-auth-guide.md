@@ -43,7 +43,7 @@ This guide explains how to set up GitHub authentication for deploying the PeerAI
 3. **Add the secret**
    - In the left sidebar, click on "Secrets and variables" > "Actions"
    - Click "New repository secret"
-   - **Name**: `GITHUB_PAT`
+   - **Name**: `GH_PAT`
    - **Value**: Paste the Personal Access Token you created
    - Click "Add secret"
 

@@ -52,7 +52,7 @@ Since GitHub requires two-factor authentication (2FA), you need to create a Pers
 2. Navigate to Settings > Secrets and variables > Actions
 3. Add the following secrets:
    - `SSH_PRIVATE_KEY`: The contents of the `PrivateKey.rsa` file
-   - `GITHUB_PAT`: The Personal Access Token you created in the previous step
+   - `GH_PAT`: The Personal Access Token you created in the previous step
 
 ## Deployment Methods
 
