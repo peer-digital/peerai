@@ -49,6 +49,7 @@ jobs:
           chmod +x ./scripts/init_db_auto.sh
           chmod +x ./scripts/debug_migrations.sh
           chmod +x ./scripts/fix_github_actions.sh
+          chmod +x ./scripts/fix_frontend_build.sh
           
           # Transfer deployment scripts
           scp -r ./deployment ubuntu@158.174.210.91:/home/ubuntu/
@@ -76,7 +77,8 @@ jobs:
           
           # Run debug and fix scripts if needed
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh" || echo "Debug migrations script failed, continuing with fixes"
-          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh" || echo "Fix GitHub Actions script failed, continuing with checks"
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh" || echo "Fix GitHub Actions script failed, continuing with fixes"
+          ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh" || echo "Fix frontend build script failed, continuing with checks"
           
           # Check deployment status
           ssh ubuntu@158.174.210.91 "cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh" 
