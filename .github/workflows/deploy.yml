@@ -67,6 +67,18 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
+      - name: Ensure scripts are executable
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
+          script: |
+            chmod +x /home/ubuntu/scripts/*.sh
+            echo "Made all scripts executable"
+      
       - name: Run diagnostic script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
@@ -156,6 +168,18 @@ jobs:
             chmod +x /home/ubuntu/scripts/fix_migration.sh
             cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/fix_migration.sh
       
+      - name: Fix constraint issue
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
+          script: |
+            chmod +x /home/ubuntu/scripts/fix_constraint_issue.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/fix_constraint_issue.sh || echo "Constraint fix script failed, but continuing deployment"
+      
       - name: Test database connection
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
@@ -169,6 +193,18 @@ jobs:
             chmod +x /home/ubuntu/scripts/test_db.sh
             chmod +x /home/ubuntu/scripts/test_db_connection.py
             cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/test_db.sh
+      
+      - name: Run pre-migration checks
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
+          script: |
+            chmod +x /home/ubuntu/scripts/pre_migration_checker.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/pre_migration_checker.sh || echo "Pre-migration check failed, but continuing deployment"
       
       - name: Initialize database
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
