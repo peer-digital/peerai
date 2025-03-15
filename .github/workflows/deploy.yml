@@ -51,17 +51,45 @@ jobs:
             exit 1
           fi
       
+      # Setup Node.js for frontend build
+      - name: Setup Node.js
+        uses: actions/setup-node@v3  # @note: GitHub's official Node.js setup action - do not change URL
+        with:
+          node-version: '18'  # @note: Node.js version - adjust if your project requires a different version
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      # Install frontend dependencies
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      # Build frontend
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+          echo "Frontend build completed"
+      
+      # Create tarball of the built frontend
+      - name: Create frontend tarball
+        run: |
+          cd frontend
+          tar -czf frontend-build.tar.gz build/
+          echo "Created frontend tarball"
+      
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/*.sh
       
-      - name: Transfer scripts via SCP
+      - name: Transfer scripts and frontend tarball via SCP
         uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
         with:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts/,deployment/"
+          source: "scripts/,deployment/,frontend/frontend-build.tar.gz"
           target: "/home/ubuntu/"
           strip_components: 0
           # Disable host key checking to handle host key changes
@@ -78,6 +106,21 @@ jobs:
           script: |
             chmod +x /home/ubuntu/scripts/*.sh
             echo "Made all scripts executable"
+      
+      # Deploy frontend tarball
+      - name: Deploy frontend tarball
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Disable host key checking to handle host key changes
+          use_insecure_cipher: true
+          script: |
+            echo "Deploying frontend build from tarball..."
+            mkdir -p /home/ubuntu/peer-ai/frontend/build
+            tar -xzf /home/ubuntu/frontend/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
+            echo "Frontend deployment completed"
       
       - name: Run comprehensive fix before deployment
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -158,7 +201,8 @@ jobs:
           script: |
             /home/ubuntu/scripts/fix_permissions.sh
       
-      - name: Run deployment script
+      # Skip backend deployment if we're using the pre-built frontend
+      - name: Run deployment script (backend only)
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
           host: 158.174.210.91
@@ -167,12 +211,12 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            cd /home/ubuntu/peer-ai && ./scripts/deploy.sh || {
+            cd /home/ubuntu/peer-ai && SKIP_FRONTEND_BUILD=true ./scripts/deploy.sh || {
               echo "Deployment script failed. Attempting emergency database fix..."
               chmod +x /home/ubuntu/scripts/comprehensive_fix.sh
               cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/comprehensive_fix.sh
               echo "Trying deployment again after emergency fix..."
-              cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
+              cd /home/ubuntu/peer-ai && SKIP_FRONTEND_BUILD=true ./scripts/deploy.sh
             }
       
       - name: Fix database migrations
