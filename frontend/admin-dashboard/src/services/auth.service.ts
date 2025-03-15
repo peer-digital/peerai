@@ -175,7 +175,7 @@ class AuthService {
     // First clear local state
     this.clearAuthState();
     // Then attempt to clear server session
-    api.post('/api/v1/auth/logout').catch((error) => {
+    api.post('/v1/auth/logout').catch((error) => {
       // Ignore 401 errors as they're expected if token is already invalid
       if (error.response?.status !== 401) {
         console.warn('Error during logout:', error);

@@ -122,9 +122,9 @@ const Settings: React.FC = () => {
 
   // Fetch current settings
   const { data: settings, isLoading, error, refetch } = useQuery<SystemSettings>({
-    queryKey: ['system-settings'],
+    queryKey: ['settings'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/admin/settings');
+      const response = await api.get('/v1/admin/settings');
       return response.data;
     },
   });
@@ -139,7 +139,7 @@ const Settings: React.FC = () => {
   // Update settings
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: SystemSettings) => {
-      await api.put('/api/v1/admin/settings', data);
+      await api.put('/v1/admin/settings', data);
     },
     onSuccess: () => {
       toast.success('Settings updated successfully');

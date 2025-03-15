@@ -97,7 +97,7 @@ const Users: React.FC = () => {
   const { data: users, isLoading, error } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/admin/users');
+      const response = await api.get('/v1/admin/users');
       return response.data;
     },
   });
@@ -113,7 +113,7 @@ const Users: React.FC = () => {
   // Update user
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: string; data: EditUserData }) => {
-      await api.patch(`/api/v1/admin/users/${userId}`, data);
+      await api.patch(`/v1/admin/users/${userId}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -128,7 +128,7 @@ const Users: React.FC = () => {
   // Toggle user status
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, action }: { userId: string; action: 'block' | 'unblock' }) => {
-      await api.post(`/api/v1/admin/users/${userId}/${action}`);
+      await api.post(`/v1/admin/users/${userId}/${action}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
