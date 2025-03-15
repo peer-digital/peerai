@@ -409,18 +409,18 @@ jobs:
               cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh || echo "Database initialization still failed, continuing deployment"
             }
       
-      - name: Run fix scripts
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh || echo "Debug migrations script failed, continuing"
-            cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh || echo "Fix GitHub Actions script failed, continuing"
-            cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh || echo "Fix frontend build script failed, continuing"
+      # - name: Run fix scripts
+      #   uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+      #   with:
+      #     host: 158.174.210.91
+      #     username: ubuntu
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     # Disable host key checking to handle host key changes
+      #     use_insecure_cipher: true
+      #     script: |
+      #       cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh || echo "Debug migrations script failed, continuing"
+      #       cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh || echo "Fix GitHub Actions script failed, continuing"
+      #       cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh || echo "Fix frontend build script failed, continuing"
       
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
