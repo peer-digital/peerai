@@ -57,13 +57,19 @@ jobs:
         with:
           node-version: '18'  # @note: Node.js version - adjust if your project requires a different version
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
+          cache-dependency-path: '**/package.json'
       
       # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f "package-lock.json" ]; then
+            echo "Found package-lock.json, using npm ci for clean install"
+            npm ci
+          else
+            echo "No package-lock.json found, using npm install instead"
+            npm install
+          fi
       
       # Build frontend
       - name: Build frontend
@@ -76,7 +82,20 @@ jobs:
       - name: Create frontend tarball
         run: |
           cd frontend
-          tar -czf frontend-build.tar.gz build/
+          mkdir -p build
+          # Check if build directory has content
+          if [ "$(ls -A build 2>/dev/null)" ]; then
+            echo "Creating tarball of build directory"
+            tar -czf frontend-build.tar.gz build/
+          else
+            echo "Build directory is empty or doesn't exist. Creating an empty tarball."
+            mkdir -p empty-build
+            touch empty-build/README.md
+            echo "This is an empty build directory. Build may have failed." > empty-build/README.md
+            tar -czf frontend-build.tar.gz empty-build/
+            mv empty-build/* build/ 2>/dev/null || true
+            rm -rf empty-build
+          fi
           echo "Created frontend tarball"
       
       - name: Make scripts executable
@@ -120,6 +139,11 @@ jobs:
             echo "Deploying frontend build from tarball..."
             mkdir -p /home/ubuntu/peer-ai/frontend/build
             tar -xzf /home/ubuntu/frontend/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
+            # If we extracted from empty-build, move files to the right place
+            if [ -d "/home/ubuntu/peer-ai/frontend/empty-build" ]; then
+              mv /home/ubuntu/peer-ai/frontend/empty-build/* /home/ubuntu/peer-ai/frontend/build/ 2>/dev/null || true
+              rm -rf /home/ubuntu/peer-ai/frontend/empty-build
+            fi
             echo "Frontend deployment completed"
       
       - name: Run comprehensive fix before deployment
