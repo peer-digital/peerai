@@ -14,6 +14,10 @@ DB_PASSWORD="peerai_password"
 SERVER_IP="158.174.210.91" # @note: Production server IP address
 ENVIRONMENT="production" # @note: Set to "development" for development environment
 
+# Check if we should skip Nginx configuration
+SKIP_NGINX_CONFIG=${SKIP_NGINX_CONFIG:-false}
+echo "SKIP_NGINX_CONFIG flag is set to: ${SKIP_NGINX_CONFIG}"
+
 echo "Starting deployment process..."
 
 # Create logs directory
@@ -631,192 +635,30 @@ SyslogIdentifier=peerai
 WantedBy=multi-user.target
 EOL
 
+# Configure backend service
+echo "Configuring backend service..."
+sudo systemctl daemon-reload
+sudo systemctl enable peerai.service
+sudo systemctl restart peerai.service
+
 # Deploy frontend (frontend is pre-built and extracted by GitHub Actions)
 echo "Configuring frontend..."
 cd "$FRONTEND_DIR"
 
 # Set proper permissions for frontend files
 echo "Setting proper permissions for frontend files..."
-sudo mkdir -p "$FRONTEND_DIR/dist"
-
-# Ensure Nginx can access all parent directories
-sudo chmod 755 /home
-sudo chmod 755 /home/ubuntu
-sudo chmod 755 "$APP_DIR"
-sudo chmod 755 "$FRONTEND_DIR"
-
-# Set ownership and permissions for the dist directory
-sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-sudo chmod -R 755 "$FRONTEND_DIR/dist"
-
-# Add nginx user to ubuntu group
-sudo usermod -a -G ubuntu www-data
-
-# Add ubuntu to www-data group
-sudo usermod -a -G www-data ubuntu
-
-# Fix SELinux context if applicable
-if command -v sestatus >/dev/null 2>&1; then
-    echo "Setting SELinux context for Nginx files..."
-    sudo chcon -R -t httpd_sys_content_t "$FRONTEND_DIR/dist" || echo "SELinux context setting failed, but continuing..."
-fi
-
-# Double-check permissions with ls -Z if available
-if command -v ls >/dev/null 2>&1 && ls --help | grep -q -- '-Z'; then
-    echo "Checking SELinux context for frontend files..."
-    ls -laZ "$FRONTEND_DIR/dist" || echo "SELinux context check failed, but continuing..."
-fi
-
-# Verify permissions
-echo "Verifying frontend permissions..."
-ls -la "$FRONTEND_DIR/dist"
-sudo -u www-data test -r "$FRONTEND_DIR/dist/index.html" && echo "✅ www-data can read index.html" || echo "❌ www-data CANNOT read index.html"
-sudo -u nginx test -r "$FRONTEND_DIR/dist/index.html" 2>/dev/null && echo "✅ nginx user can read index.html" || echo "❌ nginx user cannot read index.html (this is normal if using www-data)"
-
-# Test if www-data can access the directory
-echo "Testing www-data access to frontend directory..."
-sudo -u www-data test -r "$FRONTEND_DIR/dist" && echo "www-data can read the directory" || echo "www-data CANNOT read the directory"
-
-# Check if frontend files exist
-echo "Checking frontend files..."
-if [ ! -f "$FRONTEND_DIR/dist/index.html" ]; then
-    echo "Frontend index.html not found. Checking for frontend build..."
-    
-    # Check if we have a frontend build in the deployment package
-    if [ -d "/home/ubuntu/deployment/frontend" ]; then
-        echo "Found frontend build in deployment package. Copying..."
-        sudo mkdir -p "$FRONTEND_DIR/dist"
-        sudo cp -r /home/ubuntu/deployment/frontend/* "$FRONTEND_DIR/dist/"
-        sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-        sudo chmod -R 755 "$FRONTEND_DIR/dist"
-    else
-        echo "No frontend build found. Creating a placeholder index.html..."
-        sudo mkdir -p "$FRONTEND_DIR/dist"
-        sudo tee "$FRONTEND_DIR/dist/index.html" > /dev/null << EOL
-<!DOCTYPE html>
-<html>
-<head>
-    <title>PeerAI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f5f5f5;
-        }
-        .container {
-            text-align: center;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 600px;
-        }
-        h1 {
-            color: #333;
-        }
-        p {
-            color: #666;
-            line-height: 1.6;
-        }
-        .api-status {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>PeerAI Platform</h1>
-        <p>The frontend is currently being deployed. Please check back later.</p>
-        <div class="api-status">
-            <p>API Status: <span id="api-status">Checking...</span></p>
-        </div>
-    </div>
-    <script>
-        // Check API status
-        fetch('/health')
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('api-status').textContent = 'Online';
-                    document.getElementById('api-status').style.color = 'green';
-                } else {
-                    document.getElementById('api-status').textContent = 'Offline';
-                    document.getElementById('api-status').style.color = 'red';
-                }
-            })
-            .catch(error => {
-                document.getElementById('api-status').textContent = 'Offline';
-                document.getElementById('api-status').style.color = 'red';
-            });
-    </script>
-</body>
-</html>
-EOL
-        sudo chown www-data:www-data "$FRONTEND_DIR/dist/index.html"
-        sudo chmod 644 "$FRONTEND_DIR/dist/index.html"
-    fi
-fi
-
-# Fix permissions BEFORE restarting Nginx
-echo "Fixing permissions for Nginx..."
-# First set ownership to ubuntu user
-sudo chown -R ubuntu:ubuntu "$APP_DIR"
-
-# Then fix frontend permissions specifically for Nginx
-echo "Fixing Nginx permissions for frontend files..."
-sudo chmod -R 755 "$FRONTEND_DIR"
-sudo chmod -R 755 "$FRONTEND_DIR/dist"
-sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-
-# Ensure Nginx user can access all parent directories
-sudo chmod 755 /home
-sudo chmod 755 /home/ubuntu
-sudo chmod 755 "$APP_DIR"
-
-# Add nginx to ubuntu group
-sudo usermod -a -G ubuntu www-data
-
-# Add ubuntu to www-data group
-sudo usermod -a -G www-data ubuntu
-
-# Fix SELinux context if applicable
-if command -v sestatus >/dev/null 2>&1; then
-    echo "Setting SELinux context for Nginx files..."
-    sudo chcon -R -t httpd_sys_content_t "$FRONTEND_DIR/dist" || echo "SELinux context setting failed, but continuing..."
-fi
-
-# Double-check permissions with ls -Z if available
-if command -v ls >/dev/null 2>&1 && ls --help | grep -q -- '-Z'; then
-    echo "Checking SELinux context for frontend files..."
-    ls -laZ "$FRONTEND_DIR/dist" || echo "SELinux context check failed, but continuing..."
-fi
-
-# Verify permissions
-echo "Verifying frontend permissions..."
-ls -la "$FRONTEND_DIR/dist"
-sudo -u www-data test -r "$FRONTEND_DIR/dist/index.html" && echo "✅ www-data can read index.html" || echo "❌ www-data CANNOT read index.html"
-sudo -u nginx test -r "$FRONTEND_DIR/dist/index.html" 2>/dev/null && echo "✅ nginx user can read index.html" || echo "❌ nginx user cannot read index.html (this is normal if using www-data)"
-
-# CRITICAL FIX: Make sure nginx process can access the files
-echo "Ensuring nginx process has access to frontend files..."
 sudo chmod -R 755 "$FRONTEND_DIR/dist"
 sudo find "$FRONTEND_DIR/dist" -type f -exec chmod 644 {} \;
 sudo find "$FRONTEND_DIR/dist" -type d -exec chmod 755 {} \;
 sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
 
-# Make sure nginx user is in www-data group
-sudo usermod -a -G www-data nginx 2>/dev/null || echo "nginx user not found, using www-data"
-
-# Create nginx configuration
-echo "Creating nginx configuration..."
-sudo tee "$NGINX_CONF" > /dev/null << EOL
+# Only configure Nginx if we're not skipping it
+if [ "$SKIP_NGINX_CONFIG" = "false" ]; then
+    echo "Configuring Nginx (SKIP_NGINX_CONFIG is false)..."
+    
+    # Create nginx configuration
+    echo "Creating nginx configuration..."
+    sudo tee "$NGINX_CONF" > /dev/null << EOL
 server {
     listen 80 default_server;
     server_name _;
@@ -830,47 +672,21 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
-    # Direct match for login endpoint
-    location = /api/v1/auth/login {
-        proxy_pass http://localhost:8000/api/v1/auth/login;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-
-    # Direct match for API v1 endpoint (without trailing slash)
-    location = /api/v1 {
-        proxy_pass http://localhost:8000/api/v1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-
-    # API v1 auth endpoints - general
-    location ^~ /api/v1/auth/ {
-        proxy_pass http://localhost:8000/api/v1/auth/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-
     # API v1 endpoints
     location ^~ /api/v1/ {
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        
+        # Handle OPTIONS requests
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        
         proxy_pass http://localhost:8000/api/v1/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -884,18 +700,20 @@ server {
 
     # Backend API endpoints (fallback for non-versioned endpoints)
     location /api/ {
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        
+        # Handle OPTIONS requests
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        
         proxy_pass http://localhost:8000/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-    }
-
-    # Auth endpoints (direct access)
-    location /auth/ {
-        proxy_pass http://localhost:8000/auth/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -906,6 +724,19 @@ server {
 
     # Health check endpoint
     location /health {
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        
+        # Handle OPTIONS requests
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        
         proxy_pass http://localhost:8000/health;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -919,393 +750,27 @@ server {
 }
 EOL
 
-# Enable nginx site if not already enabled
-if [ ! -f "$NGINX_ENABLED" ]; then
-    sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
-fi
-
-# Disable default Nginx site if it exists
-if [ -f "/etc/nginx/sites-enabled/default" ]; then
-    echo "Disabling default Nginx site..."
-    sudo rm -f /etc/nginx/sites-enabled/default
-fi
-
-# CRITICAL FIX: Make sure nginx can read the configuration
-sudo chmod 644 "$NGINX_CONF"
-sudo chown root:root "$NGINX_CONF"
-
-# CRITICAL FIX: Fix permissions for Nginx
-echo "Applying critical permission fixes for Nginx..."
-# Fix ownership of frontend files
-sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-sudo chmod -R 755 "$FRONTEND_DIR/dist"
-sudo find "$FRONTEND_DIR/dist" -type f -exec chmod 644 {} \;
-sudo find "$FRONTEND_DIR/dist" -type d -exec chmod 755 {} \;
-
-# Fix directory permissions all the way up
-sudo chmod 755 /home
-sudo chmod 755 /home/ubuntu
-sudo chmod 755 "$APP_DIR"
-sudo chmod 755 "$FRONTEND_DIR"
-
-# Add nginx to www-data group and vice versa
-sudo usermod -a -G www-data nginx 2>/dev/null || echo "nginx user not found, using www-data"
-sudo usermod -a -G ubuntu www-data
-sudo usermod -a -G www-data ubuntu
-
-# Fix SELinux context if applicable
-if command -v sestatus >/dev/null 2>&1; then
-    echo "Setting SELinux context for Nginx files..."
-    sudo chcon -R -t httpd_sys_content_t "$FRONTEND_DIR/dist" || echo "SELinux context setting failed, but continuing..."
-fi
-
-# Verify permissions
-echo "Verifying frontend permissions after critical fix..."
-ls -la "$FRONTEND_DIR/dist"
-sudo -u www-data test -r "$FRONTEND_DIR/dist/index.html" && echo "✅ www-data can read index.html" || echo "❌ www-data CANNOT read index.html"
-
-# Test nginx configuration and reload
-echo "Testing Nginx configuration..."
-if ! sudo nginx -t; then
-    echo "Nginx configuration test failed. Checking for conflicting configurations..."
-    echo "List of enabled sites:"
-    ls -la /etc/nginx/sites-enabled/
-    echo "Attempting to fix configuration..."
-    # Keep only our configuration
-    sudo rm -f /etc/nginx/sites-enabled/*
-    sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
-    # Test again
-    sudo nginx -t
-fi
-
-# Restart Nginx to apply changes
-echo "Restarting Nginx to apply changes..."
-sudo systemctl restart nginx
-
-# Check Nginx error logs
-echo "Checking Nginx error logs..."
-sudo tail -n 20 /var/log/nginx/error.log
-
-# Verify Nginx is running
-echo "Verifying Nginx is running..."
-if sudo systemctl is-active --quiet nginx; then
-    echo "✅ Nginx is running"
-else
-    echo "❌ Nginx is not running. Attempting to start..."
-    sudo systemctl start nginx
-    sleep 2
-    if sudo systemctl is-active --quiet nginx; then
-        echo "✅ Nginx started successfully"
-    else
-        echo "❌ Failed to start Nginx. Check logs for details."
-        sudo journalctl -u nginx -n 50 --no-pager
+    # Enable nginx site if not already enabled
+    if [ ! -f "$NGINX_ENABLED" ]; then
+        sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
     fi
-fi
 
-# CRITICAL FIX: Make sure permissions are maintained at the end of deployment
-echo "Final permission check and fix..."
-sudo chmod -R 755 "$FRONTEND_DIR/dist"
-sudo find "$FRONTEND_DIR/dist" -type f -exec chmod 644 {} \;
-sudo find "$FRONTEND_DIR/dist" -type d -exec chmod 755 {} \;
-sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-sudo chmod 755 /home
-sudo chmod 755 /home/ubuntu
-sudo chmod 755 "$APP_DIR"
-sudo chmod 755 "$FRONTEND_DIR"
-
-# CRITICAL FIX: Make sure the backend service is running and API v1 is accessible
-echo "Ensuring backend service is running and API v1 is accessible..."
-if ! curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1"; then
-    echo "API v1 endpoint not responding correctly. Restarting backend service..."
-    sudo systemctl restart peerai.service
-    sleep 5
-    
-    # Check again
-    if ! curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1"; then
-        echo "API v1 still not responding after service restart. Starting directly..."
-        cd "$BACKEND_DIR"
-        source venv/bin/activate
-        pkill -f uvicorn || echo "No uvicorn processes found"
-        nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug > "$APP_DIR/logs/backend_final.log" 2>&1 &
-        echo $! > "$APP_DIR/backend_final.pid"
-        echo "Backend started directly as process $(cat "$APP_DIR/backend_final.pid")"
-        sleep 10
-    fi
-fi
-
-# Check if the backend API is correctly handling login requests
-echo "Testing backend login endpoint directly..."
-LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://localhost:8000/api/v1/auth/login)
-if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
-    echo "✅ Backend login endpoint is working correctly"
-else
-    echo "❌ Backend login endpoint is not working correctly. Response:"
-    echo "$LOGIN_RESPONSE"
-    
-    # Check if the backend code has the correct login model
-    echo "Checking backend code for login model..."
-    if ! grep -q "class LoginRequest" "$BACKEND_DIR/backend/main.py"; then
-        echo "LoginRequest model not found in main.py. Updating..."
-        # Create a backup of the original file
-        cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.$(date +%s)"
-        
-        # Update the file to ensure login model is properly defined
-        sed -i '/from pydantic import BaseModel/a\
-\
-# Authentication models\
-class LoginRequest(BaseModel):\
-    email: str\
-    password: str\
-\
-class LoginResponse(BaseModel):\
-    access_token: str\
-    token_type: str\
-    user: dict' "$BACKEND_DIR/backend/main.py"
-        
-        echo "Updated login models in main.py"
-        
-        # Restart the backend service
-        echo "Restarting backend service..."
-        sudo systemctl daemon-reload
-        sudo systemctl restart peerai.service
-        sleep 5
-    fi
-fi
-
-# Check if backend is validating the login request correctly
-echo "Checking backend login validation..."
-VALIDATION_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"invalid"}' http://localhost:8000/api/v1/auth/login)
-echo "Validation response: $VALIDATION_RESPONSE"
-
-if echo "$VALIDATION_RESPONSE" | grep -q "validation error"; then
-    echo "Backend validation is working correctly"
-    
-    # Update backend to add more validation details
-    echo "Updating backend with improved validation handling..."
-    
-    # Backup the main.py file first
-    cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.validation"
-    
-    # Look for the login endpoint and enhance it with better validation
-    BACKEND_FILE="$BACKEND_DIR/backend/main.py"
-    
-    # Check if we need to update the validation handling
-    if ! grep -q "detail=\"Invalid login payload" "$BACKEND_FILE"; then
-        echo "Adding improved validation handling to the login endpoint..."
-        
-        # Find the login function and add better validation handling
-        sed -i '/def api_v1_login/,/return login/{s/return login(login_data)/try:\n        return login(login_data)\n    except Exception as e:\n        raise HTTPException(\n            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,\n            detail=f"Invalid login payload: {str(e)}"\n        )/}' "$BACKEND_FILE"
-        
-        # Restart the backend service
-        echo "Restarting backend service with improved validation..."
-        sudo systemctl daemon-reload
-        sudo systemctl restart peerai.service
-        sleep 5
-        
-        # Test the improved validation
-        echo "Testing improved validation..."
-        IMPROVED_VALIDATION=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"invalid"}' http://localhost:8000/api/v1/auth/login)
-        echo "Improved validation response: $IMPROVED_VALIDATION"
-    else
-        echo "Backend already has improved validation handling"
-    fi
-fi
-
-# Check if we need to add a form-compatible login endpoint
-echo "Checking if we need to add a form-compatible login endpoint..."
-if ! grep -q "username: str = Form" "$BACKEND_DIR/backend/main.py"; then
-    echo "Adding form-compatible login endpoint..."
-    
-    # Back up the file
-    cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.$(date +%s)"
-    
-    # Add Form imports
-    sed -i '/from fastapi import FastAPI/s/FastAPI/FastAPI, Form/' "$BACKEND_DIR/backend/main.py"
-    
-    # Add form-compatible login endpoint
-    cat >> "$BACKEND_DIR/backend/main.py" << 'EOL'
-
-# Form-compatible login endpoint for legacy clients
-@app.post("/api/v1/auth/login-form")
-async def api_v1_login_form(username: str = Form(...), password: str = Form(...)):
-    """Login endpoint that accepts form data for backward compatibility"""
-    try:
-        # Convert form data to the expected LoginRequest format
-        login_data = LoginRequest(email=username, password=password)
-        return login(login_data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid login payload: {str(e)}"
-        )
-EOL
-    
-    # Restart backend to apply changes
-    echo "Restarting backend to apply form endpoint changes..."
-    sudo systemctl daemon-reload
-    sudo systemctl restart peerai.service
-    sleep 5
-    
-    # Update Nginx to redirect form login to the new endpoint
-    echo "Updating Nginx to handle form login..."
-    
-    # Restart Nginx to apply changes
-    sudo systemctl restart nginx
-    
-    # Test the form endpoint
-    echo "Testing form-compatible login endpoint..."
-    FORM_LOGIN=$(curl -s -X POST -d "username=super.admin@peerai.se&password=superadmin123" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        http://localhost:8000/api/v1/auth/login-form)
-    
-    if echo "$FORM_LOGIN" | grep -q "access_token"; then
-        echo "✅ Form-compatible login endpoint is working!"
-    else
-        echo "❌ Form-compatible login endpoint is not working: $FORM_LOGIN"
-    fi
-else
-    echo "Form-compatible login endpoint already exists."
-fi
-
-# Final verification of API v1 endpoint through Nginx
-echo "Final verification of API v1 endpoint through Nginx..."
-if curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1"; then
-    echo "✅ API v1 via Nginx is working"
-else
-    echo "❌ API v1 via Nginx is still not working. Checking Nginx configuration..."
-    sudo nginx -T | grep -A 20 "location.*api/v1"
-    echo "Checking direct backend access..."
-    curl -v http://localhost:8000/api/v1
-fi
-
-# Test the login endpoint specifically via Nginx
-echo "Testing login endpoint via Nginx..."
-LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
-if [ "$LOGIN_STATUS" = "200" ]; then
-    echo "✅ Login endpoint is accessible through Nginx (status code: $LOGIN_STATUS)"
-    echo "Response from login endpoint via Nginx:"
-    curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login | grep -q "access_token" && echo "Token received successfully"
-else
-    echo "❌ Login endpoint is not accessible through Nginx (status code: $LOGIN_STATUS)"
-    echo "Response from login endpoint via Nginx:"
-    curl -v -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login
-    
-    # Check if there's a trailing slash issue
-    echo "Trying login endpoint with trailing slash..."
-    TRAILING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login/)
-    echo "Status with trailing slash: $TRAILING_STATUS"
-    
-    # Try with a different content type
-    echo "Trying with different content type..."
-    CONTENT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/x-www-form-urlencoded" -d 'email=super.admin@peerai.se&password=superadmin123' http://$SERVER_IP/api/v1/auth/login)
-    echo "Status with form urlencoded: $CONTENT_STATUS"
-    
-    # Fix Nginx configuration if needed
-    echo "Updating Nginx configuration for login endpoint..."
-    
-    # Restart Nginx
-    echo "Restarting Nginx with additional configuration..."
-    sudo nginx -t && sudo systemctl restart nginx
-    sleep 3
-    
-    # Check again
-    echo "Checking login endpoint again after configuration update..."
-    FINAL_LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
-    if [ "$FINAL_LOGIN_STATUS" = "200" ]; then
-        echo "✅ Login endpoint is now accessible through Nginx (status code: $FINAL_LOGIN_STATUS)"
-    else
-        echo "❌ Login endpoint is still not accessible through Nginx (status code: $FINAL_LOGIN_STATUS)"
-        echo "Manual intervention may be required to fix the login endpoint"
-    fi
-fi
-
-# Test login with a properly formatted payload
-echo "Testing login with properly formatted payload..."
-LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
-if [ $? -ne 0 ]; then
-    echo "Request failed to execute"
-    echo "Checking for formatting issues..."
-    
-    # Create a special nginx configuration specifically for the login endpoint
-    echo "Creating special configuration for login endpoint..."
-    
-    # Restart Nginx to apply the configuration
-    sudo systemctl restart nginx
-    echo "Special login configuration applied and Nginx restarted"
-fi
-
-# Configure firewall to allow HTTP/HTTPS traffic
-echo "Configuring firewall..."
-sudo ufw status | grep -q "Status: active" && {
-    sudo ufw allow 80/tcp
-    sudo ufw allow 443/tcp
-    echo "Firewall configured to allow HTTP/HTTPS traffic"
-} || echo "Firewall is not active, skipping configuration"
-
-# Create admin user if it doesn't exist
-echo "Creating admin user if needed..."
-cd "$BACKEND_DIR"
-source venv/bin/activate
-
-# Create scripts directory if it doesn't exist
-if [ ! -d "scripts" ]; then
-    echo "Creating scripts directory..."
-    mkdir -p scripts
-fi
-
-# Check if admin user creation script exists, copy from source if available
-if [ ! -f "scripts/create_admin.py" ] && [ -f "/home/ubuntu/scripts/create_admin.py" ]; then
-    echo "Copying admin user creation script from source..."
-    cp /home/ubuntu/scripts/create_admin.py scripts/
-fi
-
-# Run the admin user creation script if it exists
-if [ -f "scripts/create_admin.py" ]; then
-    echo "Running existing admin user creation script..."
-    python scripts/create_admin.py
-else
-    echo "Admin user creation script not found, skipping..."
-fi
-
-# Run test users creation script if it exists and we're in development mode
-if [ -f "scripts/create_test_users.py" ] && [ "$ENVIRONMENT" = "development" ]; then
-    echo "Creating test users for development environment..."
-    python scripts/create_test_users.py
-fi
-
-# Final verification of API v1 endpoint through Nginx
-echo "Final verification of API v1 endpoint through Nginx..."
-API_V1_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVER_IP/api/v1)
-if [ "$API_V1_STATUS" = "200" ]; then
-    echo "✅ API v1 endpoint is accessible through Nginx (status code: $API_V1_STATUS)"
-else
-    echo "❌ API v1 endpoint is not accessible through Nginx (status code: $API_V1_STATUS)"
-    echo "Checking direct backend access..."
-    DIRECT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1)
-    echo "Direct backend access status: $DIRECT_STATUS"
-    
-    if [ "$DIRECT_STATUS" = "200" ]; then
-        echo "Backend is working directly but not through Nginx. This is a Nginx configuration issue."
-        echo "Checking Nginx configuration..."
-        sudo nginx -T | grep -A 20 "location.*api/v1"
-        
-        echo "Restarting Nginx one final time..."
-        sudo systemctl restart nginx
-        sleep 3
-        
-        # Check again after restart
-        FINAL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVER_IP/api/v1)
-        if [ "$FINAL_STATUS" = "200" ]; then
-            echo "✅ API v1 endpoint is now accessible through Nginx after restart"
+    # Test nginx configuration and reload
+    echo "Testing Nginx configuration..."
+    if ! sudo nginx -t; then
+        echo "Nginx configuration test failed. Using fix-nginx.sh instead..."
+        if [ -f "/home/ubuntu/scripts/fix-nginx.sh" ]; then
+            bash /home/ubuntu/scripts/fix-nginx.sh
         else
-            echo "❌ API v1 endpoint is still not accessible through Nginx after restart"
-            echo "Manual intervention may be required to fix Nginx configuration"
+            echo "fix-nginx.sh not found. Nginx configuration may need manual fixing."
         fi
     else
-        echo "Backend API v1 endpoint is not working directly either. This is a backend issue."
-        echo "Checking backend logs..."
-        tail -n 50 "$APP_DIR/logs/backend.log"
+        echo "Nginx configuration test passed. Restarting Nginx..."
+        sudo systemctl restart nginx
     fi
+else
+    echo "Skipping Nginx configuration as SKIP_NGINX_CONFIG is set to true"
+    echo "Please make sure to configure Nginx manually or run fix-nginx.sh separately"
 fi
 
 echo "Deployment completed successfully!"
@@ -1397,29 +862,32 @@ curl -s http://$SERVER_IP/api/ | grep -q "Welcome" && echo "✅ API via Nginx is
 echo "API v1 via Nginx:"
 curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 via Nginx is working" || echo "❌ API v1 via Nginx is not working"
 
-# Add this after the nginx configuration section
-
-
-# Install lua-nginx-module and dependencies if needed
-echo "Checking for Lua module for Nginx..."
-if ! dpkg -l | grep -q "libnginx-mod-http-lua"; then
-    echo "Installing Lua module for Nginx..."
-    sudo apt-get update
-    sudo apt-get install -y libnginx-mod-http-lua
-    
-    # Install lua-cjson if needed
-    if ! luarocks list | grep -q "lua-cjson"; then
-        sudo apt-get install -y luarocks
-        sudo luarocks install lua-cjson
+# Check if SKIP_NGINX_CONFIG is true before trying to install Lua modules
+if [ "$SKIP_NGINX_CONFIG" = "false" ]; then
+    # Install lua-nginx-module and dependencies if needed
+    echo "Checking for Lua module for Nginx..."
+    if ! dpkg -l | grep -q "libnginx-mod-http-lua"; then
+        echo "Installing Lua module for Nginx..."
+        sudo apt-get update
+        sudo apt-get install -y libnginx-mod-http-lua
+        
+        # Install lua-cjson if needed
+        if ! luarocks list | grep -q "lua-cjson"; then
+            sudo apt-get install -y luarocks
+            sudo luarocks install lua-cjson
+        fi
+        
+        # Restart Nginx to load new modules
+        sudo systemctl restart nginx
     fi
-    
-    # Restart Nginx to load new modules
-    sudo systemctl restart nginx
-fi 
-# Run the Nginx fix script
-echo "Running Nginx fix script to clean up configuration..."
+else
+    echo "Skipping Lua module installation as SKIP_NGINX_CONFIG is set to true"
+fi
+
+# Run the Nginx fix script if available
 if [ -f "/home/ubuntu/scripts/fix-nginx.sh" ]; then
+    echo "Running the fix-nginx.sh script to ensure proper Nginx configuration..."
     bash /home/ubuntu/scripts/fix-nginx.sh
 else
-    echo "Nginx fix script not found. Please run it manually."
+    echo "fix-nginx.sh not found. Please ensure Nginx is properly configured manually."
 fi
