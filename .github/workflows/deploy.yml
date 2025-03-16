@@ -85,14 +85,14 @@ jobs:
           echo "Extracting frontend build..."
           tar -xzf deployment/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
           
-          # Run database initialization if needed
-          echo "Initializing database if needed..."
-          /home/ubuntu/scripts/init_db.sh
-          
           # Run main deployment script
           echo "Running main deployment..."
           cd /home/ubuntu/peer-ai
           /home/ubuntu/scripts/deploy.sh
+          
+          # Run database initialization if needed
+          echo "Initializing database if needed..."
+          /home/ubuntu/scripts/init_db.sh
           
           # Run cleanup
           echo "Running post-deployment cleanup..."

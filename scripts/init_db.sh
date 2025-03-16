@@ -37,13 +37,41 @@ echo "Granting privileges to $DB_USER..."
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
 
-# Activate backend virtual environment
-cd "$BACKEND_DIR"
-source venv/bin/activate
+# Check if backend directory exists
+if [ ! -d "$BACKEND_DIR" ]; then
+    echo "Backend directory does not exist. Creating it..."
+    mkdir -p "$BACKEND_DIR"
+fi
 
-# Run migrations
-echo "Running database migrations..."
-python -m alembic upgrade head
+# Navigate to backend directory
+cd "$BACKEND_DIR"
+
+# Check if virtual environment exists, create if it doesn't
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    
+    # Check if requirements.txt exists
+    if [ -f "requirements.txt" ]; then
+        echo "Installing dependencies from requirements.txt..."
+        pip install -r requirements.txt
+    else
+        echo "Warning: requirements.txt not found. Skipping dependency installation."
+    fi
+else
+    # Activate virtual environment
+    source venv/bin/activate
+fi
+
+# Check if alembic is installed and migrations directory exists before running migrations
+if pip list | grep -q alembic && [ -d "migrations" ]; then
+    echo "Running database migrations..."
+    python -m alembic upgrade head
+else
+    echo "Skipping migrations: alembic not installed or migrations directory not found."
+fi
 
 # Create admin user if it doesn't exist
 echo "Creating admin user if needed..."
