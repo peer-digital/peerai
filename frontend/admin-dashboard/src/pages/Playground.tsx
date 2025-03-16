@@ -255,7 +255,7 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const response = await fetch(`${API_BASE_URL}/llm/models`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/llm/models`, {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
@@ -354,7 +354,7 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_BASE_URL}${endpoint.path}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1${endpoint.path}`, {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,
