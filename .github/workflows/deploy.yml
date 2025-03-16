@@ -55,10 +55,11 @@ jobs:
           
           # Create scripts tarball
           echo "Creating deployment package..."
-          mkdir -p scripts
-          cp scripts/*.sh scripts/
-          chmod +x scripts/*.sh
-          tar -czf scripts.tar.gz scripts
+          mkdir -p deployment_temp
+          cp scripts/*.sh deployment_temp/
+          chmod +x deployment_temp/*.sh
+          tar -czf scripts.tar.gz deployment_temp
+          rm -rf deployment_temp
           
           # Create deployment package
           mkdir -p deployment
