@@ -53,7 +53,7 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/auth/login',
+        '/auth/login/json',
         {
           email: credentials.email,
           password: credentials.password

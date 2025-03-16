@@ -184,26 +184,46 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def login(
-    form_data: Optional[OAuth2PasswordRequestForm] = Depends(None),
-    json_data: Optional[LoginRequest] = None,
+    form_data: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db)
 ):
-    """Login endpoint that returns a JWT token and user info"""
-    # Check if we're using JSON or form data
-    if json_data:
-        email = json_data.email
-        password = json_data.password
-    elif form_data:
-        email = form_data.username
-        password = form_data.password
-    else:
+    """Login endpoint that returns a JWT token using form data"""
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="No login credentials provided",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.hashed_password):
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    # Return user info along with the token
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "is_active": user.is_active,
+            "full_name": user.full_name,
+            "token_limit": user.token_limit
+        }
+    }
+
+
+@router.post("/login/json")
+async def login_json(
+    login_data: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    """Login endpoint that returns a JWT token using JSON data"""
+    user = db.query(User).filter(User.email == login_data.email).first()
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
