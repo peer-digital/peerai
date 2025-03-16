@@ -33,7 +33,7 @@ const DeveloperDocs: React.FC = () => {
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://158.174.210.91/api/v1/llm/completions \\
+curl -X POST http://158.174.210.91/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -60,7 +60,7 @@ curl -X POST https://158.174.210.91/api/v1/llm/completions \\
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://158.174.210.91/api/v1/llm/completions \\
+curl -X POST http://158.174.210.91/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -89,7 +89,7 @@ curl -X POST https://158.174.210.91/api/v1/llm/completions \\
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://158.174.210.91/api/v1/llm/vision \\
+curl -X POST http://158.174.210.91/api/v1/llm/vision \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -113,7 +113,7 @@ curl -X POST https://158.174.210.91/api/v1/llm/vision \\
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://158.174.210.91/api/v1/llm/audio \\
+curl -X POST http://158.174.210.91/api/v1/llm/audio \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -267,7 +267,7 @@ curl -X POST https://158.174.210.91/api/v1/llm/audio \\
 
     <script>
     const API_KEY = 'YOUR_API_KEY';  // Replace with secure key management in production
-    const API_URL = 'https://158.174.210.91/api/v1/llm/completions';
+    const API_URL = 'http://158.174.210.91/api/v1/llm/completions';
 
     function showElement(id) {
         document.getElementById(id).classList.remove('hidden');
