@@ -10,6 +10,11 @@ on:
         type: choice
         options:
           - production
+      skip_nginx_config:
+        description: 'Skip Nginx configuration changes'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   deploy:
@@ -58,6 +63,16 @@ jobs:
           mkdir -p deployment_temp
           cp scripts/*.sh deployment_temp/
           chmod +x deployment_temp/*.sh
+          
+          # Add flag to skip Nginx configuration if selected
+          if [ "${{ github.event.inputs.skip_nginx_config }}" = "true" ]; then
+            echo "export SKIP_NGINX_CONFIG=true" > deployment_temp/env_config.sh
+            echo "Skip Nginx config flag has been set"
+          else
+            echo "export SKIP_NGINX_CONFIG=false" > deployment_temp/env_config.sh
+            echo "Skip Nginx config flag has NOT been set"
+          fi
+          
           tar -czf scripts.tar.gz -C . deployment_temp
           
           # Create deployment package
@@ -79,6 +94,15 @@ jobs:
           chmod +x /home/ubuntu/deployment_temp/*.sh
           cp /home/ubuntu/deployment_temp/*.sh /home/ubuntu/scripts/
           chmod +x /home/ubuntu/scripts/*.sh
+          
+          # Source the environment config 
+          if [ -f "/home/ubuntu/deployment_temp/env_config.sh" ]; then
+            source /home/ubuntu/deployment_temp/env_config.sh
+            echo "Environment config loaded, SKIP_NGINX_CONFIG=$SKIP_NGINX_CONFIG"
+          else
+            echo "No environment config found, proceeding with default settings"
+            export SKIP_NGINX_CONFIG=false
+          fi
           
           # Run pre-deployment script
           echo "Running pre-deployment preparation..."
@@ -102,13 +126,16 @@ jobs:
           fi
           
           # Set proper permissions for frontend files
-          sudo chmod -R 755 /home/ubuntu/peer-ai/frontend/dist
-          sudo chown -R www-data:www-data /home/ubuntu/peer-ai/frontend/dist
+          echo "Setting proper permissions for frontend files..."
+          chmod -R 755 /home/ubuntu/peer-ai/frontend
+          chmod -R 755 /home/ubuntu/peer-ai/frontend/dist
+          find /home/ubuntu/peer-ai/frontend/dist -type f -exec chmod 644 {} \;
+          find /home/ubuntu/peer-ai/frontend/dist -type d -exec chmod 755 {} \;
           
-          # Run main deployment script
-          echo "Running main deployment..."
+          # Run main deployment with Nginx config flag
+          echo "Running main deployment with SKIP_NGINX_CONFIG=$SKIP_NGINX_CONFIG..."
           cd /home/ubuntu/peer-ai
-          /home/ubuntu/scripts/deploy.sh
+          SKIP_NGINX_CONFIG=$SKIP_NGINX_CONFIG /home/ubuntu/scripts/deploy.sh
           
           # Run database initialization if needed
           echo "Initializing database if needed..."
@@ -124,6 +151,14 @@ jobs:
               /home/ubuntu/scripts/cleanup.sh
           else
               echo "Cleanup script not found, skipping..."
+          fi
+          
+          echo "Running Nginx fix script to properly configure Nginx..."
+          if [ -f "/home/ubuntu/scripts/fix-nginx.sh" ]; then
+              echo "Found fix-nginx.sh script, executing..."
+              bash /home/ubuntu/scripts/fix-nginx.sh
+          else
+              echo "fix-nginx.sh script not found. Please configure Nginx manually."
           fi
           
           # Check deployment status
