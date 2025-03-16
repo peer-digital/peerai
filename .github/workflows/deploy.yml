@@ -30,21 +30,28 @@ jobs:
       
       # Install frontend dependencies
       - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
+        working-directory: frontend/admin-dashboard
+        run: |
+          if [ -f "package-lock.json" ]; then
+            echo "Found package-lock.json, using npm ci for clean install"
+            npm ci
+          else
+            echo "No package-lock.json found, using npm install instead"
+            npm install
+          fi
       
       # Build frontend
       - name: Build frontend
-        working-directory: frontend
+        working-directory: frontend/admin-dashboard
         run: npm run build
       
       # Create deployment package
       - name: Create deployment package
         run: |
           # Create frontend tarball
-          cd frontend
+          cd frontend/admin-dashboard
           tar -czf frontend-build.tar.gz build/
-          cd ..
+          cd ../..
           
           # Create scripts tarball
           tar -czf scripts.tar.gz scripts/
@@ -52,7 +59,7 @@ jobs:
           # Create deployment package
           mkdir -p deployment
           cp scripts.tar.gz deployment/
-          cp frontend/frontend-build.tar.gz deployment/
+          cp frontend/admin-dashboard/frontend-build.tar.gz deployment/
           
           # Create deployment script for VM
           cat > deployment/run_deploy.sh << 'EOF'
