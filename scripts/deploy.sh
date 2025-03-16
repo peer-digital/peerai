@@ -407,9 +407,9 @@ Wants=postgresql.service
 User=ubuntu
 Group=ubuntu
 WorkingDirectory=$BACKEND_DIR
-Environment=PYTHONPATH=$APP_DIR
+Environment=PYTHONPATH=$BACKEND_DIR
 EnvironmentFile=$BACKEND_DIR/.env
-ExecStart=$BACKEND_DIR/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4 --log-level info
+ExecStart=$BACKEND_DIR/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level info
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -426,6 +426,7 @@ cd "$FRONTEND_DIR"
 
 # Set proper permissions for frontend files
 echo "Setting proper permissions for frontend files..."
+sudo mkdir -p "$FRONTEND_DIR/dist"
 sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
 sudo chmod -R 755 "$FRONTEND_DIR/dist"
 
@@ -437,8 +438,96 @@ sudo chmod 755 "$FRONTEND_DIR"
 
 # Verify permissions
 echo "Verifying permissions..."
-ls -la "$FRONTEND_DIR/dist"
+ls -la "$FRONTEND_DIR"
+ls -la "$FRONTEND_DIR/dist" || echo "dist directory not found or empty"
 sudo -u www-data ls -la "$FRONTEND_DIR/dist" || echo "www-data user cannot access the frontend directory"
+
+# Check if frontend files exist
+echo "Checking frontend files..."
+if [ ! -f "$FRONTEND_DIR/dist/index.html" ]; then
+    echo "Frontend index.html not found. Checking for frontend build..."
+    
+    # Check if we have a frontend build in the deployment package
+    if [ -d "/home/ubuntu/deployment/frontend" ]; then
+        echo "Found frontend build in deployment package. Copying..."
+        sudo mkdir -p "$FRONTEND_DIR/dist"
+        sudo cp -r /home/ubuntu/deployment/frontend/* "$FRONTEND_DIR/dist/"
+        sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
+        sudo chmod -R 755 "$FRONTEND_DIR/dist"
+    else
+        echo "No frontend build found. Creating a placeholder index.html..."
+        sudo mkdir -p "$FRONTEND_DIR/dist"
+        sudo tee "$FRONTEND_DIR/dist/index.html" > /dev/null << EOL
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PeerAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .api-status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PeerAI Platform</h1>
+        <p>The frontend is currently being deployed. Please check back later.</p>
+        <div class="api-status">
+            <p>API Status: <span id="api-status">Checking...</span></p>
+        </div>
+    </div>
+    <script>
+        // Check API status
+        fetch('/health')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('api-status').textContent = 'Online';
+                    document.getElementById('api-status').style.color = 'green';
+                } else {
+                    document.getElementById('api-status').textContent = 'Offline';
+                    document.getElementById('api-status').style.color = 'red';
+                }
+            })
+            .catch(error => {
+                document.getElementById('api-status').textContent = 'Offline';
+                document.getElementById('api-status').style.color = 'red';
+            });
+    </script>
+</body>
+</html>
+EOL
+        sudo chown www-data:www-data "$FRONTEND_DIR/dist/index.html"
+        sudo chmod 644 "$FRONTEND_DIR/dist/index.html"
+    fi
+fi
 
 # Create nginx configuration
 echo "Creating nginx configuration..."
@@ -452,17 +541,13 @@ server {
     root $FRONTEND_DIR/dist;
     index index.html;
     
-    # Frontend - Fix for permission issues
+    # Frontend - Simplified configuration
     location / {
-        try_files \$uri \$uri/ /index.html =404;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        # Add debug headers
-        add_header X-Debug-Path \$document_root\$uri;
-        add_header X-Debug-Uri \$uri;
+        try_files \$uri \$uri/ /index.html;
     }
 
-    # Backend API - Fix for authentication and other API endpoints
-    location /api/v1/ {
+    # Backend API endpoints
+    location /api/ {
         proxy_pass http://localhost:8000/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -472,8 +557,6 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
     }
 
     # Auth endpoints
@@ -489,32 +572,12 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 
-    # Legacy API path for compatibility
-    location /api/ {
-        proxy_pass http://localhost:8000/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-
     # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
         access_log off;
-        add_header Content-Type application/json;
     }
 
-    # Enable gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
     # Log configuration
     access_log /var/log/nginx/peerai_access.log;
     error_log /var/log/nginx/peerai_error.log debug;
@@ -561,6 +624,25 @@ if ! sudo systemctl is-active --quiet peerai.service; then
         pip install uvicorn
     fi
     
+    # Check if the main.py file exists in the expected location
+    if [ ! -f "$BACKEND_DIR/backend/main.py" ]; then
+        echo "Main application file not found at expected location. Checking structure..."
+        find "$BACKEND_DIR" -name "main.py" -type f
+    fi
+    
+    # Check Python path and module structure
+    echo "Checking Python module structure..."
+    cd "$BACKEND_DIR"
+    source venv/bin/activate
+    python -c "import sys; print('Python path:', sys.path)"
+    python -c "import importlib.util; print('backend module exists:', importlib.util.find_spec('backend') is not None)" || echo "Failed to check module"
+    
+    # Try to start the service with direct command to see errors
+    echo "Trying to start backend directly to see errors..."
+    cd "$BACKEND_DIR"
+    source venv/bin/activate
+    python -c "from backend.main import app; print('Successfully imported app')" || echo "Failed to import app"
+    
     # Try to start the service again
     sudo systemctl restart peerai.service
     sleep 5
@@ -569,7 +651,27 @@ if ! sudo systemctl is-active --quiet peerai.service; then
     if sudo systemctl is-active --quiet peerai.service; then
         echo "Backend service is now running."
     else
-        echo "Failed to start backend service. Manual intervention required."
+        echo "Failed to start backend service. Trying alternative approach..."
+        
+        # Try running directly as a background process
+        echo "Starting backend directly as a background process..."
+        cd "$BACKEND_DIR"
+        source venv/bin/activate
+        nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
+        echo $! > "$APP_DIR/backend.pid"
+        echo "Backend started as process $(cat "$APP_DIR/backend.pid")"
+        
+        # Wait for backend to start
+        echo "Waiting for backend to start..."
+        sleep 10
+        
+        # Check if backend is responding
+        if curl -s http://localhost:8000/health; then
+            echo "Backend is now running as a background process."
+        else
+            echo "Backend still not responding. Manual intervention required."
+            echo "Check logs at $APP_DIR/logs/backend.log"
+        fi
     fi
 fi
 
