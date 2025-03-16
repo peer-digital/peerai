@@ -3,59 +3,54 @@ set -e
 
 # Define variables
 APP_DIR="/home/ubuntu/peer-ai"
+BACKEND_DIR="$APP_DIR/backend"
 DB_NAME="peerai_db"
 DB_USER="peerai"
-DB_PASSWORD="peerai_password"  # Added password from deploy.sh
+DB_PASSWORD="peerai_password" # @note: Default database password
 
-echo "Initializing database with basic data..."
+echo "Starting database initialization..."
 
-# Check if PostgreSQL is running
-if ! systemctl is-active --quiet postgresql; then
-    echo "Error: PostgreSQL is not running."
-    echo "Starting PostgreSQL..."
-    sudo systemctl start postgresql
-fi
+# Ensure PostgreSQL is running
+sudo systemctl status postgresql >/dev/null || sudo systemctl start postgresql
 
-# Create a temporary SQL file
-TMP_SQL_FILE="/tmp/init_db.sql"
-
-# Write SQL commands to the temporary file
-cat > "$TMP_SQL_FILE" << EOL
--- Create a default admin user if it doesn't exist
-DO \$\$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'users') THEN
-        RAISE NOTICE 'Table users does not exist yet. Skipping admin user creation.';
-    ELSE
-        IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@example.com') THEN
-            INSERT INTO users (email, hashed_password, is_active, is_superuser, full_name, created_at, updated_at)
-            VALUES ('admin@example.com', '\$2b\$12\$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', true, true, 'Admin User', NOW(), NOW());
-            RAISE NOTICE 'Created admin user: admin@example.com with password: password';
-        ELSE
-            RAISE NOTICE 'Admin user already exists.';
-        END IF;
-    END IF;
-END
-\$\$;
-
--- Add any other initialization data here
-EOL
-
-# Execute the SQL file - try with peerai user first, fall back to postgres if needed
-echo "Executing SQL commands..."
-if PGPASSWORD="$DB_PASSWORD" psql -U "$DB_USER" -d "$DB_NAME" -f "$TMP_SQL_FILE" 2>/dev/null; then
-    echo "Successfully executed SQL commands as $DB_USER user."
+# Check if database exists
+if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+    echo "Database $DB_NAME already exists"
 else
-    echo "Could not connect as $DB_USER user, trying with postgres user..."
-    # Try with sudo to postgres user as fallback
-    sudo -u postgres psql -d "$DB_NAME" -f "$TMP_SQL_FILE"
+    echo "Creating database $DB_NAME..."
+    sudo -u postgres createdb "$DB_NAME"
+    echo "Database created successfully"
 fi
 
-# Remove the temporary SQL file
-rm "$TMP_SQL_FILE"
+# Check if database user exists
+USER_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'")
+if [ "$USER_EXISTS" = "1" ]; then
+    echo "User $DB_USER already exists"
+else
+    echo "Creating database user $DB_USER..."
+    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+    echo "User created successfully"
+fi
 
-echo "Database initialization completed successfully!"
-echo "Default admin credentials (if users table exists):"
-echo "Email: admin@example.com"
-echo "Password: password"
-echo "Note: You should change this password immediately after first login." 
+# Grant privileges to user
+echo "Granting privileges to $DB_USER..."
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
+
+# Activate backend virtual environment
+cd "$BACKEND_DIR"
+source venv/bin/activate
+
+# Run migrations
+echo "Running database migrations..."
+python -m alembic upgrade head
+
+# Create admin user if it doesn't exist
+echo "Creating admin user if needed..."
+if [ -f "$BACKEND_DIR/scripts/create_admin.py" ]; then
+    python "$BACKEND_DIR/scripts/create_admin.py"
+else
+    echo "Warning: create_admin.py script not found. Skipping admin user creation."
+fi
+
+echo "Database initialization completed successfully!" 

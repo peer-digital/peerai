@@ -1,69 +1,54 @@
-# VM Connection and Database Testing Scripts
+# Peer AI Deployment Scripts
 
-This directory contains scripts to help you connect to the VM and test the database.
+This directory contains scripts for deploying and managing the Peer AI application.
 
-## Scripts Overview
+## Core Deployment Scripts
 
-- `connect_to_vm.sh`: Sets up SSH keys and connects to the VM
-- `ssh_to_db.sh`: Connects to the VM and runs database tests
-- `diagnose_ssh_locally.sh`: Diagnoses SSH connection issues
-- `setup_local_ssh.sh`: Sets up SSH keys for connecting to the VM
+- `deploy.sh`: Main deployment script that deploys the backend and configures the frontend
+- `pre_deploy.sh`: Prepares the VM environment before deployment (installs dependencies, creates directories)
+- `init_db.sh`: Initializes the PostgreSQL database, creates users and permissions
+- `cleanup.sh`: Performs post-deployment cleanup, backup rotation, and system maintenance
+- `check_deployment.sh`: Verifies the deployment status (services, API, database)
 
-## Connecting to the VM
+## Utility Scripts
 
-To connect to the VM, run:
+- `backup_db.sh`: Creates database backups
+- `pre_commit_tests.sh`: Runs tests before committing code
+- `pre_launch_check.py`: Performs pre-production checks
 
-```bash
-./scripts/connect_to_vm.sh
-```
+## Deployment Process
 
-This script will:
-1. Create a temporary SSH key file at `~/.ssh/peer_ai_vm_key`
-2. Update your SSH known_hosts file to accept the VM's host key
-3. Provide you with the command to connect to the VM
-4. Optionally connect you to the VM immediately
+The deployment process follows these steps:
 
-## Testing the Database
+1. **Pre-deployment**: Prepares the VM environment
+   - Creates necessary directories
+   - Installs dependencies
+   - Configures services
+   - Backs up the current database
 
-To test the database, run:
+2. **Database Initialization**: Sets up the database
+   - Creates database if it doesn't exist
+   - Creates database user if needed
+   - Sets up permissions
+   - Runs database migrations
 
-```bash
-./scripts/ssh_to_db.sh
-```
+3. **Deployment**: Deploys the application
+   - Sets up environment variables
+   - Installs backend dependencies
+   - Creates systemd service
+   - Configures Nginx
+   - Restarts services
 
-This script will:
-1. Check if you're already on the VM
-2. If not, it will use the `connect_to_vm.sh` script to connect to the VM
-3. Run database tests to check the connection, tables, and constraints
-4. Connect you to the PostgreSQL shell
+4. **Cleanup**: Post-deployment maintenance
+   - Backs up the database
+   - Rotates old backups
+   - Cleans up temporary files
+   - Cleans up logs
 
-## Troubleshooting SSH Connection Issues
-
-If you're having trouble connecting to the VM, run:
-
-```bash
-./scripts/diagnose_ssh_locally.sh
-```
-
-This script will:
-1. Check your SSH directory permissions
-2. Check your SSH key permissions
-3. Display your SSH key fingerprint
-4. Check if the SSH agent is running
-5. Test the SSH connection with verbose output
-6. Provide next steps if the connection fails
-
-## GitHub Actions Workflow
-
-The GitHub Actions workflow (`.github/workflows/deploy.yml`) has been updated to handle host key changes by using the `use_insecure_cipher: true` parameter for all SSH and SCP actions.
-
-## Manual SSH Connection
-
-If you prefer to connect to the VM manually, you can use:
-
-```bash
-ssh -i ~/.ssh/peer_ai_vm_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no ubuntu@158.174.210.91
-```
+5. **Verification**: Checks deployment status
+   - Verifies services are running
+   - Checks API accessibility
+   - Confirms database connection
 
 ## Database Connection Details
 
@@ -71,4 +56,4 @@ ssh -i ~/.ssh/peer_ai_vm_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no u
 - Port: 5432
 - Database: peerai_db
 - Username: peerai
-- Password: peerai_password 
+- Password: peerai_password # @note: Default database password 
