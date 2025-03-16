@@ -12,6 +12,7 @@ DB_NAME="peerai_db"
 DB_USER="peerai"
 DB_PASSWORD="peerai_password"
 SERVER_IP="158.174.210.91" # @note: Production server IP address
+ENVIRONMENT="production" # @note: Set to "development" for development environment
 
 echo "Starting deployment process..."
 
@@ -99,22 +100,7 @@ echo "Installing backend dependencies..."
 source venv/bin/activate
 pip install --upgrade pip
 
-# Check if requirements.txt exists, create a basic one if it doesn't
-if [ ! -f "requirements.txt" ]; then
-    echo "requirements.txt not found, creating a basic one..."
-    cat > "requirements.txt" << EOL
-fastapi==0.110.0
-uvicorn==0.27.1
-sqlalchemy==2.0.27
-alembic==1.13.1
-psycopg2-binary==2.9.9
-python-dotenv==1.0.0
-pydantic==2.6.1
-pydantic-settings==2.1.0
-EOL
-fi
-
-# Install dependencies
+# Install dependencies from the existing requirements.txt
 pip install -r requirements.txt
 
 # Check if alembic directory exists, initialize if it doesn't
@@ -403,88 +389,22 @@ sudo systemctl reload nginx
 
 # Create admin user if it doesn't exist
 echo "Creating admin user if needed..."
-if [ ! -d "$BACKEND_DIR/scripts" ]; then
-    mkdir -p "$BACKEND_DIR/scripts"
-fi
-
-if [ ! -f "$BACKEND_DIR/scripts/create_admin.py" ]; then
-    echo "Creating admin user script..."
-    cat > "$BACKEND_DIR/scripts/create_admin.py" << EOL
-import os
-import sys
-import hashlib
-import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Get database URL from environment
-database_url = os.getenv("DATABASE_URL")
-if not database_url:
-    print("Error: DATABASE_URL environment variable not set")
-    sys.exit(1)
-
-# Create SQLAlchemy engine and session
-engine = create_engine(database_url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Define Base model
-Base = declarative_base()
-
-# Define User model
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
-# Simple password hashing function (in production, use a proper hashing library)
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def create_admin_user():
-    db = SessionLocal()
-    
-    # Check if admin user already exists
-    admin = db.query(User).filter(User.is_admin == True).first()
-    if admin:
-        print(f"Admin user already exists: {admin.email}")
-        return
-    
-    # Create admin user
-    admin_email = "admin@peerai.com"
-    admin_password = "admin123"  # Change this in production
-    
-    admin_user = User(
-        email=admin_email,
-        hashed_password=hash_password(admin_password),
-        is_active=True,
-        is_admin=True
-    )
-    
-    db.add(admin_user)
-    db.commit()
-    print(f"Admin user created: {admin_email}")
-    print("IMPORTANT: Change the default admin password after first login!")
-
-if __name__ == "__main__":
-    create_admin_user()
-EOL
-fi
-
-# Run the admin user creation script
 cd "$BACKEND_DIR"
 source venv/bin/activate
-python scripts/create_admin.py
+
+# Run the admin user creation script if it exists
+if [ -f "scripts/create_admin.py" ]; then
+    echo "Running existing admin user creation script..."
+    python scripts/create_admin.py
+else
+    echo "Admin user creation script not found, skipping..."
+fi
+
+# Run test users creation script if it exists and we're in development mode
+if [ -f "scripts/create_test_users.py" ] && [ "$ENVIRONMENT" = "development" ]; then
+    echo "Creating test users for development environment..."
+    python scripts/create_test_users.py
+fi
 
 echo "Deployment completed successfully!"
 echo "Frontend available at: http://$SERVER_IP"
