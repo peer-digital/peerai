@@ -803,6 +803,19 @@ server {
     }
 
     # API v1 auth endpoints - must come before other API endpoints
+    location = /api/v1/auth/login {
+        proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+
+    # API v1 auth endpoints - general
     location ^~ /api/v1/auth/ {
         proxy_pass http://localhost:8000/api/v1/auth/;
         proxy_set_header Host \$host;
@@ -979,8 +992,47 @@ if ! curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1"; then
     fi
 fi
 
-# Final check of API v1 via Nginx
-echo "Final check of API v1 via Nginx..."
+# Check if the backend API is correctly handling login requests
+echo "Testing backend login endpoint directly..."
+LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://localhost:8000/api/v1/auth/login)
+if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
+    echo "✅ Backend login endpoint is working correctly"
+else
+    echo "❌ Backend login endpoint is not working correctly. Response:"
+    echo "$LOGIN_RESPONSE"
+    
+    # Check if the backend code has the correct login model
+    echo "Checking backend code for login model..."
+    if ! grep -q "class LoginRequest" "$BACKEND_DIR/backend/main.py"; then
+        echo "LoginRequest model not found in main.py. Updating..."
+        # Create a backup of the original file
+        cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.$(date +%s)"
+        
+        # Update the file to ensure login model is properly defined
+        sed -i '/from pydantic import BaseModel/a\
+\
+# Authentication models\
+class LoginRequest(BaseModel):\
+    email: str\
+    password: str\
+\
+class LoginResponse(BaseModel):\
+    access_token: str\
+    token_type: str\
+    user: dict' "$BACKEND_DIR/backend/main.py"
+        
+        echo "Updated login models in main.py"
+        
+        # Restart the backend service
+        echo "Restarting backend service..."
+        sudo systemctl daemon-reload
+        sudo systemctl restart peerai.service
+        sleep 5
+    fi
+fi
+
+# Final verification of API v1 endpoint through Nginx
+echo "Final verification of API v1 endpoint through Nginx..."
 if curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1"; then
     echo "✅ API v1 via Nginx is working"
 else
@@ -988,6 +1040,66 @@ else
     sudo nginx -T | grep -A 20 "location.*api/v1"
     echo "Checking direct backend access..."
     curl -v http://localhost:8000/api/v1
+fi
+
+# Test the login endpoint specifically via Nginx
+echo "Testing login endpoint via Nginx..."
+LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
+if [ "$LOGIN_STATUS" = "200" ]; then
+    echo "✅ Login endpoint is accessible through Nginx (status code: $LOGIN_STATUS)"
+    echo "Response from login endpoint via Nginx:"
+    curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login | grep -q "access_token" && echo "Token received successfully"
+else
+    echo "❌ Login endpoint is not accessible through Nginx (status code: $LOGIN_STATUS)"
+    echo "Response from login endpoint via Nginx:"
+    curl -v -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login
+    
+    # Check if there's a trailing slash issue
+    echo "Trying login endpoint with trailing slash..."
+    TRAILING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login/)
+    echo "Status with trailing slash: $TRAILING_STATUS"
+    
+    # Try with a different content type
+    echo "Trying with different content type..."
+    CONTENT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/x-www-form-urlencoded" -d 'email=super.admin@peerai.se&password=superadmin123' http://$SERVER_IP/api/v1/auth/login)
+    echo "Status with form urlencoded: $CONTENT_STATUS"
+    
+    # Fix Nginx configuration if needed
+    echo "Updating Nginx configuration for login endpoint..."
+    sudo tee /etc/nginx/conf.d/api_fix.conf > /dev/null << EOL
+server {
+    listen 80;
+    server_name $SERVER_IP;
+    
+    # Direct login endpoint fix
+    location = /api/v1/auth/login {
+        proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
+EOL
+    
+    # Restart Nginx
+    echo "Restarting Nginx with additional configuration..."
+    sudo nginx -t && sudo systemctl restart nginx
+    sleep 3
+    
+    # Check again
+    echo "Checking login endpoint again after configuration update..."
+    FINAL_LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
+    if [ "$FINAL_LOGIN_STATUS" = "200" ]; then
+        echo "✅ Login endpoint is now accessible through Nginx (status code: $FINAL_LOGIN_STATUS)"
+    else
+        echo "❌ Login endpoint is still not accessible through Nginx (status code: $FINAL_LOGIN_STATUS)"
+        echo "Manual intervention may be required to fix the login endpoint"
+    fi
 fi
 
 # Configure firewall to allow HTTP/HTTPS traffic
