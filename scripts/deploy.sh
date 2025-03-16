@@ -574,6 +574,15 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
+    # API v1 endpoints
+    location /api/v1/ {
+        proxy_pass http://localhost:8000/api/v1/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
     # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
@@ -598,11 +607,12 @@ if [ -f "/etc/nginx/sites-enabled/default" ]; then
     sudo rm -f /etc/nginx/sites-enabled/default
 fi
 
-# Set proper permissions
-echo "Setting proper permissions..."
+# Fix permissions BEFORE restarting Nginx
+echo "Fixing permissions for Nginx..."
+# First set ownership to ubuntu user
 sudo chown -R ubuntu:ubuntu "$APP_DIR"
 
-# Fix Nginx permissions for frontend files
+# Then fix frontend permissions specifically for Nginx
 echo "Fixing Nginx permissions for frontend files..."
 sudo chmod -R 755 "$FRONTEND_DIR"
 sudo chmod -R 755 "$FRONTEND_DIR/dist"
@@ -615,6 +625,12 @@ sudo chmod 755 "$APP_DIR"
 
 # Add nginx to ubuntu group
 sudo usermod -a -G ubuntu www-data
+
+# Verify permissions
+echo "Verifying frontend permissions..."
+ls -la "$FRONTEND_DIR/dist"
+sudo -u www-data test -r "$FRONTEND_DIR/dist/index.html" && echo "✅ www-data can read index.html" || echo "❌ www-data CANNOT read index.html"
+sudo -u nginx test -r "$FRONTEND_DIR/dist/index.html" 2>/dev/null && echo "✅ nginx user can read index.html" || echo "❌ nginx user cannot read index.html (this is normal if using www-data)"
 
 # Reload systemd, enable and restart service
 echo "Restarting services..."
@@ -645,6 +661,17 @@ if ! sudo systemctl is-active --quiet peerai.service; then
     # Create logs directory if it doesn't exist
     mkdir -p "$APP_DIR/logs"
     
+    # Ensure backend main.py has the auth endpoint
+    echo "Checking backend main.py for auth endpoint..."
+    if ! grep -q "@app.post(\"/auth/login\")" "$BACKEND_DIR/backend/main.py"; then
+        echo "Auth endpoint not found in main.py. Updating..."
+        # Create a backup of the original file
+        cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak"
+        
+        # Update the file to ensure auth endpoint is properly defined
+        sed -i 's|@app.post("/auth/login")|@app.post("/auth/login")|g' "$BACKEND_DIR/backend/main.py"
+    fi
+    
     # Start the backend service directly with explicit path to uvicorn
     echo "Starting backend service directly..."
     nohup "$BACKEND_DIR/venv/bin/python" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
@@ -656,7 +683,7 @@ if ! sudo systemctl is-active --quiet peerai.service; then
     sleep 10
     
     # Check if backend is responding
-    if curl -s http://localhost:8000/health; then
+    if curl -s http://localhost:8000/health | grep -q "healthy"; then
         echo "Backend is now running as a background process."
     else
         echo "Backend still not responding. Checking logs..."
@@ -675,7 +702,7 @@ if ! sudo systemctl is-active --quiet peerai.service; then
         sleep 10
         
         # Final check
-        if curl -s http://localhost:8000/health; then
+        if curl -s http://localhost:8000/health | grep -q "healthy"; then
             echo "Backend is now running with direct Python execution."
         else
             echo "Backend still not responding. Manual intervention required."
@@ -699,11 +726,29 @@ if ! sudo nginx -t; then
     sudo nginx -t
 fi
 
-sudo systemctl reload nginx
+# Restart Nginx to apply changes
+echo "Restarting Nginx to apply changes..."
+sudo systemctl restart nginx
 
 # Check Nginx error logs
 echo "Checking Nginx error logs..."
 sudo tail -n 20 /var/log/nginx/error.log
+
+# Verify Nginx is running
+echo "Verifying Nginx is running..."
+if sudo systemctl is-active --quiet nginx; then
+    echo "✅ Nginx is running"
+else
+    echo "❌ Nginx is not running. Attempting to start..."
+    sudo systemctl start nginx
+    sleep 2
+    if sudo systemctl is-active --quiet nginx; then
+        echo "✅ Nginx started successfully"
+    else
+        echo "❌ Failed to start Nginx. Check logs for details."
+        sudo journalctl -u nginx -n 50 --no-pager
+    fi
+fi
 
 # Configure firewall to allow HTTP/HTTPS traffic
 echo "Configuring firewall..."
