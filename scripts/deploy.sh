@@ -802,9 +802,22 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
-    # API v1 auth endpoints - must come before other API endpoints
+    # Direct match for login endpoint
     location = /api/v1/auth/login {
         proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+
+    # Direct match for API v1 endpoint (without trailing slash)
+    location = /api/v1 {
+        proxy_pass http://localhost:8000/api/v1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -1031,6 +1044,45 @@ class LoginResponse(BaseModel):\
     fi
 fi
 
+# Check if backend is validating the login request correctly
+echo "Checking backend login validation..."
+VALIDATION_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"invalid"}' http://localhost:8000/api/v1/auth/login)
+echo "Validation response: $VALIDATION_RESPONSE"
+
+if echo "$VALIDATION_RESPONSE" | grep -q "validation error"; then
+    echo "Backend validation is working correctly"
+    
+    # Update backend to add more validation details
+    echo "Updating backend with improved validation handling..."
+    
+    # Backup the main.py file first
+    cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.validation"
+    
+    # Look for the login endpoint and enhance it with better validation
+    BACKEND_FILE="$BACKEND_DIR/backend/main.py"
+    
+    # Check if we need to update the validation handling
+    if ! grep -q "detail=\"Invalid login payload" "$BACKEND_FILE"; then
+        echo "Adding improved validation handling to the login endpoint..."
+        
+        # Find the login function and add better validation handling
+        sed -i '/def api_v1_login/,/return login/{s/return login(login_data)/try:\n        return login(login_data)\n    except Exception as e:\n        raise HTTPException(\n            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,\n            detail=f"Invalid login payload: {str(e)}"\n        )/}' "$BACKEND_FILE"
+        
+        # Restart the backend service
+        echo "Restarting backend service with improved validation..."
+        sudo systemctl daemon-reload
+        sudo systemctl restart peerai.service
+        sleep 5
+        
+        # Test the improved validation
+        echo "Testing improved validation..."
+        IMPROVED_VALIDATION=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"invalid"}' http://localhost:8000/api/v1/auth/login)
+        echo "Improved validation response: $IMPROVED_VALIDATION"
+    else
+        echo "Backend already has improved validation handling"
+    fi
+fi
+
 # Final verification of API v1 endpoint through Nginx
 echo "Final verification of API v1 endpoint through Nginx..."
 if curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1"; then
@@ -1100,6 +1152,55 @@ EOL
         echo "❌ Login endpoint is still not accessible through Nginx (status code: $FINAL_LOGIN_STATUS)"
         echo "Manual intervention may be required to fix the login endpoint"
     fi
+fi
+
+# Test login with a properly formatted payload
+echo "Testing login with properly formatted payload..."
+LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://$SERVER_IP/api/v1/auth/login)
+if [ $? -ne 0 ]; then
+    echo "Request failed to execute"
+    echo "Checking for formatting issues..."
+    
+    # Create a special nginx configuration specifically for the login endpoint
+    echo "Creating special configuration for login endpoint..."
+    sudo tee /etc/nginx/conf.d/login_fix.conf > /dev/null << EOL
+server {
+    listen 80;
+    server_name $SERVER_IP;
+    
+    # Special login endpoint handling
+    location = /api/v1/auth/login {
+        # Add CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        
+        # Handle preflight requests
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        
+        # Set content type for JSON requests
+        proxy_set_header Content-Type 'application/json';
+        proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
+EOL
+    
+    # Restart Nginx to apply the configuration
+    sudo systemctl restart nginx
+    echo "Special login configuration applied and Nginx restarted"
 fi
 
 # Configure firewall to allow HTTP/HTTPS traffic
