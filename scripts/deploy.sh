@@ -57,9 +57,13 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from passlib.context import CryptContext
 
 # Load environment variables
 load_dotenv()
+
+# Password hashing configuration
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Create FastAPI app
 app = FastAPI(title="PeerAI API", version="0.1.0")
@@ -102,19 +106,56 @@ def api_v1():
 # Authentication endpoints
 @app.post("/auth/login")
 def login(login_data: LoginRequest):
-    # This is a mock implementation - in production, validate credentials against database
-    if login_data.email == "admin@example.com" and login_data.password == "password":
-        # Generate a mock token
+    # Check for super admin credentials
+    if login_data.email == "super.admin@peerai.se" and login_data.password == "superadmin123":
         return LoginResponse(
             access_token="mock_token_for_testing_purposes_only",
             token_type="bearer",
             user={
                 "id": 1,
                 "email": login_data.email,
+                "name": "Super Admin",
+                "role": "super_admin"
+            }
+        )
+    # Check for admin credentials
+    elif login_data.email == "admin@peerai.se" and login_data.password == "admin123":
+        return LoginResponse(
+            access_token="mock_token_for_testing_purposes_only",
+            token_type="bearer",
+            user={
+                "id": 2,
+                "email": login_data.email,
+                "name": "Team Admin",
+                "role": "user_admin"
+            }
+        )
+    # Check for regular user credentials
+    elif login_data.email == "user@peerai.se" and login_data.password == "user123":
+        return LoginResponse(
+            access_token="mock_token_for_testing_purposes_only",
+            token_type="bearer",
+            user={
+                "id": 3,
+                "email": login_data.email,
+                "name": "Regular User",
+                "role": "user"
+            }
+        )
+    # Fallback for demo purposes
+    elif login_data.email == "admin@example.com" and login_data.password == "password":
+        return LoginResponse(
+            access_token="mock_token_for_testing_purposes_only",
+            token_type="bearer",
+            user={
+                "id": 4,
+                "email": login_data.email,
                 "name": "Admin User",
                 "role": "admin"
             }
         )
+    
+    # If no credentials match
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect email or password",
@@ -126,9 +167,9 @@ def get_current_user():
     # This is a mock implementation - in production, validate token and return user
     return {
         "id": 1,
-        "email": "admin@example.com",
-        "name": "Admin User",
-        "role": "admin"
+        "email": "super.admin@peerai.se",
+        "name": "Super Admin",
+        "role": "super_admin"
     }
 EOL
 fi
@@ -146,6 +187,9 @@ pip install --upgrade pip
 
 # Install dependencies from the existing requirements.txt
 pip install -r requirements.txt
+
+# Ensure passlib is installed for password hashing
+pip install passlib[bcrypt]
 
 # Check if alembic directory exists, initialize if it doesn't
 if [ ! -d "migrations" ]; then
