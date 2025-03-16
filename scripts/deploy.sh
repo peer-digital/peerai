@@ -426,15 +426,19 @@ cd "$FRONTEND_DIR"
 
 # Set proper permissions for frontend files
 echo "Setting proper permissions for frontend files..."
-sudo chown -R ubuntu:ubuntu "$FRONTEND_DIR"
-sudo chmod -R 755 "$FRONTEND_DIR"
-sudo chmod -R +r "$FRONTEND_DIR/dist"
+sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
+sudo chmod -R 755 "$FRONTEND_DIR/dist"
 
 # Make sure Nginx user can access the frontend directory
 sudo usermod -a -G ubuntu www-data
-sudo chmod g+rx /home/ubuntu
-sudo chmod g+rx "$APP_DIR"
-sudo chmod g+rx "$FRONTEND_DIR"
+sudo chmod 755 /home/ubuntu
+sudo chmod 755 "$APP_DIR"
+sudo chmod 755 "$FRONTEND_DIR"
+
+# Verify permissions
+echo "Verifying permissions..."
+ls -la "$FRONTEND_DIR/dist"
+sudo -u www-data ls -la "$FRONTEND_DIR/dist" || echo "www-data user cannot access the frontend directory"
 
 # Create nginx configuration
 echo "Creating nginx configuration..."
@@ -444,13 +448,17 @@ server {
     listen [::]:80;
     server_name $SERVER_IP;
     
+    # Set proper root directory and index
     root $FRONTEND_DIR/dist;
     index index.html;
     
-    # Frontend
+    # Frontend - Fix for permission issues
     location / {
-        try_files \$uri \$uri/ /index.html;
+        try_files \$uri \$uri/ /index.html =404;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+        # Add debug headers
+        add_header X-Debug-Path \$document_root\$uri;
+        add_header X-Debug-Uri \$uri;
     }
 
     # Backend API - Fix for authentication and other API endpoints
@@ -466,6 +474,19 @@ server {
         proxy_cache_bypass \$http_upgrade;
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
+    }
+
+    # Auth endpoints
+    location /auth/ {
+        proxy_pass http://localhost:8000/auth/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
     }
 
     # Legacy API path for compatibility
@@ -496,7 +517,7 @@ server {
     
     # Log configuration
     access_log /var/log/nginx/peerai_access.log;
-    error_log /var/log/nginx/peerai_error.log;
+    error_log /var/log/nginx/peerai_error.log debug;
 }
 EOL
 
@@ -520,6 +541,37 @@ echo "Restarting services..."
 sudo systemctl daemon-reload
 sudo systemctl enable peerai.service
 sudo systemctl restart peerai.service
+
+# Check if backend service is running
+echo "Checking backend service status..."
+if ! sudo systemctl is-active --quiet peerai.service; then
+    echo "Backend service is not running. Checking logs..."
+    sudo journalctl -u peerai.service -n 50 --no-pager
+    
+    echo "Attempting to fix backend service..."
+    # Check if the backend directory exists and has the right permissions
+    sudo chown -R ubuntu:ubuntu "$BACKEND_DIR"
+    sudo chmod -R 755 "$BACKEND_DIR"
+    
+    # Check if the virtual environment is properly set up
+    if [ ! -f "$BACKEND_DIR/venv/bin/uvicorn" ]; then
+        echo "Uvicorn not found in virtual environment. Reinstalling..."
+        cd "$BACKEND_DIR"
+        source venv/bin/activate
+        pip install uvicorn
+    fi
+    
+    # Try to start the service again
+    sudo systemctl restart peerai.service
+    sleep 5
+    
+    # Check status again
+    if sudo systemctl is-active --quiet peerai.service; then
+        echo "Backend service is now running."
+    else
+        echo "Failed to start backend service. Manual intervention required."
+    fi
+fi
 
 # Test nginx configuration and reload
 echo "Testing Nginx configuration..."
@@ -587,17 +639,42 @@ echo "Backend API available at: http://$SERVER_IP/api"
 # Check API endpoints
 echo "Checking API endpoints..."
 echo "Testing root endpoint:"
-curl -s http://localhost:8000/ | grep -q "Welcome" && echo "✅ Root endpoint is working" || echo "❌ Root endpoint is not working"
+if curl -s http://localhost:8000/ | grep -q "Welcome"; then
+    echo "✅ Root endpoint is working"
+else
+    echo "❌ Root endpoint is not working"
+    echo "Response from root endpoint:"
+    curl -v http://localhost:8000/
+fi
 
 echo "Testing health endpoint:"
-curl -s http://localhost:8000/health | grep -q "healthy" && echo "✅ Health endpoint is working" || echo "❌ Health endpoint is not working"
+if curl -s http://localhost:8000/health | grep -q "healthy"; then
+    echo "✅ Health endpoint is working"
+else
+    echo "❌ Health endpoint is not working"
+    echo "Response from health endpoint:"
+    curl -v http://localhost:8000/health
+fi
 
 echo "Testing API v1 endpoint:"
-curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 endpoint is working" || echo "❌ API v1 endpoint is not working"
+if curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1"; then
+    echo "✅ API v1 endpoint is working"
+else
+    echo "❌ API v1 endpoint is not working"
+    echo "Response from API v1 endpoint:"
+    curl -v http://localhost:8000/api/v1
+fi
 
-echo "Testing auth endpoints (should return 404 if not implemented):"
-AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/auth/login)
+echo "Testing auth endpoints:"
+AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://localhost:8000/auth/login)
 echo "Auth login endpoint status: $AUTH_STATUS"
+if [ "$AUTH_STATUS" = "200" ]; then
+    echo "✅ Auth login endpoint is working"
+    echo "Response from auth login endpoint:"
+    curl -s -X POST -H "Content-Type: application/json" -d '{"email":"super.admin@peerai.se","password":"superadmin123"}' http://localhost:8000/auth/login | grep -q "access_token" && echo "Token received successfully"
+else
+    echo "❌ Auth login endpoint is not working"
+fi
 
 # Check Nginx proxy configuration
 echo "Testing Nginx proxy configuration:"
