@@ -26,7 +26,8 @@ export default defineConfig({
     allowedHosts: [
       // Allow both frontend and backend Render domains
       'peerai-fe.onrender.com',
-      'peerai-be.onrender.com'
+      'peerai-be.onrender.com',
+      '158.174.210.91',
     ],
     headers: {
       'Access-Control-Allow-Origin': '*',
