@@ -39,11 +39,7 @@ class AuthService {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      // Create form data for OAuth2 token request
-      const formData = new URLSearchParams();
-      formData.append('username', credentials.email);
-      formData.append('password', credentials.password);
-
+      // Remove form data creation and use JSON directly
       console.log('Sending login request...'); // Debug log
 
       const response = await api.post<{
@@ -59,10 +55,13 @@ class AuthService {
         };
       }>(
         '/api/v1/auth/login',
-        formData,
+        {
+          email: credentials.email,
+          password: credentials.password
+        },
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
           },
         }
       );
