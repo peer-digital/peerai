@@ -4,7 +4,11 @@ import { toast } from 'react-toastify';
 // @important: API base URL configuration
 // In development, we use the Vite proxy which is configured to localhost:8000
 // In production, this will be overridden by VITE_API_BASE_URL environment variable
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000' : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91');
+const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
+  ? import.meta.env.VITE_API_BASE_URL 
+  : 'http://localhost:8000';
+
+console.log('Using API base URL:', API_BASE_URL);
 
 // Create axios instance with default config
 const api = axios.create({
@@ -12,7 +16,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for handling cookies/sessions
+  withCredentials: false, // Set to false to avoid CORS issues with credentials
 });
 
 // Request interceptor
