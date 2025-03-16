@@ -336,17 +336,31 @@ EOL
 echo "Configuring frontend..."
 cd "$FRONTEND_DIR"
 
+# Set proper permissions for frontend files
+echo "Setting proper permissions for frontend files..."
+sudo chown -R ubuntu:ubuntu "$FRONTEND_DIR"
+sudo chmod -R 755 "$FRONTEND_DIR"
+sudo chmod -R +r "$FRONTEND_DIR/dist"
+
+# Make sure Nginx user can access the frontend directory
+sudo usermod -a -G ubuntu www-data
+sudo chmod g+rx /home/ubuntu
+sudo chmod g+rx "$APP_DIR"
+sudo chmod g+rx "$FRONTEND_DIR"
+
 # Create nginx configuration
 echo "Creating nginx configuration..."
 sudo tee "$NGINX_CONF" > /dev/null << EOL
 server {
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name $SERVER_IP;
-
+    
+    root $FRONTEND_DIR/dist;
+    index index.html;
+    
     # Frontend
     location / {
-        root $FRONTEND_DIR/dist;
-        index index.html;
         try_files \$uri \$uri/ /index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
@@ -376,6 +390,10 @@ server {
     # Enable gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    
+    # Log configuration
+    access_log /var/log/nginx/peerai_access.log;
+    error_log /var/log/nginx/peerai_error.log;
 }
 EOL
 
@@ -397,6 +415,10 @@ sudo systemctl restart peerai.service
 # Test nginx configuration and reload
 sudo nginx -t
 sudo systemctl reload nginx
+
+# Check Nginx error logs
+echo "Checking Nginx error logs..."
+sudo tail -n 20 /var/log/nginx/error.log
 
 # Configure firewall to allow HTTP/HTTPS traffic
 echo "Configuring firewall..."
