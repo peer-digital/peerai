@@ -50,7 +50,7 @@ if [ ! -d "backend" ]; then
     
     # Create main.py with a basic FastAPI application
     cat > backend/main.py << EOL
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
@@ -188,6 +188,20 @@ def api_v1_get_current_user():
 
 # Include the API v1 router
 app.include_router(api_v1_router)
+
+# Form-compatible login endpoint for legacy clients
+@app.post("/api/v1/auth/login-form")
+async def api_v1_login_form(username: str = Form(...), password: str = Form(...)):
+    """Login endpoint that accepts form data for backward compatibility"""
+    try:
+        # Convert form data to the expected LoginRequest format
+        login_data = LoginRequest(email=username, password=password)
+        return login(login_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid login payload: {str(e)}"
+        )
 EOL
 else
     # Check and update existing backend code
@@ -215,7 +229,7 @@ else
         
         # Update the main.py file to include proper API v1 routing
         cat > "$BACKEND_DIR/backend/main.py" << EOL
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
@@ -353,6 +367,20 @@ def api_v1_get_current_user():
 
 # Include the API v1 router
 app.include_router(api_v1_router)
+
+# Form-compatible login endpoint for legacy clients
+@app.post("/api/v1/auth/login-form")
+async def api_v1_login_form(username: str = Form(...), password: str = Form(...)):
+    """Login endpoint that accepts form data for backward compatibility"""
+    try:
+        # Convert form data to the expected LoginRequest format
+        login_data = LoginRequest(email=username, password=password)
+        return login(login_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid login payload: {str(e)}"
+        )
 EOL
     fi
 fi
@@ -1083,6 +1111,96 @@ if echo "$VALIDATION_RESPONSE" | grep -q "validation error"; then
     fi
 fi
 
+# Check if we need to add a form-compatible login endpoint
+echo "Checking if we need to add a form-compatible login endpoint..."
+if ! grep -q "username: str = Form" "$BACKEND_DIR/backend/main.py"; then
+    echo "Adding form-compatible login endpoint..."
+    
+    # Back up the file
+    cp "$BACKEND_DIR/backend/main.py" "$BACKEND_DIR/backend/main.py.bak.$(date +%s)"
+    
+    # Add Form imports
+    sed -i '/from fastapi import FastAPI/s/FastAPI/FastAPI, Form/' "$BACKEND_DIR/backend/main.py"
+    
+    # Add form-compatible login endpoint
+    cat >> "$BACKEND_DIR/backend/main.py" << 'EOL'
+
+# Form-compatible login endpoint for legacy clients
+@app.post("/api/v1/auth/login-form")
+async def api_v1_login_form(username: str = Form(...), password: str = Form(...)):
+    """Login endpoint that accepts form data for backward compatibility"""
+    try:
+        # Convert form data to the expected LoginRequest format
+        login_data = LoginRequest(email=username, password=password)
+        return login(login_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid login payload: {str(e)}"
+        )
+EOL
+    
+    # Restart backend to apply changes
+    echo "Restarting backend to apply form endpoint changes..."
+    sudo systemctl daemon-reload
+    sudo systemctl restart peerai.service
+    sleep 5
+    
+    # Update Nginx to redirect form login to the new endpoint
+    echo "Updating Nginx to handle form login..."
+    sudo tee /etc/nginx/conf.d/form_login_redirect.conf > /dev/null << 'EOL'
+server {
+    listen 80;
+    
+    # Redirect form submissions to the form-compatible endpoint
+    location = /api/v1/auth/login {
+        if ($content_type ~* "application/x-www-form-urlencoded") {
+            rewrite ^ /api/v1/auth/login-form last;
+        }
+        
+        proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+    
+    location = /api/v1/auth/login-form {
+        proxy_pass http://localhost:8000/api/v1/auth/login-form;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
+EOL
+    
+    # Restart Nginx to apply changes
+    sudo systemctl restart nginx
+    
+    # Test the form endpoint
+    echo "Testing form-compatible login endpoint..."
+    FORM_LOGIN=$(curl -s -X POST -d "username=super.admin@peerai.se&password=superadmin123" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        http://localhost:8000/api/v1/auth/login-form)
+    
+    if echo "$FORM_LOGIN" | grep -q "access_token"; then
+        echo "✅ Form-compatible login endpoint is working!"
+    else
+        echo "❌ Form-compatible login endpoint is not working: $FORM_LOGIN"
+    fi
+else
+    echo "Form-compatible login endpoint already exists."
+fi
+
 # Final verification of API v1 endpoint through Nginx
 echo "Final verification of API v1 endpoint through Nginx..."
 if curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1"; then
@@ -1364,4 +1482,85 @@ echo "API via Nginx:"
 curl -s http://$SERVER_IP/api/ | grep -q "Welcome" && echo "✅ API via Nginx is working" || echo "❌ API via Nginx is not working"
 
 echo "API v1 via Nginx:"
-curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 via Nginx is working" || echo "❌ API v1 via Nginx is not working" 
+curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 via Nginx is working" || echo "❌ API v1 via Nginx is not working"
+
+# Add this after the nginx configuration section
+
+# Create special config for handling form-urlencoded to JSON conversion
+echo "Creating form-to-json transformation config..."
+sudo tee /etc/nginx/conf.d/login_transform.conf > /dev/null << EOL
+server {
+    listen 80;
+    server_name $SERVER_IP;
+    
+    # Special login endpoint handling for form data
+    location = /api/v1/auth/login {
+        # Handle OPTIONS for CORS
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        
+        # Check if it's form data and transform to the format FastAPI expects
+        if (\$content_type ~* "application/x-www-form-urlencoded") {
+            rewrite_by_lua_block {
+                -- Read form data (username and password)
+                ngx.req.read_body()
+                local args, err = ngx.req.get_post_args()
+                
+                if not args then
+                    ngx.log(ngx.ERR, "Failed to get post args: ", err)
+                    return
+                end
+                
+                -- Create new JSON body with email instead of username
+                local cjson = require "cjson"
+                local json_body = {
+                    email = args.username,
+                    password = args.password
+                }
+                
+                -- Replace the request body with our JSON
+                local new_body = cjson.encode(json_body)
+                ngx.req.set_body_data(new_body)
+                
+                -- Change content type header to JSON
+                ngx.req.set_header("Content-Type", "application/json")
+            }
+        }
+        
+        # Proxy to backend
+        proxy_pass http://localhost:8000/api/v1/auth/login;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
+EOL
+
+# Install lua-nginx-module and dependencies if needed
+echo "Checking for Lua module for Nginx..."
+if ! dpkg -l | grep -q "libnginx-mod-http-lua"; then
+    echo "Installing Lua module for Nginx..."
+    sudo apt-get update
+    sudo apt-get install -y libnginx-mod-http-lua
+    
+    # Install lua-cjson if needed
+    if ! luarocks list | grep -q "lua-cjson"; then
+        sudo apt-get install -y luarocks
+        sudo luarocks install lua-cjson
+    fi
+    
+    # Restart Nginx to load new modules
+    sudo systemctl restart nginx
+fi 
