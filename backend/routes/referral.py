@@ -14,7 +14,7 @@ from services.referral import ReferralService
 from services.email import EmailService
 from core.security import get_current_user
 
-router = APIRouter()
+router = APIRouter(tags=["referrals"])
 
 
 class ReferralInvitation(BaseModel):

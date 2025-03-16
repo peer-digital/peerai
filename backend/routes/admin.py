@@ -23,7 +23,7 @@ from services.analytics import (
 from models.referral import Referral
 from services.referral import ReferralService
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 
 # Response Models
