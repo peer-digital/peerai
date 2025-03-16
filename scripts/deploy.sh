@@ -55,6 +55,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -72,6 +74,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Authentication models
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
 # Health check endpoint
 @app.get("/health", status_code=status.HTTP_200_OK)
 def health_check():
@@ -86,6 +98,38 @@ def read_root():
 @app.get("/api/v1")
 def api_v1():
     return {"message": "PeerAI API v1"}
+
+# Authentication endpoints
+@app.post("/auth/login")
+def login(login_data: LoginRequest):
+    # This is a mock implementation - in production, validate credentials against database
+    if login_data.email == "admin@example.com" and login_data.password == "password":
+        # Generate a mock token
+        return LoginResponse(
+            access_token="mock_token_for_testing_purposes_only",
+            token_type="bearer",
+            user={
+                "id": 1,
+                "email": login_data.email,
+                "name": "Admin User",
+                "role": "admin"
+            }
+        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect email or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+@app.get("/auth/me")
+def get_current_user():
+    # This is a mock implementation - in production, validate token and return user
+    return {
+        "id": 1,
+        "email": "admin@example.com",
+        "name": "Admin User",
+        "role": "admin"
+    }
 EOL
 fi
 
@@ -365,7 +409,22 @@ server {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 
-    # Backend API
+    # Backend API - Fix for authentication and other API endpoints
+    location /api/v1/ {
+        proxy_pass http://localhost:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+
+    # Legacy API path for compatibility
     location /api/ {
         proxy_pass http://localhost:8000/;
         proxy_http_version 1.1;
@@ -479,4 +538,27 @@ fi
 
 echo "Deployment completed successfully!"
 echo "Frontend available at: http://$SERVER_IP"
-echo "Backend API available at: http://$SERVER_IP/api" 
+echo "Backend API available at: http://$SERVER_IP/api"
+
+# Check API endpoints
+echo "Checking API endpoints..."
+echo "Testing root endpoint:"
+curl -s http://localhost:8000/ | grep -q "Welcome" && echo "✅ Root endpoint is working" || echo "❌ Root endpoint is not working"
+
+echo "Testing health endpoint:"
+curl -s http://localhost:8000/health | grep -q "healthy" && echo "✅ Health endpoint is working" || echo "❌ Health endpoint is not working"
+
+echo "Testing API v1 endpoint:"
+curl -s http://localhost:8000/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 endpoint is working" || echo "❌ API v1 endpoint is not working"
+
+echo "Testing auth endpoints (should return 404 if not implemented):"
+AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/auth/login)
+echo "Auth login endpoint status: $AUTH_STATUS"
+
+# Check Nginx proxy configuration
+echo "Testing Nginx proxy configuration:"
+echo "API via Nginx:"
+curl -s http://$SERVER_IP/api/ | grep -q "Welcome" && echo "✅ API via Nginx is working" || echo "❌ API via Nginx is not working"
+
+echo "API v1 via Nginx:"
+curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 via Nginx is working" || echo "❌ API v1 via Nginx is not working" 
