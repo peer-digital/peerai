@@ -352,8 +352,8 @@ sudo chmod g+rx "$FRONTEND_DIR"
 echo "Creating nginx configuration..."
 sudo tee "$NGINX_CONF" > /dev/null << EOL
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 80;
+    listen [::]:80;
     server_name $SERVER_IP;
     
     root $FRONTEND_DIR/dist;
@@ -402,6 +402,12 @@ if [ ! -f "$NGINX_ENABLED" ]; then
     sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
 fi
 
+# Disable default Nginx site if it exists
+if [ -f "/etc/nginx/sites-enabled/default" ]; then
+    echo "Disabling default Nginx site..."
+    sudo rm -f /etc/nginx/sites-enabled/default
+fi
+
 # Set proper permissions
 echo "Setting proper permissions..."
 sudo chown -R ubuntu:ubuntu "$APP_DIR"
@@ -413,7 +419,19 @@ sudo systemctl enable peerai.service
 sudo systemctl restart peerai.service
 
 # Test nginx configuration and reload
-sudo nginx -t
+echo "Testing Nginx configuration..."
+if ! sudo nginx -t; then
+    echo "Nginx configuration test failed. Checking for conflicting configurations..."
+    echo "List of enabled sites:"
+    ls -la /etc/nginx/sites-enabled/
+    echo "Attempting to fix configuration..."
+    # Keep only our configuration
+    sudo rm -f /etc/nginx/sites-enabled/*
+    sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
+    # Test again
+    sudo nginx -t
+fi
+
 sudo systemctl reload nginx
 
 # Check Nginx error logs
