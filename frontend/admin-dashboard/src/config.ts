@@ -1,5 +1,5 @@
 // @important: API base URL configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://158.174.210.91';
 
 // @important: Default API key for development (should be empty in production)
 export const DEFAULT_API_KEY = import.meta.env.VITE_DEFAULT_API_KEY || '';

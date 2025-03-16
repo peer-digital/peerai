@@ -11,7 +11,7 @@ from backend.models.auth import User
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
     "https://peerai-fe.onrender.com",
-    "https://peerai-be.onrender.com",
+    "https://158.174.210.91",
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.peerdigital.se",
@@ -68,6 +68,7 @@ app.add_middleware(
     max_age=3600,
 )
 
+
 # Add a middleware to handle CORS for admin routes specifically
 @app.middleware("http")
 async def admin_cors_middleware(request: Request, call_next):
@@ -79,8 +80,9 @@ async def admin_cors_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Origin"] = origin
             return response
-    
+
     return await call_next(request)
+
 
 def custom_openapi():
     if app.openapi_schema:
@@ -109,6 +111,7 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 @app.get(f"{settings.API_V1_PREFIX}/openapi.json")
 async def get_openapi_schema(current_user: User = Depends(get_current_user)):
     """Get OpenAPI schema - protected endpoint requiring VIEW_API_DOCS permission"""
@@ -118,15 +121,18 @@ async def get_openapi_schema(current_user: User = Depends(get_current_user)):
         )
     return custom_openapi()
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok"}
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 
 # Import routers
 from backend.routes import inference, auth, admin, rbac, referral, admin_models
@@ -140,7 +146,10 @@ app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
-app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)  # Mount under /api/v1/llm instead of taking over all /api/v1
+app.mount(
+    f"{settings.API_V1_PREFIX}/llm", llm_app
+)  # Mount under /api/v1/llm instead of taking over all /api/v1
+
 
 @app.get("/")
 async def root():
