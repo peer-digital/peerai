@@ -34,7 +34,7 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 // @important: Import API base URL from config
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, API_PREFIX } from '../config';
 
 interface EndpointConfig {
   method: string;
@@ -255,7 +255,7 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const modelsResponse = await fetch(`${API_BASE_URL}/api/llm/models`, {
+      const modelsResponse = await fetch(`${API_BASE_URL}${API_PREFIX}/llm/models`, {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
@@ -354,7 +354,7 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_BASE_URL}/api${endpoint.path}`, {
+      const response = await fetch(`${API_BASE_URL}${API_PREFIX}${endpoint.path}`, {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,

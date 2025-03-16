@@ -2,13 +2,16 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // @important: API base URL configuration
-// In development, we use the Vite proxy which is configured to localhost:8000
+// In development, we use localhost:8000
 // In production, this will be overridden by VITE_API_BASE_URL environment variable
 const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000' : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91');
 
+// @important: API prefix is now consistent between environments
+const API_PREFIX = '/api';
+
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: `${API_BASE_URL}${API_PREFIX}`,
   headers: {
     'Content-Type': 'application/json',
   },

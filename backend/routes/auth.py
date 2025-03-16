@@ -47,6 +47,11 @@ class APIKeyCreate(BaseModel):
     expires_in_days: Optional[int] = None
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -179,11 +184,26 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: Optional[OAuth2PasswordRequestForm] = Depends(None),
+    json_data: Optional[LoginRequest] = None,
+    db: Session = Depends(get_db)
 ):
-    """Login endpoint that returns a JWT token"""
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    """Login endpoint that returns a JWT token and user info"""
+    # Check if we're using JSON or form data
+    if json_data:
+        email = json_data.email
+        password = json_data.password
+    elif form_data:
+        email = form_data.username
+        password = form_data.password
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No login credentials provided",
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -194,7 +214,20 @@ async def login(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Return user info along with the token
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "is_active": user.is_active,
+            "full_name": user.full_name,
+            "token_limit": user.token_limit
+        }
+    }
 
 
 @router.post("/api-keys", response_model=dict)

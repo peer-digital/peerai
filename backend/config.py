@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_DAILY: int = Field(default=1000, description="API requests per day")
 
     # API settings
-    API_V1_PREFIX: str = "/api/v1"
+    API_V1_PREFIX: str = "/api"
     PROJECT_NAME: str = "Peer AI"
     VERSION: str = "1.0.0"
 
