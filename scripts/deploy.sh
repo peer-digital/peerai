@@ -427,20 +427,31 @@ cd "$FRONTEND_DIR"
 # Set proper permissions for frontend files
 echo "Setting proper permissions for frontend files..."
 sudo mkdir -p "$FRONTEND_DIR/dist"
-sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
-sudo chmod -R 755 "$FRONTEND_DIR/dist"
 
-# Make sure Nginx user can access the frontend directory
-sudo usermod -a -G ubuntu www-data
+# Ensure Nginx can access all parent directories
+sudo chmod 755 /home
 sudo chmod 755 /home/ubuntu
 sudo chmod 755 "$APP_DIR"
 sudo chmod 755 "$FRONTEND_DIR"
 
+# Set ownership and permissions for the dist directory
+sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
+sudo chmod -R 755 "$FRONTEND_DIR/dist"
+
+# Add nginx user to ubuntu group
+sudo usermod -a -G ubuntu www-data
+
 # Verify permissions
 echo "Verifying permissions..."
+ls -la /home
+ls -la /home/ubuntu
+ls -la "$APP_DIR"
 ls -la "$FRONTEND_DIR"
 ls -la "$FRONTEND_DIR/dist" || echo "dist directory not found or empty"
-sudo -u www-data ls -la "$FRONTEND_DIR/dist" || echo "www-data user cannot access the frontend directory"
+
+# Test if www-data can access the directory
+echo "Testing www-data access to frontend directory..."
+sudo -u www-data test -r "$FRONTEND_DIR/dist" && echo "www-data can read the directory" || echo "www-data CANNOT read the directory"
 
 # Check if frontend files exist
 echo "Checking frontend files..."
@@ -533,49 +544,35 @@ fi
 echo "Creating nginx configuration..."
 sudo tee "$NGINX_CONF" > /dev/null << EOL
 server {
-    listen 80;
-    listen [::]:80;
-    server_name $SERVER_IP;
+    listen 80 default_server;
+    server_name _;
     
     # Set proper root directory and index
     root $FRONTEND_DIR/dist;
     index index.html;
     
-    # Frontend - Simplified configuration
+    # Frontend - Ultra simplified configuration
     location / {
-        try_files \$uri \$uri/ /index.html;
+        try_files \$uri /index.html;
     }
 
     # Backend API endpoints
     location /api/ {
         proxy_pass http://localhost:8000/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
     }
 
     # Auth endpoints
     location /auth/ {
         proxy_pass http://localhost:8000/auth/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
     }
 
     # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
-        access_log off;
     }
 
     # Log configuration
@@ -616,61 +613,54 @@ if ! sudo systemctl is-active --quiet peerai.service; then
     sudo chown -R ubuntu:ubuntu "$BACKEND_DIR"
     sudo chmod -R 755 "$BACKEND_DIR"
     
-    # Check if the virtual environment is properly set up
-    if [ ! -f "$BACKEND_DIR/venv/bin/uvicorn" ]; then
-        echo "Uvicorn not found in virtual environment. Reinstalling..."
-        cd "$BACKEND_DIR"
-        source venv/bin/activate
-        pip install uvicorn
-    fi
+    # Force kill any existing uvicorn processes
+    echo "Killing any existing uvicorn processes..."
+    pkill -f uvicorn || echo "No uvicorn processes found"
     
-    # Check if the main.py file exists in the expected location
-    if [ ! -f "$BACKEND_DIR/backend/main.py" ]; then
-        echo "Main application file not found at expected location. Checking structure..."
-        find "$BACKEND_DIR" -name "main.py" -type f
-    fi
-    
-    # Check Python path and module structure
-    echo "Checking Python module structure..."
+    # Start backend directly as a background process
+    echo "Starting backend directly as a background process..."
     cd "$BACKEND_DIR"
     source venv/bin/activate
-    python -c "import sys; print('Python path:', sys.path)"
-    python -c "import importlib.util; print('backend module exists:', importlib.util.find_spec('backend') is not None)" || echo "Failed to check module"
     
-    # Try to start the service with direct command to see errors
-    echo "Trying to start backend directly to see errors..."
-    cd "$BACKEND_DIR"
-    source venv/bin/activate
-    python -c "from backend.main import app; print('Successfully imported app')" || echo "Failed to import app"
+    # Create logs directory if it doesn't exist
+    mkdir -p "$APP_DIR/logs"
     
-    # Try to start the service again
-    sudo systemctl restart peerai.service
-    sleep 5
+    # Start the backend service directly
+    echo "Starting backend service directly..."
+    nohup "$BACKEND_DIR/venv/bin/uvicorn" backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
+    echo $! > "$APP_DIR/backend.pid"
+    echo "Backend started as process $(cat "$APP_DIR/backend.pid")"
     
-    # Check status again
-    if sudo systemctl is-active --quiet peerai.service; then
-        echo "Backend service is now running."
+    # Wait for backend to start
+    echo "Waiting for backend to start..."
+    sleep 10
+    
+    # Check if backend is responding
+    if curl -s http://localhost:8000/health; then
+        echo "Backend is now running as a background process."
     else
-        echo "Failed to start backend service. Trying alternative approach..."
+        echo "Backend still not responding. Checking logs..."
+        tail -n 50 "$APP_DIR/logs/backend.log"
         
-        # Try running directly as a background process
-        echo "Starting backend directly as a background process..."
+        # Try one more approach - run with Python directly
+        echo "Trying to run with Python directly..."
         cd "$BACKEND_DIR"
         source venv/bin/activate
-        nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
-        echo $! > "$APP_DIR/backend.pid"
-        echo "Backend started as process $(cat "$APP_DIR/backend.pid")"
+        nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend_direct.log" 2>&1 &
+        echo $! > "$APP_DIR/backend_direct.pid"
+        echo "Backend started directly as process $(cat "$APP_DIR/backend_direct.pid")"
         
         # Wait for backend to start
         echo "Waiting for backend to start..."
         sleep 10
         
-        # Check if backend is responding
+        # Final check
         if curl -s http://localhost:8000/health; then
-            echo "Backend is now running as a background process."
+            echo "Backend is now running with direct Python execution."
         else
             echo "Backend still not responding. Manual intervention required."
-            echo "Check logs at $APP_DIR/logs/backend.log"
+            echo "Check logs at $APP_DIR/logs/backend_direct.log"
+            tail -n 50 "$APP_DIR/logs/backend_direct.log"
         fi
     fi
 fi
