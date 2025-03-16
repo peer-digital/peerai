@@ -551,9 +551,9 @@ server {
     root $FRONTEND_DIR/dist;
     index index.html;
     
-    # Frontend - Ultra simplified configuration
+    # Frontend - Fix try_files directive to prevent redirection loops
     location / {
-        try_files \$uri /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
 
     # Backend API endpoints
@@ -561,6 +561,8 @@ server {
         proxy_pass http://localhost:8000/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Auth endpoints
@@ -568,16 +570,20 @@ server {
         proxy_pass http://localhost:8000/auth/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     # Log configuration
     access_log /var/log/nginx/peerai_access.log;
-    error_log /var/log/nginx/peerai_error.log debug;
+    error_log /var/log/nginx/peerai_error.log;
 }
 EOL
 
@@ -595,6 +601,20 @@ fi
 # Set proper permissions
 echo "Setting proper permissions..."
 sudo chown -R ubuntu:ubuntu "$APP_DIR"
+
+# Fix Nginx permissions for frontend files
+echo "Fixing Nginx permissions for frontend files..."
+sudo chmod -R 755 "$FRONTEND_DIR"
+sudo chmod -R 755 "$FRONTEND_DIR/dist"
+sudo chown -R www-data:www-data "$FRONTEND_DIR/dist"
+
+# Ensure Nginx user can access all parent directories
+sudo chmod 755 /home
+sudo chmod 755 /home/ubuntu
+sudo chmod 755 "$APP_DIR"
+
+# Add nginx to ubuntu group
+sudo usermod -a -G ubuntu www-data
 
 # Reload systemd, enable and restart service
 echo "Restarting services..."
@@ -625,9 +645,9 @@ if ! sudo systemctl is-active --quiet peerai.service; then
     # Create logs directory if it doesn't exist
     mkdir -p "$APP_DIR/logs"
     
-    # Start the backend service directly
+    # Start the backend service directly with explicit path to uvicorn
     echo "Starting backend service directly..."
-    nohup "$BACKEND_DIR/venv/bin/uvicorn" backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
+    nohup "$BACKEND_DIR/venv/bin/python" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend.log" 2>&1 &
     echo $! > "$APP_DIR/backend.pid"
     echo "Backend started as process $(cat "$APP_DIR/backend.pid")"
     
@@ -646,7 +666,7 @@ if ! sudo systemctl is-active --quiet peerai.service; then
         echo "Trying to run with Python directly..."
         cd "$BACKEND_DIR"
         source venv/bin/activate
-        nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > "$APP_DIR/logs/backend_direct.log" 2>&1 &
+        nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug > "$APP_DIR/logs/backend_direct.log" 2>&1 &
         echo $! > "$APP_DIR/backend_direct.pid"
         echo "Backend started directly as process $(cat "$APP_DIR/backend_direct.pid")"
         
@@ -731,14 +751,51 @@ echo "Backend API available at: http://$SERVER_IP/api"
 # Check API endpoints
 echo "Checking API endpoints..."
 echo "Testing root endpoint:"
-if curl -s http://localhost:8000/ | grep -q "Welcome"; then
-    echo "✅ Root endpoint is working"
-else
-    echo "❌ Root endpoint is not working"
-    echo "Response from root endpoint:"
-    curl -v http://localhost:8000/
+
+# Retry mechanism for backend checks
+MAX_RETRIES=5
+RETRY_COUNT=0
+BACKEND_RUNNING=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:8000/ | grep -q "Welcome"; then
+        echo "✅ Root endpoint is working"
+        BACKEND_RUNNING=true
+        break
+    else
+        echo "❌ Root endpoint is not working (attempt $((RETRY_COUNT+1))/$MAX_RETRIES)"
+        RETRY_COUNT=$((RETRY_COUNT+1))
+        
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            echo "Response from root endpoint:"
+            curl -v http://localhost:8000/
+        else
+            echo "Waiting 5 seconds before retrying..."
+            sleep 5
+        fi
+    fi
+done
+
+if [ "$BACKEND_RUNNING" = false ]; then
+    echo "WARNING: Backend service is not responding after multiple attempts."
+    echo "Checking backend logs..."
+    tail -n 50 "$APP_DIR/logs/backend.log"
+    echo "Checking backend direct logs..."
+    tail -n 50 "$APP_DIR/logs/backend_direct.log"
+    echo "Checking systemd service status..."
+    sudo systemctl status peerai.service
+    
+    echo "Attempting one final restart of the backend service..."
+    cd "$BACKEND_DIR"
+    source venv/bin/activate
+    pkill -f uvicorn || echo "No uvicorn processes found"
+    nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug > "$APP_DIR/logs/backend_final.log" 2>&1 &
+    echo $! > "$APP_DIR/backend_final.pid"
+    echo "Final backend restart as process $(cat "$APP_DIR/backend_final.pid")"
+    sleep 10
 fi
 
+# Continue with other endpoint checks
 echo "Testing health endpoint:"
 if curl -s http://localhost:8000/health | grep -q "healthy"; then
     echo "✅ Health endpoint is working"
