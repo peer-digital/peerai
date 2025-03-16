@@ -392,6 +392,18 @@ echo "Creating admin user if needed..."
 cd "$BACKEND_DIR"
 source venv/bin/activate
 
+# Create scripts directory if it doesn't exist
+if [ ! -d "scripts" ]; then
+    echo "Creating scripts directory..."
+    mkdir -p scripts
+fi
+
+# Check if admin user creation script exists, copy from source if available
+if [ ! -f "scripts/create_admin.py" ] && [ -f "/home/ubuntu/scripts/create_admin.py" ]; then
+    echo "Copying admin user creation script from source..."
+    cp /home/ubuntu/scripts/create_admin.py scripts/
+fi
+
 # Run the admin user creation script if it exists
 if [ -f "scripts/create_admin.py" ]; then
     echo "Running existing admin user creation script..."

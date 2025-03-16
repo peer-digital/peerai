@@ -54,7 +54,10 @@ rm -rf "$TEMP_DIR/scripts.tar.gz"
 # Set proper permissions
 echo "Setting proper permissions..."
 sudo chown -R ubuntu:ubuntu "$APP_DIR"
-sudo chmod -R 755 "$APP_DIR/scripts"
+# Fix the path to the scripts directory
+if [ -d "/home/ubuntu/scripts" ]; then
+  sudo chmod -R 755 "/home/ubuntu/scripts"
+fi
 
 echo "Cleaning systemd journal..."
 sudo journalctl --vacuum-time=7d
