@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// @important: API base URL configuration - hardcoded to VM IP
-// Force using the VM IP address for all environments to avoid localhost issues
-const API_BASE_URL = 'http://158.174.210.91';
+// @important: API base URL configuration
+// Use environment variable with fallback to VM IP address
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91';
 
 console.log('Using API base URL:', API_BASE_URL);
 

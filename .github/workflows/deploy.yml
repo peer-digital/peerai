@@ -45,6 +45,15 @@ jobs:
             npm install
           fi
       
+      # Set environment variables for frontend build
+      - name: Set environment variables for frontend build
+        working-directory: frontend/admin-dashboard
+        run: |
+          echo "VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}" > .env
+          echo "VITE_APP_ENV=${{ vars.VITE_APP_ENV }}" >> .env
+          echo "Frontend environment file created with:"
+          cat .env
+      
       # Build frontend
       - name: Build frontend
         working-directory: frontend/admin-dashboard

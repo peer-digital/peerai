@@ -36,7 +36,7 @@ EOL
 # Create frontend environment file
 echo "Creating frontend environment file..."
 cat > "$FRONTEND_DIR/.env" << EOL
-VITE_API_URL=http://$SERVER_IP/api/v1
+VITE_API_BASE_URL=http://$SERVER_IP
 VITE_APP_ENV=production
 EOL
 
