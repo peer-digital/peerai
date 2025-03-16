@@ -1148,40 +1148,6 @@ EOL
     
     # Update Nginx to redirect form login to the new endpoint
     echo "Updating Nginx to handle form login..."
-    sudo tee /etc/nginx/conf.d/form_login_redirect.conf > /dev/null << 'EOL'
-server {
-    listen 80;
-    
-    # Redirect form submissions to the form-compatible endpoint
-    location = /api/v1/auth/login {
-        if ($content_type ~* "application/x-www-form-urlencoded") {
-            rewrite ^ /api/v1/auth/login-form last;
-        }
-        
-        proxy_pass http://localhost:8000/api/v1/auth/login;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-    
-    location = /api/v1/auth/login-form {
-        proxy_pass http://localhost:8000/api/v1/auth/login-form;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-}
-EOL
     
     # Restart Nginx to apply changes
     sudo systemctl restart nginx
@@ -1236,25 +1202,6 @@ else
     
     # Fix Nginx configuration if needed
     echo "Updating Nginx configuration for login endpoint..."
-    sudo tee /etc/nginx/conf.d/api_fix.conf > /dev/null << EOL
-server {
-    listen 80;
-    server_name $SERVER_IP;
-    
-    # Direct login endpoint fix
-    location = /api/v1/auth/login {
-        proxy_pass http://localhost:8000/api/v1/auth/login;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-}
-EOL
     
     # Restart Nginx
     echo "Restarting Nginx with additional configuration..."
@@ -1281,40 +1228,6 @@ if [ $? -ne 0 ]; then
     
     # Create a special nginx configuration specifically for the login endpoint
     echo "Creating special configuration for login endpoint..."
-    sudo tee /etc/nginx/conf.d/login_fix.conf > /dev/null << EOL
-server {
-    listen 80;
-    server_name $SERVER_IP;
-    
-    # Special login endpoint handling
-    location = /api/v1/auth/login {
-        # Add CORS headers
-        add_header 'Access-Control-Allow-Origin' '*' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-        
-        # Handle preflight requests
-        if (\$request_method = 'OPTIONS') {
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
-            return 204;
-        }
-        
-        # Set content type for JSON requests
-        proxy_set_header Content-Type 'application/json';
-        proxy_pass http://localhost:8000/api/v1/auth/login;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-}
-EOL
     
     # Restart Nginx to apply the configuration
     sudo systemctl restart nginx
@@ -1486,67 +1399,6 @@ curl -s http://$SERVER_IP/api/v1 | grep -q "PeerAI API v1" && echo "✅ API v1 v
 
 # Add this after the nginx configuration section
 
-# Create special config for handling form-urlencoded to JSON conversion
-echo "Creating form-to-json transformation config..."
-sudo tee /etc/nginx/conf.d/login_transform.conf > /dev/null << EOL
-server {
-    listen 80;
-    server_name $SERVER_IP;
-    
-    # Special login endpoint handling for form data
-    location = /api/v1/auth/login {
-        # Handle OPTIONS for CORS
-        if (\$request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '*' always;
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
-            return 204;
-        }
-        
-        # Check if it's form data and transform to the format FastAPI expects
-        if (\$content_type ~* "application/x-www-form-urlencoded") {
-            rewrite_by_lua_block {
-                -- Read form data (username and password)
-                ngx.req.read_body()
-                local args, err = ngx.req.get_post_args()
-                
-                if not args then
-                    ngx.log(ngx.ERR, "Failed to get post args: ", err)
-                    return
-                end
-                
-                -- Create new JSON body with email instead of username
-                local cjson = require "cjson"
-                local json_body = {
-                    email = args.username,
-                    password = args.password
-                }
-                
-                -- Replace the request body with our JSON
-                local new_body = cjson.encode(json_body)
-                ngx.req.set_body_data(new_body)
-                
-                -- Change content type header to JSON
-                ngx.req.set_header("Content-Type", "application/json")
-            }
-        }
-        
-        # Proxy to backend
-        proxy_pass http://localhost:8000/api/v1/auth/login;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90;
-        proxy_connect_timeout 90;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-    }
-}
-EOL
 
 # Install lua-nginx-module and dependencies if needed
 echo "Checking for Lua module for Nginx..."
@@ -1564,3 +1416,10 @@ if ! dpkg -l | grep -q "libnginx-mod-http-lua"; then
     # Restart Nginx to load new modules
     sudo systemctl restart nginx
 fi 
+# Run the Nginx fix script
+echo "Running Nginx fix script to clean up configuration..."
+if [ -f "/home/ubuntu/scripts/fix-nginx.sh" ]; then
+    bash /home/ubuntu/scripts/fix-nginx.sh
+else
+    echo "Nginx fix script not found. Please run it manually."
+fi
