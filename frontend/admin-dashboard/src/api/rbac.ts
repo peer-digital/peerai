@@ -1,7 +1,7 @@
 import { Team, TeamWithMembers, User, Role } from '../types/rbac';
 import { apiClient } from './client';
 
-const BASE_PATH = '/api/v1/rbac';
+const BASE_PATH = '/rbac';
 
 export const rbacApi = {
     // Team operations

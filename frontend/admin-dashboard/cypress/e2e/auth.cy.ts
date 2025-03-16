@@ -11,7 +11,7 @@ declare namespace Cypress {
 describe('Authentication', () => {
   beforeEach(() => {
     // Mock API responses
-    cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
+    cy.intercept('POST', '/auth/login', (req: any) => {
       const formData = new URLSearchParams(req.body);
       const username = formData.get('username');
       const password = formData.get('password');
@@ -34,7 +34,7 @@ describe('Authentication', () => {
       }
     }).as('loginRequest');
 
-    cy.intercept('GET', '/api/v1/auth/validate', {
+    cy.intercept('GET', '/auth/validate', {
       statusCode: 200,
       body: {
         id: '1',

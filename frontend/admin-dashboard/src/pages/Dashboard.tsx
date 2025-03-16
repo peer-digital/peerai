@@ -153,12 +153,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   const { data: stats, isLoading, error } = useQuery<UsageStats>({
     queryKey: ['usage-stats', viewType],
     queryFn: async () => {
-      let endpoint = '/api/v1/admin/usage/personal';
+      let endpoint = '/admin/usage/personal';
       
       if (viewType === 'team') {
-        endpoint = '/api/v1/admin/usage/team';
+        endpoint = '/admin/usage/team';
       } else if (viewType === 'all') {
-        endpoint = '/api/v1/admin/stats';
+        endpoint = '/admin/stats';
       }
       
       const response = await api.get(endpoint);

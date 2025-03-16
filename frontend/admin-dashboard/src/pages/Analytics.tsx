@@ -178,14 +178,14 @@ const Analytics: React.FC = () => {
   const { data, isLoading, error } = useQuery<AnalyticsData>({
     queryKey: ['analytics', viewType, timeRange, selectedTeam, selectedUser],
     queryFn: async () => {
-      let endpoint = '/api/v1/admin/analytics/personal';
+      let endpoint = '/admin/analytics/personal';
       const params = new URLSearchParams();
       params.append('timeRange', timeRange);
       
       if (viewType === 'team') {
-        endpoint = '/api/v1/admin/analytics/team';
+        endpoint = '/admin/analytics/team';
       } else if (viewType === 'all') {
-        endpoint = '/api/v1/admin/analytics';
+        endpoint = '/admin/analytics';
         
         if (selectedTeam) {
           params.append('teamId', selectedTeam);
@@ -202,9 +202,9 @@ const Analytics: React.FC = () => {
       } catch (error) {
         console.warn(`Error fetching analytics data from ${endpoint}: `, error);
         // If the personal or team endpoint fails, try the admin endpoint as fallback
-        if (endpoint !== '/api/v1/admin/analytics' && hasPermission(user?.role || Role.USER, Permission.VIEW_ALL_USAGE)) {
+        if (endpoint !== '/admin/analytics' && hasPermission(user?.role || Role.USER, Permission.VIEW_ALL_USAGE)) {
           try {
-            const adminResponse = await api.get(`/api/v1/admin/analytics?${params.toString()}`);
+            const adminResponse = await api.get(`/admin/analytics?${params.toString()}`);
             return adminResponse.data;
           } catch (adminError) {
             console.error('Admin endpoint also failed: ', adminError);

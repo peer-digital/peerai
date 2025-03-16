@@ -87,7 +87,7 @@ const ModelManagement: React.FC = () => {
   const fetchModels = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/v1/admin/models');
+      const response = await apiClient.get('/admin/models');
       setModels(response.data);
       setError(null);
     } catch (err: unknown) {
@@ -110,7 +110,7 @@ const ModelManagement: React.FC = () => {
 
   const fetchProviders = async () => {
     try {
-      const response = await apiClient.get('/api/v1/admin/providers');
+      const response = await apiClient.get('/admin/providers');
       setProviders(response.data);
     } catch (err: unknown) {
       console.error('Error fetching providers:', err);
@@ -172,11 +172,11 @@ const ModelManagement: React.FC = () => {
 
       if (editRecord) {
         // Update
-        await apiClient.put(`/api/v1/admin/models/${editRecord.id}`, formData);
+        await apiClient.put(`/admin/models/${editRecord.id}`, formData);
         toast.success('Model updated successfully');
       } else {
         // Create
-        await apiClient.post('/api/v1/admin/models', formData);
+        await apiClient.post('/admin/models', formData);
         toast.success('Model created successfully');
       }
       handleCloseDialog();
@@ -191,7 +191,7 @@ const ModelManagement: React.FC = () => {
   const handleDelete = async (record: ModelRecord) => {
     if (!window.confirm(`Are you sure you want to delete "${record.display_name}"?`)) return;
     try {
-      await apiClient.delete(`/api/v1/admin/models/${record.id}`);
+      await apiClient.delete(`/admin/models/${record.id}`);
       toast.success('Model deleted successfully');
       fetchModels();
     } catch (err: unknown) {

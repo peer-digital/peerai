@@ -28,7 +28,7 @@ declare global {
 // Mock API responses
 beforeEach(() => {
   // Mock successful login response
-  cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
+  cy.intercept('POST', '/auth/login', (req: any) => {
     const { username, password } = Object.fromEntries(new URLSearchParams(req.body));
     
     if (username === 'admin@peerai.se' && password === 'admin123') {
@@ -50,7 +50,7 @@ beforeEach(() => {
   }).as('loginRequest');
 
   // Mock token validation response
-  cy.intercept('GET', '/api/v1/auth/validate', {
+  cy.intercept('GET', '/auth/validate', {
     statusCode: 200,
     body: {
       id: '1',
@@ -61,7 +61,7 @@ beforeEach(() => {
   }).as('validateToken');
 
   // Mock logout response
-  cy.intercept('POST', '/api/v1/auth/logout', {
+  cy.intercept('POST', '/auth/logout', {
     statusCode: 200,
     body: { message: 'Logged out successfully' }
   }).as('logoutRequest');
