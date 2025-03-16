@@ -89,7 +89,7 @@ server {
 
     # Frontend
     location / {
-        root $FRONTEND_DIR/build;
+        root $FRONTEND_DIR/dist;
         index index.html;
         try_files \$uri \$uri/ /index.html;
     }

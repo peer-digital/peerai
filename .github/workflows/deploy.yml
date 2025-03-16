@@ -50,7 +50,7 @@ jobs:
         run: |
           # Create frontend tarball
           cd frontend/admin-dashboard
-          tar -czf frontend-build.tar.gz build/
+          tar -czf frontend-build.tar.gz dist/
           cd ../..
           
           # Create scripts tarball
