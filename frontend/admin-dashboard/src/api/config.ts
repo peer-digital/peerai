@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000' : (import.met
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

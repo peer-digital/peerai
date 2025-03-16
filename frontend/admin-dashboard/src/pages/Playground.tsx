@@ -255,19 +255,19 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/llm/models`, {
+      const modelsResponse = await fetch(`${API_BASE_URL}/api/llm/models`, {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
         },
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Error fetching models: ${response.statusText}`);
+      if (!modelsResponse.ok) {
+        const errorData = await modelsResponse.json();
+        throw new Error(errorData.detail || `Error fetching models: ${modelsResponse.statusText}`);
       }
       
-      const models = await response.json();
+      const models = await modelsResponse.json();
       
       if (!Array.isArray(models)) {
         throw new Error('Invalid response format: models data is not an array');
@@ -354,7 +354,7 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1${endpoint.path}`, {
+      const response = await fetch(`${API_BASE_URL}/api${endpoint.path}`, {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,
