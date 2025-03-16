@@ -221,7 +221,7 @@ function Playground() {
 
   const generateCurlCommand = () => {
     const endpoint = endpointConfigs[selectedEndpoint];
-    let command = `curl -X ${endpoint.method} ${API_BASE_URL}${endpoint.path}`;
+    let command = `curl -X ${endpoint.method} ${API_BASE_URL}${API_PREFIX}${endpoint.path}`;
     
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
       command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
@@ -354,7 +354,10 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_BASE_URL}${API_PREFIX}${endpoint.path}`, {
+      // Ensure the path starts with a slash
+      const path = endpoint.path.startsWith('/') ? endpoint.path : `/${endpoint.path}`;
+
+      const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,

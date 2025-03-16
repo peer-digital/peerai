@@ -82,6 +82,31 @@ async def admin_cors_middleware(request: Request, call_next):
     
     return await call_next(request)
 
+# Add a middleware to handle path normalization for consistent API routing
+@app.middleware("http")
+async def path_normalization_middleware(request: Request, call_next):
+    """
+    This middleware ensures consistent API routing regardless of whether requests
+    come directly to the backend or through Nginx proxy.
+    
+    In the VM environment, Nginx strips the /api prefix when proxying to the backend.
+    This middleware ensures that both direct requests and proxied requests work correctly.
+    """
+    original_path = request.url.path
+    
+    # Case 1: Direct access to backend with non-prefixed auth paths (e.g., /auth/login)
+    # We need to add the API prefix to ensure it's routed correctly
+    if not original_path.startswith(settings.API_V1_PREFIX) and (
+        original_path.startswith("/auth/") or 
+        original_path.startswith("/llm/")
+    ):
+        request.scope["path"] = f"{settings.API_V1_PREFIX}{original_path}"
+    
+    # Case 2: Nginx proxied requests where /api/ is stripped
+    # This is handled by mounting routers both with and without the API prefix
+    
+    return await call_next(request)
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -131,16 +156,27 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Import routers
 from backend.routes import inference, auth, admin, rbac, referral, admin_models
 
-# Include all non-LLM routes in the main app first
+# Mount all routers with API prefix for direct access
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 
+# Mount all routers without API prefix for Nginx proxied requests
+# This ensures compatibility with the server environment where Nginx strips the /api prefix
+app.include_router(auth.router, prefix="")
+app.include_router(admin.router, prefix="")
+app.include_router(rbac.router, prefix="")
+app.include_router(admin_models.router, prefix="/admin")
+app.include_router(referral.router, prefix="")
+
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
-app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)  # Mount under /api/v1/llm instead of taking over all /api/v1
+# Mount LLM app with API prefix
+app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)
+# Mount LLM app without API prefix for Nginx proxied requests
+app.mount("/llm", llm_app)
 
 @app.get("/")
 async def root():
