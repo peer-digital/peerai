@@ -12,14 +12,6 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    proxy: {
-      // Proxy API requests to the backend during development
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   preview: {
     // @ts-expect-error - allowedHosts is valid but not typed

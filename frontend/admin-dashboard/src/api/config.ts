@@ -1,12 +1,9 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// @important: API base URL configuration
-// In development, we use the Vite proxy which is configured to localhost:8000
-// In production, this will be overridden by VITE_API_BASE_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
-  ? import.meta.env.VITE_API_BASE_URL 
-  : 'http://localhost:8000';
+// @important: API base URL configuration - hardcoded to VM IP
+// Force using the VM IP address for all environments to avoid localhost issues
+const API_BASE_URL = 'http://158.174.210.91';
 
 console.log('Using API base URL:', API_BASE_URL);
 
