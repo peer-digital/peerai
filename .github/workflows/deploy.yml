@@ -54,7 +54,11 @@ jobs:
           cd ../..
           
           # Create scripts tarball
-          tar -czf scripts.tar.gz scripts/
+          echo "Creating deployment package..."
+          mkdir -p scripts
+          cp scripts/*.sh scripts/
+          chmod +x scripts/*.sh
+          tar -czf scripts.tar.gz scripts
           
           # Create deployment package
           mkdir -p deployment

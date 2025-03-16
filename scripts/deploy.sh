@@ -313,6 +313,7 @@ sudo tee "$SYSTEMD_SERVICE" > /dev/null << EOL
 [Unit]
 Description=PeerAI API Service
 After=network.target postgresql.service
+Wants=postgresql.service
 
 [Service]
 User=ubuntu
@@ -323,6 +324,9 @@ EnvironmentFile=$BACKEND_DIR/.env
 ExecStart=$BACKEND_DIR/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4 --log-level info
 Restart=always
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=peerai
 
 [Install]
 WantedBy=multi-user.target
@@ -344,11 +348,12 @@ server {
         root $FRONTEND_DIR/dist;
         index index.html;
         try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 
     # Backend API
-    location /api {
-        proxy_pass http://localhost:8000;
+    location /api/ {
+        proxy_pass http://localhost:8000/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -357,6 +362,8 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
     }
 
     # Health check endpoint
@@ -365,6 +372,10 @@ server {
         access_log off;
         add_header Content-Type application/json;
     }
+
+    # Enable gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
 EOL
 
@@ -386,6 +397,14 @@ sudo systemctl restart peerai.service
 # Test nginx configuration and reload
 sudo nginx -t
 sudo systemctl reload nginx
+
+# Configure firewall to allow HTTP/HTTPS traffic
+echo "Configuring firewall..."
+sudo ufw status | grep -q "Status: active" && {
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    echo "Firewall configured to allow HTTP/HTTPS traffic"
+} || echo "Firewall is not active, skipping configuration"
 
 # Create admin user if it doesn't exist
 echo "Creating admin user if needed..."
