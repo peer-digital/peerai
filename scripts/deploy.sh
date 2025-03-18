@@ -367,7 +367,7 @@ server {
 
     # Backend API
     location /api/ {
-        proxy_pass http://localhost:8000/;
+        proxy_pass http://localhost:8000/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
