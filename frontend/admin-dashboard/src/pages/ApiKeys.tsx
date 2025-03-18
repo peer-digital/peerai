@@ -132,8 +132,15 @@ const ApiKeys: React.FC = () => {
   };
 
   const handleCopyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast.success('API key copied to clipboard');
+    // Check if navigator.clipboard exists before using it
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(key);
+      toast.success('API key copied to clipboard');
+    } else {
+      // Fallback for environments where Clipboard API is not available
+      console.warn('Clipboard API not available');
+      toast.error('Unable to copy to clipboard. This feature may not be supported in your environment.');
+    }
   };
 
   const handleCloseDialog = () => {
