@@ -2,13 +2,28 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, API_PREFIX } from '../config';
 
+console.log('Environment:', import.meta.env.VITE_APP_ENV);
+console.log('API Base URL from env:', import.meta.env.VITE_API_BASE_URL);
+console.log('API Base URL from config:', API_BASE_URL);
+
+// Determine if we're in development mode
+const isDevelopment = import.meta.env.MODE === 'development' || 
+                     import.meta.env.VITE_APP_ENV === 'development' ||
+                     window.location.hostname === 'localhost';
+
+// @important: API base URL for development to avoid env variable issues
+const apiBaseUrl = isDevelopment ? 'http://localhost:8000/api' : API_BASE_URL;
+
+console.log('Using API Base URL:', apiBaseUrl);
+console.log('Development mode:', isDevelopment);
+
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: `${API_BASE_URL}${API_PREFIX}`,
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for handling cookies/sessions
+  withCredentials: false, // Changed to false since we're using token auth
 });
 
 // Request interceptor

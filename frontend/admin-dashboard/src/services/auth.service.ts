@@ -40,6 +40,7 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       console.log('Sending login request...'); // Debug log
+      console.log('API URL:', `${api.defaults.baseURL}/auth/login/json`); // Debug the full API URL
 
       const response = await api.post<{
         access_token: string;

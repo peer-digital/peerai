@@ -97,7 +97,7 @@ const Users: React.FC = () => {
   const { data: users, isLoading, error } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await api.get('/v1/admin/users');
+      const response = await api.get('/admin/users');
       return response.data;
     },
   });
