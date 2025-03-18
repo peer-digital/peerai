@@ -20,14 +20,15 @@ const EmailVerification: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const verifyEmail = async () => {
       if (hasAttemptedVerification) return; // Prevent multiple verification attempts
       
       try {
-        const response = await api.get(`/auth/verify-email/${token}`);
-        setMessage(response.data.message);
+        const response = await api.get(`/api/v1/auth/verify-email/${token}`);
+        setMessage(response.data.message || 'Email verified successfully!');
         setStatus('success');
         setHasAttemptedVerification(true);
         
@@ -38,9 +39,14 @@ const EmailVerification: React.FC = () => {
           queryClient.refetchQueries({ queryKey: ['users'] });
         }, 1000);
       } catch (error: any) {
-        setMessage(error.response?.data?.detail || 'Failed to verify email');
+        console.error('Verification error:', error);
+        setMessage(
+          error.response?.data?.detail || 'Failed to verify email. The link may be invalid or expired.'
+        );
         setStatus('error');
         setHasAttemptedVerification(true);
+      } finally {
+        setIsLoading(false);
       }
     };
 

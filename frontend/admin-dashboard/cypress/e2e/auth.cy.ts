@@ -11,17 +11,21 @@ declare namespace Cypress {
 describe('Authentication', () => {
   beforeEach(() => {
     // Mock API responses
-    cy.intercept('POST', '/auth/login', (req: any) => {
-      const formData = new URLSearchParams(req.body);
-      const username = formData.get('username');
-      const password = formData.get('password');
+    cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
+      const { email, password } = req.body;
       
-      if (username === 'admin@peerai.se' && password === 'admin123') {
+      if (email === 'admin@example.com' && password === 'password123') {
         req.reply({
           statusCode: 200,
           body: {
-            access_token: 'mock_token',
-            token_type: 'bearer'
+            access_token: 'fake-jwt-token',
+            token_type: 'bearer',
+            user: {
+              id: 1,
+              email: 'admin@example.com',
+              role: 'admin',
+              is_active: true
+            }
           }
         });
       } else {
@@ -34,13 +38,14 @@ describe('Authentication', () => {
       }
     }).as('loginRequest');
 
-    cy.intercept('GET', '/auth/validate', {
+    cy.intercept('GET', '/api/v1/auth/validate', {
       statusCode: 200,
       body: {
-        id: '1',
-        email: 'admin@peerai.se',
-        name: 'Admin User',
-        role: 'admin'
+        id: 1,
+        email: 'admin@example.com',
+        is_active: true,
+        role: 'admin',
+        token_limit: 10000
       }
     }).as('validateToken');
 
