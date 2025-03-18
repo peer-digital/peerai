@@ -88,7 +88,7 @@ const ApiKeys: React.FC = () => {
   const { data: apiKeys, isLoading, error, refetch } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
     queryFn: async () => {
-      const response = await api.get('/v1/auth/api-keys');
+      const response = await api.get('/api/auth/api-keys');
       return response.data;
     },
   });
@@ -96,7 +96,7 @@ const ApiKeys: React.FC = () => {
   // Create new API key
   const createKeyMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await api.post('/v1/auth/api-keys', { name });
+      const response = await api.post('/api/auth/api-keys', { name });
       return response.data;
     },
     onSuccess: (data) => {
@@ -112,7 +112,7 @@ const ApiKeys: React.FC = () => {
   // Delete API key
   const deleteKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      await api.delete(`/v1/auth/api-keys/${keyId}`);
+      await api.delete(`/api/auth/api-keys/${keyId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });

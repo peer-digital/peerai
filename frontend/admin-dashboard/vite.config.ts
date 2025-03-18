@@ -16,8 +16,8 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_APP_ENV': JSON.stringify(env.VITE_APP_ENV || mode),
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
         mode === 'production' 
-          ? (env.VITE_API_BASE_URL || 'http://158.174.210.91/api')
-          : (env.VITE_API_BASE_URL || 'http://localhost:8000/api')
+          ? (env.VITE_API_BASE_URL || 'http://158.174.210.91')
+          : (env.VITE_API_BASE_URL || 'http://localhost:8000')
       ),
     },
     plugins: [react()],
