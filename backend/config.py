@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         default=False,
         description="Debug mode - defaults to True in development, False in production",
     )
-    MOCK_MODE: bool = Field(default=True, description="Mock external services")
+    MOCK_MODE: bool = Field(default=False, description="Mock external services")
 
     # LLM Configuration
     # @url: https://llm-api.bahnhof.se/v1/completions

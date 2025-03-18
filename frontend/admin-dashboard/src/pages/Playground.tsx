@@ -69,6 +69,21 @@ interface CompletionResponse {
   };
 }
 
+interface MistralRequestParams {
+  prompt?: string;
+  messages?: Array<{role: string, content: string}>;
+  max_tokens?: number;
+  temperature?: number;
+  model: string;
+  mock_mode: boolean;
+  top_p?: number;
+  stop?: string | string[];
+  random_seed?: number;
+  safe_prompt?: boolean;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+}
+
 const ENDPOINTS: Record<string, EndpointConfig> = {
   health: {
     method: 'GET',
@@ -86,7 +101,14 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
       max_tokens: 100,
       temperature: 0.7,
       mock_mode: false,
-      model: "hosted-llm"  // @important: Default to hosted LLM
+      model: "hosted-llm",  // @model: Default to hosted LLM
+      // Advanced parameters for Mistral models:
+      // top_p: 1.0,
+      // stop: ["stop phrase"],  // String or array of strings
+      // random_seed: 42,
+      // safe_prompt: false,
+      // presence_penalty: 0,
+      // frequency_penalty: 0
     }, null, 2),
   },
   vision: {
@@ -130,6 +152,15 @@ function Playground() {
   const [error, setError] = useState<string | null>(null);
   const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
+  const [showAdvancedParams, setShowAdvancedParams] = useState(false);
+  
+  // Advanced parameters for Mistral models
+  const [topP, setTopP] = useState(1.0);
+  const [stopSequences, setStopSequences] = useState('');
+  const [randomSeed, setRandomSeed] = useState<number | null>(null);
+  const [safePrompt, setSafePrompt] = useState(false);
+  const [presencePenalty, setPresencePenalty] = useState(0);
+  const [frequencyPenalty, setFrequencyPenalty] = useState(0);
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -167,7 +198,7 @@ function Playground() {
   const updateRequestBody = (model: string, mock: boolean) => {
     if (selectedEndpoint === 'completions') {
       try {
-        let currentBody = {};
+        let currentBody: Partial<MistralRequestParams> = {};
         try {
           currentBody = JSON.parse(requestBody);
         } catch (e) {
@@ -180,11 +211,30 @@ function Playground() {
           };
         }
         
-        const newBody = {
-          ...currentBody,
+        // Start with the required fields
+        const newBody: MistralRequestParams = {
+          ...currentBody as any, // Use any to avoid type conflicts with existing fields
           model: model,
           mock_mode: mock
         };
+        
+        // Add advanced parameters for Mistral models if they're enabled
+        if (model.startsWith('mistral-') && showAdvancedParams) {
+          newBody.top_p = topP;
+          
+          if (stopSequences.trim()) {
+            newBody.stop = stopSequences.split(',').map(s => s.trim());
+          }
+          
+          if (randomSeed !== null) {
+            newBody.random_seed = randomSeed;
+          }
+          
+          newBody.safe_prompt = safePrompt;
+          newBody.presence_penalty = presencePenalty;
+          newBody.frequency_penalty = frequencyPenalty;
+        }
+        
         setRequestBody(JSON.stringify(newBody, null, 2));
       } catch (e) {
         console.error('Failed to update request body:', e);
@@ -210,6 +260,8 @@ function Playground() {
   const handleModelChange = (event: SelectChangeEvent) => {
     const newModel = event.target.value;
     setSelectedModel(newModel);
+    // Show advanced params if it's a Mistral model
+    setShowAdvancedParams(newModel.startsWith('mistral-'));
     updateRequestBody(newModel, mockMode);
   };
 
@@ -217,6 +269,49 @@ function Playground() {
     const newMockMode = event.target.checked;
     setMockMode(newMockMode);
     updateRequestBody(selectedModel, newMockMode);
+  };
+
+  // Add handler functions for the new advanced parameters
+  const handleTopPChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setTopP(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const handleStopSequencesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setStopSequences(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const handleRandomSeedChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value === '' ? null : parseInt(event.target.value, 10);
+    setRandomSeed(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const handleSafePromptChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.checked;
+    setSafePrompt(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const handlePresencePenaltyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setPresencePenalty(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const handleFrequencyPenaltyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setFrequencyPenalty(value);
+    updateRequestBody(selectedModel, mockMode);
+  };
+  
+  const toggleAdvancedParams = () => {
+    const newShowAdvanced = !showAdvancedParams;
+    setShowAdvancedParams(newShowAdvanced);
+    updateRequestBody(selectedModel, mockMode);
   };
 
   const generateCurlCommand = () => {
@@ -470,6 +565,117 @@ function Playground() {
                     )}
                   </Select>
                 </FormControl>
+              )}
+
+              {selectedEndpoint === 'completions' && selectedModel.startsWith('mistral-') && (
+                <Box>
+                  <Tooltip 
+                    title="Configure advanced Mistral API parameters like top_p, stop sequences, etc." 
+                    arrow 
+                    placement="top"
+                  >
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={toggleAdvancedParams}
+                      sx={{ mb: 2 }}
+                    >
+                      {showAdvancedParams ? 'Hide Advanced Parameters' : 'Show Advanced Parameters'}
+                    </Button>
+                  </Tooltip>
+                  
+                  {showAdvancedParams && (
+                    <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Mistral API Advanced Parameters
+                      </Typography>
+                      
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        These parameters are specific to Mistral models and will be sent to the Mistral API when you make a request.
+                      </Alert>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Top P"
+                            type="number"
+                            InputProps={{ inputProps: { min: 0, max: 1, step: 0.1 } }}
+                            value={topP}
+                            onChange={handleTopPChange}
+                            helperText="Controls diversity via nucleus sampling (0.0-1.0)"
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Random Seed"
+                            type="number"
+                            value={randomSeed === null ? '' : randomSeed}
+                            onChange={handleRandomSeedChange}
+                            helperText="Integer for deterministic sampling"
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Presence Penalty"
+                            type="number"
+                            InputProps={{ inputProps: { min: -2, max: 2, step: 0.1 } }}
+                            value={presencePenalty}
+                            onChange={handlePresencePenaltyChange}
+                            helperText="Penalizes repeated tokens (-2.0 to 2.0)"
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Frequency Penalty"
+                            type="number"
+                            InputProps={{ inputProps: { min: -2, max: 2, step: 0.1 } }}
+                            value={frequencyPenalty}
+                            onChange={handleFrequencyPenaltyChange}
+                            helperText="Penalizes token frequency (-2.0 to 2.0)"
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Stop Sequences"
+                            value={stopSequences}
+                            onChange={handleStopSequencesChange}
+                            helperText="Comma-separated list of sequences to stop generation"
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={safePrompt}
+                                onChange={handleSafePromptChange}
+                              />
+                            }
+                            label="Safe Prompt"
+                          />
+                        </Grid>
+                      </Grid>
+                      
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        Streaming is not supported in the current implementation.
+                      </Alert>
+                    </Paper>
+                  )}
+                </Box>
               )}
 
               {error && selectedEndpoint === 'completions' && (

@@ -144,6 +144,24 @@ class ModelOrchestrator:
                     f"Using messages directly: {transformed_request['messages']}"
                 )
 
+            # Handle standard Mistral API parameters
+            mistral_params = [
+                "max_tokens", "temperature", "top_p", "stop", 
+                "random_seed", "safe_prompt", "presence_penalty", "frequency_penalty"
+            ]
+            
+            for param in mistral_params:
+                if param in request_data and request_data[param] is not None:
+                    transformed_request[param] = request_data[param]
+                    # Remove from request_data so we don't process it again
+                    request_data = {k: v for k, v in request_data.items() if k != param}
+            
+            # Remove stream parameter as it's not fully implemented yet
+            if "stream" in transformed_request:
+                del transformed_request["stream"]
+            if "stream" in request_data:
+                request_data = {k: v for k, v in request_data.items() if k != "stream"}
+
             # Add other parameters from model config, excluding description and api_model_id
             if model.config:
                 for key, value in model.config.items():

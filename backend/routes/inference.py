@@ -3,7 +3,7 @@ Inference routes for PeerAI API
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from fastapi import (
     APIRouter,
     Depends,
@@ -29,6 +29,9 @@ from services.model_orchestrator import ModelOrchestrator
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Force MOCK_MODE to False for testing purposes
+settings.MOCK_MODE = False
+
 router = APIRouter()
 
 
@@ -39,8 +42,18 @@ class TextCompletionRequest(BaseModel):
     messages: Optional[List[Dict[str, str]]] = None
     max_tokens: Optional[int] = Field(default=100, ge=1, le=2048)
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=1.0)
+    top_p: Optional[float] = Field(default=1.0, ge=0.0, le=1.0)
+    stream: Optional[bool] = Field(
+        default=False, 
+        description="Not currently implemented. Will be ignored if set to true."
+    )
+    stop: Optional[Union[str, List[str]]] = None  # Can be a string or list of strings
+    random_seed: Optional[int] = None
+    safe_prompt: Optional[bool] = Field(default=False)
+    presence_penalty: Optional[float] = Field(default=0, ge=-2.0, le=2.0)
+    frequency_penalty: Optional[float] = Field(default=0, ge=-2.0, le=2.0)
     mock_mode: Optional[bool] = False
-    model: Optional[str] = None  # Model name to use, or None for default
+    model: Optional[str] = None  # @model: Model name to use, or None for default
 
     @validator("prompt", "messages")
     def validate_input(cls, v, values):
@@ -381,10 +394,35 @@ async def call_mistral(
         # Prepare request payload according to Mistral's API format
         payload = {
             "model": settings.EXTERNAL_MODEL,
-            "messages": request.messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
+        
+        # Set messages based on either prompt or messages field
+        if request.messages:
+            payload["messages"] = request.messages
+        elif request.prompt:
+            payload["messages"] = [{"role": "user", "content": request.prompt}]
+            
+        # Add optional parameters if they're provided
+        if request.top_p is not None:
+            payload["top_p"] = request.top_p
+        # Remove stream parameter as it's not fully implemented yet
+        if "stream" in payload:
+            del payload["stream"]
+        if request.stop is not None:
+            payload["stop"] = request.stop
+        if request.random_seed is not None:
+            payload["random_seed"] = request.random_seed
+        if request.safe_prompt is not None:
+            payload["safe_prompt"] = request.safe_prompt
+        if request.presence_penalty is not None:
+            payload["presence_penalty"] = request.presence_penalty
+        if request.frequency_penalty is not None:
+            payload["frequency_penalty"] = request.frequency_penalty
+        # Override model from request if provided
+        if request.model:
+            payload["model"] = request.model
 
         logger.debug("Making request to Mistral API with payload: %s", payload)
 
@@ -404,7 +442,7 @@ async def call_mistral(
         return CompletionResponse(
             choices=result["choices"],
             provider="mistral",
-            model=settings.EXTERNAL_MODEL,
+            model=settings.EXTERNAL_MODEL if not request.model else request.model,
             usage=result["usage"],
             latency_ms=int(response.elapsed.total_seconds() * 1000),
         )

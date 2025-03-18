@@ -179,7 +179,13 @@ def create_tables():
                 VALUES 
                 ({mistral_tiny_id}, 'prompt', 'messages', 'format_as_chat_message'),
                 ({mistral_tiny_id}, 'max_tokens', 'max_tokens', NULL),
-                ({mistral_tiny_id}, 'temperature', 'temperature', NULL)
+                ({mistral_tiny_id}, 'temperature', 'temperature', NULL),
+                ({mistral_tiny_id}, 'top_p', 'top_p', NULL),
+                ({mistral_tiny_id}, 'stop', 'stop', NULL),
+                ({mistral_tiny_id}, 'random_seed', 'random_seed', NULL),
+                ({mistral_tiny_id}, 'safe_prompt', 'safe_prompt', NULL),
+                ({mistral_tiny_id}, 'presence_penalty', 'presence_penalty', NULL),
+                ({mistral_tiny_id}, 'frequency_penalty', 'frequency_penalty', NULL)
             """))
             conn.commit()
             print("Parameter mappings for Mistral models inserted successfully.")
