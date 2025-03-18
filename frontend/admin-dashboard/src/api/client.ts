@@ -1,7 +1,12 @@
 import axios from 'axios';
 
 // @important: Base URL for API requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_APP_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? 'http://localhost:8000/api' 
+  : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91/api');
+
+console.log('Using API Base URL in client:', API_BASE_URL);
 
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,

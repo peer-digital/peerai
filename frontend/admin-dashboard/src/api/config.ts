@@ -11,8 +11,8 @@ const isDevelopment = import.meta.env.MODE === 'development' ||
                      import.meta.env.VITE_APP_ENV === 'development' ||
                      window.location.hostname === 'localhost';
 
-// @important: API base URL for development to avoid env variable issues
-const apiBaseUrl = isDevelopment ? 'http://localhost:8000/api' : API_BASE_URL;
+// @important: Use config.ts API_BASE_URL to ensure consistency
+const apiBaseUrl = API_BASE_URL;
 
 console.log('Using API Base URL:', apiBaseUrl);
 console.log('Development mode:', isDevelopment);
