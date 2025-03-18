@@ -33,7 +33,7 @@ declare global {
 // Mock API responses
 beforeEach(() => {
   // Mock successful login response
-  cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
+  cy.intercept('POST', '/v1/auth/login', (req: any) => {
     const { email, password } = req.body;
     
     // Simple validation for demo purposes
@@ -64,7 +64,7 @@ beforeEach(() => {
   }).as('loginRequest');
 
   // Mock token validation response
-  cy.intercept('GET', '/api/v1/auth/validate', {
+  cy.intercept('GET', '/v1/auth/validate', {
     statusCode: 200,
     body: {
       id: 1,
@@ -77,7 +77,7 @@ beforeEach(() => {
   }).as('validateToken');
 
   // Mock logout response
-  cy.intercept('POST', '/api/v1/auth/logout', {
+  cy.intercept('POST', '/v1/auth/logout', {
     statusCode: 200,
     body: { 
       detail: 'Successfully logged out'
@@ -116,7 +116,7 @@ beforeEach(() => {
 // Mock auth endpoints for all tests
 Cypress.Commands.add('mockAuthEndpoints', () => {
   // Login endpoint
-  cy.intercept('POST', '/api/v1/auth/login', (req: any) => {
+  cy.intercept('POST', '/v1/auth/login', (req: any) => {
     const { email, password } = req.body;
     
     // Simple validation for demo purposes
@@ -147,7 +147,7 @@ Cypress.Commands.add('mockAuthEndpoints', () => {
   }).as('loginRequest');
   
   // Validate token endpoint
-  cy.intercept('GET', '/api/v1/auth/validate', {
+  cy.intercept('GET', '/v1/auth/validate', {
     statusCode: 200,
     body: {
       id: 1,
@@ -160,7 +160,7 @@ Cypress.Commands.add('mockAuthEndpoints', () => {
   }).as('validateToken');
   
   // Logout endpoint
-  cy.intercept('POST', '/api/v1/auth/logout', {
+  cy.intercept('POST', '/v1/auth/logout', {
     statusCode: 200,
     body: { 
       detail: 'Successfully logged out'

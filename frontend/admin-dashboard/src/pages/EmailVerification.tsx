@@ -27,7 +27,7 @@ const EmailVerification: React.FC = () => {
       if (hasAttemptedVerification) return; // Prevent multiple verification attempts
       
       try {
-        const response = await api.get(`/api/v1/auth/verify-email/${token}`);
+        const response = await api.get(`/v1/auth/verify-email/${token}`);
         setMessage(response.data.message || 'Email verified successfully!');
         setStatus('success');
         setHasAttemptedVerification(true);
