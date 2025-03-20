@@ -100,14 +100,14 @@ const MetricCard = ({ title, value, change, suffix = '' }: {
         {title}
       </Typography>
       <Typography variant="h4" sx={{ mb: 1 }}>
-        {value.toLocaleString()}{suffix}
+        {(value || 0).toLocaleString()}{suffix}
       </Typography>
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip
           size="small"
-          icon={change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-          label={`${Math.abs(change)}% ${change >= 0 ? 'increase' : 'decrease'}`}
-          color={change >= 0 ? 'success' : 'error'}
+          icon={(change || 0) >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+          label={`${Math.abs(change || 0)}% ${(change || 0) >= 0 ? 'increase' : 'decrease'}`}
+          color={(change || 0) >= 0 ? 'success' : 'error'}
           variant="outlined"
         />
         <Typography variant="caption" color="textSecondary">
@@ -353,7 +353,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                 Usage Trends
               </Typography>
               <Box sx={{ width: '100%', height: 400 }}>
-                {stats.dailyStats && stats.dailyStats.length > 0 ? (
+                {stats?.dailyStats && stats.dailyStats.length > 0 ? (
                   <ResponsiveContainer>
                     <AreaChart
                       data={stats.dailyStats}
@@ -409,20 +409,20 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                 Model Usage Distribution
               </Typography>
               <Box sx={{ mt: 2 }}>
-                {stats.modelUsage && stats.modelUsage.length > 0 ? (
+                {stats?.modelUsage && Array.isArray(stats.modelUsage) && stats.modelUsage.length > 0 ? (
                   stats.modelUsage.map((model) => (
-                    <Box key={model.model} sx={{ mb: 2 }}>
+                    <Box key={model?.model || 'unknown'} sx={{ mb: 2 }}>
                       <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
                         <Typography variant="body2">
-                          {model.model}
+                          {model?.model || 'Unknown Model'}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          {model.requests.toLocaleString()} requests
+                          {(model?.requests || 0).toLocaleString()} requests
                         </Typography>
                       </Stack>
                       <LinearProgress 
                         variant="determinate" 
-                        value={model.percentage} 
+                        value={model?.percentage || 0} 
                         sx={{ 
                           height: 8,
                           borderRadius: 1,
