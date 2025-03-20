@@ -23,6 +23,10 @@ if ! command -v python3 &> /dev/null; then
   sudo apt-get install -y python3 python3-pip python3-venv
 fi
 
+# Always ensure python3-venv is installed (even if Python is already installed)
+echo "Ensuring python3-venv is installed..."
+sudo apt-get install -y python3-venv python3.12-venv
+
 # Create application directory if it doesn't exist
 mkdir -p /home/ubuntu/peer-ai/frontend
 mkdir -p /home/ubuntu/peer-ai/backend
