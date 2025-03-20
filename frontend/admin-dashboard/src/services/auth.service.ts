@@ -114,8 +114,9 @@ class AuthService {
         is_active: boolean;
         role: string;
         full_name?: string;
-        token_limit: number;
-      }>('/auth/validate');
+        name?: string;
+        token_limit?: number;
+      }>('/auth/me');
 
       console.log('Token validation response:', {
         rawData: validateResponse.data,
@@ -143,8 +144,8 @@ class AuthService {
         email: validateResponse.data.email,
         is_active: validateResponse.data.is_active ?? true,
         role: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING] || Role.USER,
-        name: validateResponse.data.full_name,
-        token_limit: validateResponse.data.token_limit
+        name: validateResponse.data.full_name || validateResponse.data.name,
+        token_limit: validateResponse.data.token_limit ?? 10000
       };
 
       console.log('Mapped user data:', userData);
