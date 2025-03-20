@@ -49,36 +49,51 @@ cd "$BACKEND_DIR"
 # Check if virtual environment exists, create if it doesn't
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install --upgrade pip
+    python3 -m venv venv || { echo "Failed to create virtual environment. Continuing without it."; exit 0; }
     
-    # Check if requirements.txt exists
-    if [ -f "requirements.txt" ]; then
-        echo "Installing dependencies from requirements.txt..."
-        pip install -r requirements.txt
+    # Only try to activate if the virtual environment was created
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+        pip install --upgrade pip
+        
+        # Check if requirements.txt exists
+        if [ -f "requirements.txt" ]; then
+            echo "Installing dependencies from requirements.txt..."
+            pip install -r requirements.txt
+        else
+            echo "Warning: requirements.txt not found. Skipping dependency installation."
+        fi
     else
-        echo "Warning: requirements.txt not found. Skipping dependency installation."
+        echo "Virtual environment activation file not found. Skipping dependency installation."
     fi
 else
-    # Activate virtual environment
-    source venv/bin/activate
+    # Only try to activate if the activation file exists
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+    else
+        echo "Virtual environment activation file not found. Skipping activation."
+    fi
 fi
 
-# Check if alembic is installed and migrations directory exists before running migrations
-if pip list | grep -q alembic && [ -d "migrations" ]; then
-    echo "Running database migrations..."
-    python -m alembic upgrade head
+# Only run migrations if we have an active virtual environment
+if [ -f "venv/bin/activate" ] && [ -f "venv/bin/pip" ]; then
+    # Check if alembic is installed and migrations directory exists before running migrations
+    if venv/bin/pip list | grep -q alembic && [ -d "migrations" ]; then
+        echo "Running database migrations..."
+        venv/bin/python -m alembic upgrade head
+    else
+        echo "Skipping migrations: alembic not installed or migrations directory not found."
+    fi
 else
-    echo "Skipping migrations: alembic not installed or migrations directory not found."
+    echo "Skipping migrations: virtual environment not properly set up."
 fi
 
-# Create admin user if it doesn't exist
-echo "Creating admin user if needed..."
-if [ -f "$BACKEND_DIR/scripts/create_admin.py" ]; then
-    python "$BACKEND_DIR/scripts/create_admin.py"
+# Only create admin user if we have an active virtual environment
+if [ -f "venv/bin/python" ] && [ -f "$BACKEND_DIR/scripts/create_admin.py" ]; then
+    echo "Creating admin user if needed..."
+    venv/bin/python "$BACKEND_DIR/scripts/create_admin.py"
 else
-    echo "Warning: create_admin.py script not found. Skipping admin user creation."
+    echo "Skipping admin user creation: virtual environment not properly set up or script not found."
 fi
 
 echo "Database initialization completed successfully!" 
