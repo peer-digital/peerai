@@ -1,12 +1,11 @@
 import axios from 'axios';
 
-// @important: Base URL for API requests
+// Get the API base URL from environment variables or use a default
 const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_APP_ENV === 'development';
 const API_BASE_URL = isDevelopment
-    ? 'http://localhost:8000/api'
-    : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91/api');
-
-console.log('Using API Base URL in client:', API_BASE_URL);
+    ? 'http://localhost:8000/api'  // Corrected: /api for local dev
+    : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91/api'); // /api for production
+console.log("API BASE URL: " + API_BASE_URL);
 
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -16,10 +15,9 @@ export const apiClient = axios.create({
     withCredentials: false, // We're using token-based auth, not cookies.
 });
 
-// Add request interceptor for authentication
+// Request interceptor for adding the auth token
 apiClient.interceptors.request.use(
     (config) => {
-        // Use the same key as in auth.service.ts (ACCESS_TOKEN_KEY)
         const token = localStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -55,6 +53,12 @@ apiClient.interceptors.response.use(
                     // Other errors
                     console.error('API Error:', error.response.data.detail);
             }
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Network Error:', error.message);
+        } else {
+            // Something happened in setting up the request
+            console.error('Error:', error.message);
         }
         return Promise.reject(error);
     }

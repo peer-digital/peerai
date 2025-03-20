@@ -8,14 +8,6 @@ from backend.core.security import get_current_user
 from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
 
-# Define allowed origins for admin/auth endpoints
-ADMIN_ALLOWED_ORIGINS = [
-    "https://app.peerdigital.se",  # Add your production frontend URL
-    "http://localhost:3000",  # Keep for local development
-    "http://localhost:5173",  # Keep for local development
-    # "https://peerai-fe.onrender.com",  <- Removed. Use server name instead
-]
-
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -35,9 +27,9 @@ llm_app = FastAPI(
 # CORS for LLM API endpoints - allow all origins
 llm_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins for the LLM API
     allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],  # Only allow specific methods
     allow_headers=[
         "Content-Type",
         "X-API-Key",
@@ -45,14 +37,14 @@ llm_app.add_middleware(
         "Origin",
         "X-Requested-With",
     ],
-    expose_headers=["*"],
-    max_age=3600,
+    expose_headers=["*"],  # Expose all response headers
+    max_age=3600,  # Cache preflight response for 1 hour
 )
 
-# CORS for main app - allow both admin origins and all origins for LLM endpoints
+# CORS for main app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=["*"],  # Allow all origins for the main app
     allow_credentials=False, # Must be False when using "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
@@ -66,20 +58,6 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
-
-# Add a middleware to handle CORS for admin routes specifically
-@app.middleware("http")
-async def admin_cors_middleware(request: Request, call_next):
-    if not request.url.path.startswith(f"{settings.API_V1_PREFIX}/llm"):
-        # For non-LLM routes, check if origin is in allowed admin origins
-        origin = request.headers.get("Origin")
-        if origin and origin in ADMIN_ALLOWED_ORIGINS:
-            response = await call_next(request)
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Origin"] = origin
-            return response
-
-    return await call_next(request)
 
 def custom_openapi():
     if app.openapi_schema:
@@ -137,15 +115,10 @@ app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin") # /api/admin/...
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 
-# No need for duplicate router mounts without API prefix
-# The Nginx configuration now correctly forwards /api to /api on the backend
-
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
 # Mount LLM app with API prefix
 app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)
-# No longer need to mount without API prefix
-# app.mount("/llm", llm_app)
 
 @app.get("/")
 async def root():
