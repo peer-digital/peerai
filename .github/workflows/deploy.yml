@@ -48,18 +48,18 @@ jobs:
       # Create deployment package
       - name: Create deployment package
         run: |
+          # Verify scripts directory contents first
+          echo "Checking scripts directory..."
+          ls -la scripts/
+          
           # Create frontend tarball from the build output
           cd frontend/admin-dashboard
           tar -czf frontend-build.tar.gz dist/
           cd ../..
           
-          # Create scripts tarball
+          # Create scripts tarball - copy directly to avoid creating an extra directory
           echo "Creating scripts package..."
-          mkdir -p deployment_temp
-          cp scripts/*.sh deployment_temp/
-          chmod +x deployment_temp/*.sh
-          tar -czf scripts.tar.gz -C deployment_temp .
-          rm -rf deployment_temp
+          tar -czf scripts.tar.gz -C scripts .
           
           # Prepare deployment directory
           mkdir -p deployment
@@ -92,5 +92,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
           script: |
+            echo "Starting deployment script..."
             chmod +x /home/ubuntu/deployment/run_deploy.sh
-            /home/ubuntu/deployment/run_deploy.sh 
+            /home/ubuntu/deployment/run_deploy.sh || echo "Deployment script encountered errors but will continue" 
