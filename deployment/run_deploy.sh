@@ -21,23 +21,32 @@ fi
 
 # Apply Nginx configuration 
 echo "Setting up Nginx configuration..."
-if [ -f "/home/ubuntu/peer-ai/deployment/nginx.conf" ]; then
+# First check for nginx.conf.latest, then fall back to nginx.conf
+if [ -f "/home/ubuntu/deployment/nginx.conf.latest" ]; then
+  echo "Using the latest NGINX configuration (nginx.conf.latest)..."
+  sudo cp /home/ubuntu/deployment/nginx.conf.latest /etc/nginx/sites-available/peerai
+elif [ -f "/home/ubuntu/peer-ai/deployment/nginx.conf" ]; then
+  echo "Using existing NGINX configuration (nginx.conf)..."
   sudo cp /home/ubuntu/peer-ai/deployment/nginx.conf /etc/nginx/sites-available/peerai
-  
-  # Create symbolic link if it doesn't exist
-  if [ ! -f "/etc/nginx/sites-enabled/peerai" ]; then
-    sudo ln -s /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/peerai
-  fi
-  
-  # Test and reload Nginx
+else
+  echo "Warning: No NGINX configuration file found. Nginx configuration not updated."
+fi
+
+# Create symbolic link if it doesn't exist
+if [ -f "/etc/nginx/sites-available/peerai" ] && [ ! -f "/etc/nginx/sites-enabled/peerai" ]; then
+  echo "Creating symbolic link for NGINX configuration..."
+  sudo ln -s /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/peerai
+fi
+
+# Test and reload Nginx
+if [ -f "/etc/nginx/sites-available/peerai" ]; then
+  echo "Testing NGINX configuration..."
   if sudo nginx -t; then
     sudo systemctl reload nginx
     echo "Nginx configuration updated successfully."
   else
     echo "Warning: Nginx configuration test failed. Configuration not applied."
   fi
-else
-  echo "Warning: Nginx configuration file not found. Nginx configuration not updated."
 fi
 
 # Restart the backend service

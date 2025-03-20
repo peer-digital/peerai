@@ -66,7 +66,9 @@ jobs:
           mv scripts.tar.gz deployment/
           mv frontend/admin-dashboard/frontend-build.tar.gz deployment/
           
-          # No need to copy nginx.conf as it's already in the deployment directory
+          # Copy nginx.conf to deployment directory to ensure the latest version is used
+          echo "Copying nginx.conf to deployment directory..."
+          cp deployment/nginx.conf deployment/nginx.conf.latest
           
           # Ensure run_deploy.sh is executable
           chmod +x deployment/run_deploy.sh

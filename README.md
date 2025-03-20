@@ -186,4 +186,28 @@ Proprietary - All rights reserved by Peer Digital Sweden AB
 
 ## Support
 
-For support, email support@peerdigital.se or visit our [support portal](https://support.peerdigital.se). 
+For support, email support@peerdigital.se or visit our [support portal](https://support.peerdigital.se).
+
+## API Endpoint Configuration
+
+The application is designed to support consistent API endpoint handling in various deployment scenarios:
+
+### Different Deployment Scenarios
+
+1. **Same-origin deployment**: Frontend and backend served from the same server/domain
+2. **Cross-origin deployment**: Frontend and backend served from different servers/domains
+
+### Key Components
+
+- **Config Module**: `frontend/admin-dashboard/src/config.ts` provides the `getApiUrl()` function that determines whether to use relative or absolute URLs based on the deployment context.
+- **API Clients**: All API clients use this consistent approach for endpoint construction.
+- **NGINX Configuration**: The NGINX config supports both deployment scenarios with proper routing and CORS headers.
+
+### Best Practices
+
+When adding new API calls:
+
+1. Always use the `getApiUrl()` function when constructing endpoint URLs
+2. Never hardcode absolute URLs
+3. Keep the API prefix consistent (`/api`)
+4. Ensure proper error handling for both same-origin and cross-origin scenarios 

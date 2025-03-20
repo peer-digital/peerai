@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { API_BASE_URL, API_PREFIX } from '../config';
+import { API_BASE_URL, API_PREFIX, getApiUrl } from '../config';
 
 console.log('Environment:', import.meta.env.VITE_APP_ENV);
 console.log('API Base URL from env:', import.meta.env.VITE_API_BASE_URL);
@@ -11,11 +11,17 @@ const isDevelopment = import.meta.env.MODE === 'development' ||
                      import.meta.env.VITE_APP_ENV === 'development' ||
                      window.location.hostname === 'localhost';
 
-// @important: Use config.ts API_BASE_URL to ensure consistency
-const apiBaseUrl = API_BASE_URL;
+// @important: Determine if we're using same-origin deployment
+const isSameOrigin = window.location.origin === API_BASE_URL || 
+                    window.location.origin === `http://${API_BASE_URL}` ||
+                    window.location.origin === `https://${API_BASE_URL.replace('http://', '')}`;
+
+// @important: Use baseURL that works for all deployment scenarios
+const apiBaseUrl = isSameOrigin ? API_PREFIX : `${API_BASE_URL}${API_PREFIX}`;
 
 console.log('Using API Base URL:', apiBaseUrl);
 console.log('Development mode:', isDevelopment);
+console.log('Same Origin Deployment:', isSameOrigin);
 
 // Create axios instance with default config
 const api = axios.create({
@@ -35,7 +41,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Ensure all requests use the API prefix consistently
+    // Ensure all requests use consistent formatting
     if (config.url && !config.url.startsWith('/')) {
       config.url = `/${config.url}`;
     }
@@ -71,5 +77,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// @important: Helper function for building API URLs dynamically
+export const buildApiUrl = (path: string) => getApiUrl(path);
 
 export default api; 

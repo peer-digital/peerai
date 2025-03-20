@@ -15,7 +15,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, API_PREFIX, getApiUrl } from '../config';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { toast } from 'react-toastify';
 
@@ -267,7 +267,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
 
     <script>
     const API_KEY = 'YOUR_API_KEY';  // Replace with secure key management in production
-    const API_URL = 'https://peerai-be.onrender.com/api/v1/llm/completions';
+    const API_URL = '${getApiUrl('/llm/completions')}';
 
     function showElement(id) {
         document.getElementById(id).classList.remove('hidden');

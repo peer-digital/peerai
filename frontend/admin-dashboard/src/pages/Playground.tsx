@@ -34,7 +34,7 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 // @important: Import API base URL from config
-import { API_BASE_URL, API_PREFIX } from '../config';
+import { API_BASE_URL, API_PREFIX, getApiUrl } from '../config';
 
 interface EndpointConfig {
   method: string;
@@ -316,7 +316,9 @@ function Playground() {
 
   const generateCurlCommand = () => {
     const endpoint = endpointConfigs[selectedEndpoint];
-    let command = `curl -X ${endpoint.method} ${API_BASE_URL}${API_PREFIX}${endpoint.path}`;
+    // Ensure the path starts with a slash
+    const path = endpoint.path.startsWith('/') ? endpoint.path : `/${endpoint.path}`;
+    let command = `curl -X ${endpoint.method} ${getApiUrl(path)}`;
     
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
       command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
@@ -350,7 +352,7 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const modelsResponse = await fetch(`${API_BASE_URL}${API_PREFIX}/llm/models`, {
+      const modelsResponse = await fetch(getApiUrl('/llm/models'), {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
@@ -452,7 +454,7 @@ function Playground() {
       // Ensure the path starts with a slash
       const path = endpoint.path.startsWith('/') ? endpoint.path : `/${endpoint.path}`;
 
-      const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {
+      const response = await fetch(getApiUrl(path), {
         method: endpoint.method,
         headers,
         body: endpoint.requiresBody ? requestBody : undefined,

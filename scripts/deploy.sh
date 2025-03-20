@@ -348,54 +348,101 @@ sudo chmod g+rx /home/ubuntu
 sudo chmod g+rx "$APP_DIR"
 sudo chmod g+rx "$FRONTEND_DIR"
 
-# Create nginx configuration
-echo "Creating nginx configuration..."
-sudo tee "$NGINX_CONF" > /dev/null << EOL
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $SERVER_IP;
-    
-    root $FRONTEND_DIR/dist;
-    index index.html;
-    
-    # Frontend
-    location / {
-        try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:8000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-
-    # Health check endpoint
-    location /health {
-        proxy_pass http://localhost:8000/health;
-        access_log off;
-        add_header Content-Type application/json;
-    }
-
-    # Enable gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
-    # Log configuration
-    access_log /var/log/nginx/peerai_access.log;
-    error_log /var/log/nginx/peerai_error.log;
-}
+# First check if a newer NGINX configuration exists from the deployment
+if [ -f "/home/ubuntu/deployment/nginx.conf.latest" ]; then
+  echo "Found newer NGINX configuration at /home/ubuntu/deployment/nginx.conf.latest"
+  echo "Copying it to $NGINX_CONF..."
+  sudo cp "/home/ubuntu/deployment/nginx.conf.latest" "$NGINX_CONF"
+# Create nginx configuration if it doesn't exist yet
+elif [ ! -f "$NGINX_CONF" ]; then
+  echo "Creating nginx configuration..."
+  sudo tee "$NGINX_CONF" > /dev/null << EOL
+  server {
+      listen 80;
+      server_name $SERVER_IP;  # Use the server IP variable
+  
+      root $FRONTEND_DIR/dist; # Path to built frontend
+      index index.html;
+  
+      # @important: Main frontend route
+      location / {
+          try_files \$uri \$uri/ /index.html;
+      }
+  
+      # @important: API proxy with consistent URL pattern for all deployment scenarios
+      location /api {
+          # Remove trailing slashes for consistent URL handling
+          rewrite ^/(.*)/$ /\$1 permanent;
+          
+          # Proxy to backend FastAPI service, no trailing slash to avoid path issues
+          proxy_pass http://localhost:8000/api;
+          
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade \$http_upgrade;          # For websockets
+          proxy_set_header Connection "upgrade";          # For websockets
+          proxy_set_header Host \$host;
+          proxy_cache_bypass \$http_upgrade;
+          proxy_set_header X-Real-IP \$remote_addr;
+          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto \$scheme;
+          proxy_set_header X-Forwarded-Host \$host;
+          
+          # Increase timeouts for streaming responses
+          proxy_connect_timeout 300s;
+          proxy_send_timeout 300s;
+          proxy_read_timeout 300s;
+          
+          # Add CORS headers for development
+          if (\$request_method = 'OPTIONS') {
+              add_header 'Access-Control-Allow-Origin' '*';
+              add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
+              add_header 'Access-Control-Allow-Headers' 'X-API-Key, Authorization, Content-Type, Accept';
+              add_header 'Access-Control-Max-Age' 86400;
+              add_header 'Content-Type' 'text/plain charset=UTF-8';
+              add_header 'Content-Length' 0;
+              return 204;
+          }
+          
+          # Add CORS headers for actual requests
+          add_header 'Access-Control-Allow-Origin' '*';
+          add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
+          add_header 'Access-Control-Allow-Headers' 'X-API-Key, Authorization, Content-Type, Accept';
+      }
+  
+      # Health check endpoint
+      location /health {
+          proxy_pass http://localhost:8000/health;
+          proxy_http_version 1.1;
+          proxy_set_header Host \$host;
+          proxy_set_header X-Real-IP \$remote_addr;
+          access_log off;
+      }
+  
+      # Cache static assets
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+          expires 30d;
+          add_header Cache-Control "public, no-transform";
+      }
+  
+      # Deny access to .htaccess files
+      location ~ /\.ht {
+          deny all;
+      }
+  
+      # Client-side routing - all routes that don't match other locations should serve index.html
+      location @rewrites {
+          rewrite ^(.+)$ /index.html last;
+      }
+      
+      # Log configuration
+      access_log /var/log/nginx/peerai_access.log;
+      error_log /var/log/nginx/peerai_error.log;
+  }
 EOL
+else
+  echo "NGINX configuration already exists at $NGINX_CONF, skipping creation..."
+  echo "To update NGINX configuration, use the deployment/nginx.conf file and deployment workflow."
+fi
 
 # Enable nginx site if not already enabled
 if [ ! -f "$NGINX_ENABLED" ]; then

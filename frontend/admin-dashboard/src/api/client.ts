@@ -1,14 +1,17 @@
 import axios from 'axios';
+import { API_BASE_URL, API_PREFIX, getApiUrl } from '../config';
 
-// Get the API base URL from environment variables or use a default
-const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_APP_ENV === 'development';
-const API_BASE_URL = isDevelopment
-    ? 'http://localhost:8000/api'  // Corrected: /api for local dev
-    : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91/api'); // /api for production
-console.log("API BASE URL: " + API_BASE_URL);
+// @important: Determine if we're using same-origin deployment
+const isSameOrigin = window.location.origin === API_BASE_URL || 
+                   window.location.origin === `http://${API_BASE_URL}` ||
+                   window.location.origin === `https://${API_BASE_URL.replace('http://', '')}`;
+
+// @important: Use baseURL that works for all deployment scenarios
+const apiBaseUrl = isSameOrigin ? API_PREFIX : `${API_BASE_URL}${API_PREFIX}`;
+console.log("API BASE URL: " + apiBaseUrl);
 
 export const apiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -21,6 +24,10 @@ apiClient.interceptors.request.use(
         const token = localStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+        // Ensure all requests use consistent formatting
+        if (config.url && !config.url.startsWith('/')) {
+          config.url = `/${config.url}`;
         }
         return config;
     },
@@ -62,4 +69,7 @@ apiClient.interceptors.response.use(
         }
         return Promise.reject(error);
     }
-); 
+);
+
+// @important: Helper function for building API URLs dynamically
+export const buildApiUrl = (path: string) => getApiUrl(path); 
