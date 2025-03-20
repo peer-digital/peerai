@@ -87,9 +87,14 @@ if [ -f "/etc/nginx/sites-available/peerai" ]; then
   fi
 fi
 
-# Restart the backend service
-echo "Restarting backend service..."
-sudo systemctl restart peerai
+# Restart the backend service - only if it exists
+echo "Checking backend service..."
+if systemctl list-unit-files | grep -q peerai.service; then
+  echo "Restarting backend service..."
+  sudo systemctl restart peerai || echo "Warning: Failed to restart backend service, but continuing."
+else
+  echo "Backend service not installed yet - will be created by the main deployment script."
+fi
 
 # Basic check
 echo "Running basic service checks..."
