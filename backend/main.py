@@ -10,11 +10,10 @@ from backend.models.auth import User
 
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
-    "https://peerai-fe.onrender.com",
-    "https://peerai-be.onrender.com",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://app.peerdigital.se",
+    "https://app.peerdigital.se",  # Add your production frontend URL
+    "http://localhost:3000",  # Keep for local development
+    "http://localhost:5173",  # Keep for local development
+    # "https://peerai-fe.onrender.com",  <- Removed. Use server name instead
 ]
 
 app = FastAPI(
@@ -54,7 +53,7 @@ llm_app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when using "*"
+    allow_credentials=False, # Must be False when using "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
         "Content-Type",
@@ -79,32 +78,7 @@ async def admin_cors_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Origin"] = origin
             return response
-    
-    return await call_next(request)
 
-# Add a middleware to handle path normalization for consistent API routing
-@app.middleware("http")
-async def path_normalization_middleware(request: Request, call_next):
-    """
-    This middleware ensures consistent API routing regardless of whether requests
-    come directly to the backend or through Nginx proxy.
-    
-    In the VM environment, Nginx strips the /api prefix when proxying to the backend.
-    This middleware ensures that both direct requests and proxied requests work correctly.
-    """
-    original_path = request.url.path
-    
-    # Case 1: Direct access to backend with non-prefixed auth paths (e.g., /auth/login)
-    # We need to add the API prefix to ensure it's routed correctly
-    if not original_path.startswith(settings.API_V1_PREFIX) and (
-        original_path.startswith("/auth/") or 
-        original_path.startswith("/llm/")
-    ):
-        request.scope["path"] = f"{settings.API_V1_PREFIX}{original_path}"
-    
-    # Case 2: Nginx proxied requests where /api/ is stripped
-    # This is handled by mounting routers both with and without the API prefix
-    
     return await call_next(request)
 
 def custom_openapi():
@@ -160,23 +134,18 @@ from backend.routes import inference, auth, admin, rbac, referral, admin_models
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
-app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
+app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin") # /api/admin/...
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 
-# Mount all routers without API prefix for Nginx proxied requests
-# This ensures compatibility with the server environment where Nginx strips the /api prefix
-app.include_router(auth.router, prefix="")
-app.include_router(admin.router, prefix="")
-app.include_router(rbac.router, prefix="")
-app.include_router(admin_models.router, prefix="/admin")
-app.include_router(referral.router, prefix="")
+# No need for duplicate router mounts without API prefix
+# The Nginx configuration now correctly forwards /api to /api on the backend
 
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
 # Mount LLM app with API prefix
 app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)
-# Mount LLM app without API prefix for Nginx proxied requests
-app.mount("/llm", llm_app)
+# No longer need to mount without API prefix
+# app.mount("/llm", llm_app)
 
 @app.get("/")
 async def root():

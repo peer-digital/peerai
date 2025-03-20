@@ -48,68 +48,28 @@ jobs:
       # Create deployment package
       - name: Create deployment package
         run: |
-          # Create frontend tarball
+          # Create frontend tarball from the build output
           cd frontend/admin-dashboard
           tar -czf frontend-build.tar.gz dist/
           cd ../..
           
           # Create scripts tarball
-          echo "Creating deployment package..."
+          echo "Creating scripts package..."
           mkdir -p deployment_temp
           cp scripts/*.sh deployment_temp/
           chmod +x deployment_temp/*.sh
-          tar -czf scripts.tar.gz deployment_temp
+          tar -czf scripts.tar.gz -C deployment_temp .
           rm -rf deployment_temp
           
-          # Create deployment package
+          # Prepare deployment directory
           mkdir -p deployment
-          cp scripts.tar.gz deployment/
-          cp frontend/admin-dashboard/frontend-build.tar.gz deployment/
+          mv scripts.tar.gz deployment/
+          mv frontend/admin-dashboard/frontend-build.tar.gz deployment/
           
-          # Create deployment script for VM
-          cat > deployment/run_deploy.sh << 'EOF'
-          #!/bin/bash
-          set -e
+          # Copy Nginx configuration
+          cp deployment/nginx.conf deployment/
           
-          echo "Starting deployment process on VM..."
-          
-          # Extract scripts
-          cd /home/ubuntu
-          mkdir -p scripts
-          tar -xzf deployment/scripts.tar.gz -C /home/ubuntu/
-          chmod +x /home/ubuntu/scripts/*.sh
-          
-          # Run pre-deployment script
-          echo "Running pre-deployment preparation..."
-          /home/ubuntu/scripts/pre_deploy.sh
-          
-          # Create application directory if it doesn't exist
-          mkdir -p /home/ubuntu/peer-ai/frontend
-          
-          # Extract frontend build
-          echo "Extracting frontend build..."
-          tar -xzf deployment/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
-          
-          # Run main deployment script
-          echo "Running main deployment..."
-          cd /home/ubuntu/peer-ai
-          /home/ubuntu/scripts/deploy.sh
-          
-          # Run database initialization if needed
-          echo "Initializing database if needed..."
-          /home/ubuntu/scripts/init_db.sh
-          
-          # Run cleanup
-          echo "Running post-deployment cleanup..."
-          /home/ubuntu/scripts/cleanup.sh
-          
-          # Check deployment status
-          echo "Checking deployment status..."
-          /home/ubuntu/scripts/check_deployment.sh
-          
-          echo "Deployment process completed!"
-          EOF
-          
+          # Copy our run_deploy.sh script directly (not generating it inline)
           chmod +x deployment/run_deploy.sh
       
       # Transfer deployment package to VM

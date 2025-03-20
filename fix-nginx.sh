@@ -17,7 +17,9 @@ fi
 sudo cp "$NGINX_CONF" "${NGINX_CONF}.bak.$(date +%s)"
 echo "Backup created."
 
-# Replace the proxy_pass directive for /api/
+# Update the proxy_pass directive for /api/
+# The backend is now consistently using /api, so we proxy to that.
+# The frontend is served statically by Nginx, so we don't proxy that.
 sudo sed -i 's|proxy_pass http://localhost:8000/;|proxy_pass http://localhost:8000/api/;|g' "$NGINX_CONF"
 echo "Updated proxy_pass directive."
 
@@ -36,7 +38,7 @@ sudo systemctl reload nginx
 
 echo "NGINX configuration updated and reloaded successfully."
 echo "Changes made:"
-echo "  - Changed proxy_pass for /api/ from http://localhost:8000/ to http://localhost:8000/api/"
+echo "  - Changed proxy_pass for /api from http://localhost:8000/ to http://localhost:8000/api/"
 
 # Check NGINX error log
 echo "Checking NGINX error log..."
