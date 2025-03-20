@@ -96,4 +96,9 @@ jobs:
           script: |
             echo "Starting deployment script..."
             chmod +x /home/ubuntu/deployment/run_deploy.sh
-            /home/ubuntu/deployment/run_deploy.sh || echo "Deployment script encountered errors but will continue" 
+            /home/ubuntu/deployment/run_deploy.sh || echo "Deployment script encountered errors but will continue"
+            
+            # Execute the comprehensive deploy.sh script to set up the entire stack
+            echo "Setting up the complete backend stack..."
+            chmod +x /home/ubuntu/scripts/deploy.sh
+            /home/ubuntu/scripts/deploy.sh 

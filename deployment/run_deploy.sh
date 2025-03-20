@@ -12,6 +12,12 @@ echo "Extracting frontend build..."
 # Update the path to look in the deployment directory instead
 tar -xzf /home/ubuntu/deployment/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/ || echo "Warning: Failed to extract frontend build, file may be missing"
 
+# Extract scripts
+echo "Extracting scripts..."
+mkdir -p /home/ubuntu/scripts
+tar -xzf /home/ubuntu/deployment/scripts.tar.gz -C /home/ubuntu/scripts/ || echo "Warning: Failed to extract scripts, file may be missing"
+chmod +x /home/ubuntu/scripts/*.sh 2>/dev/null || echo "Warning: No executable scripts found"
+
 # Run database initialization if needed
 echo "Initializing database if needed..."
 if [ -f "/home/ubuntu/scripts/init_db.sh" ]; then
