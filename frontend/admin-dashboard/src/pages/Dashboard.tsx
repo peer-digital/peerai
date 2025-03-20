@@ -161,8 +161,23 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
         endpoint = '/admin/stats';
       }
       
+      // Log the authorization header to debug authentication issues
+      console.log('Auth token being used:', localStorage.getItem('access_token'));
+      
       const response = await api.get(endpoint);
       console.log('Usage stats:', response.data);
+      
+      // Validate data structure to ensure it's not HTML or malformed
+      const isValidData = response.data && 
+                        typeof response.data === 'object' && 
+                        'totalRequests' in response.data &&
+                        'totalTokens' in response.data;
+                        
+      if (!isValidData) {
+        console.error('Invalid data structure received:', response.data);
+        throw new Error('Invalid data structure received from server');
+      }
+      
       return response.data;
     },
   });
@@ -266,29 +281,29 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title="Total Requests"
-              value={stats.totalRequests}
-              change={stats.requestsChange}
+              value={stats?.totalRequests || 0}
+              change={stats?.requestsChange || 0}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title="Total Tokens"
-              value={stats.totalTokens}
-              change={stats.tokensChange}
+              value={stats?.totalTokens || 0}
+              change={stats?.tokensChange || 0}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title={viewType === 'personal' ? 'Your Sessions' : 'Active Users'}
-              value={stats.activeUsers}
-              change={stats.usersChange}
+              value={stats?.activeUsers || 0}
+              change={stats?.usersChange || 0}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title="Avg. Latency"
-              value={stats.averageLatency}
-              change={stats.latencyChange}
+              value={stats?.averageLatency || 0}
+              change={stats?.latencyChange || 0}
               suffix="ms"
             />
           </Grid>
@@ -302,7 +317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
-                {stats.totalTokens.toLocaleString()} / {user.token_limit.toLocaleString()} tokens
+                {(stats?.totalTokens || 0).toLocaleString()} / {(user.token_limit || 0).toLocaleString()} tokens
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 ({tokenUsagePercentage.toFixed(1)}%)

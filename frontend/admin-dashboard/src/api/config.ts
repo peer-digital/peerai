@@ -55,11 +55,36 @@ api.interceptors.request.use(
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Check if the response is HTML instead of expected JSON
+    if (response.data && typeof response.data === 'string' && 
+        response.data.trim().startsWith('<!doctype html>')) {
+      console.error('Received HTML response instead of JSON. Likely authentication error.');
+      // Create a fake 401 response to trigger authentication handling
+      const error = {
+        response: {
+          status: 401,
+          data: { detail: 'Invalid authentication token' }
+        }
+      };
+      return Promise.reject(error);
+    }
+    return response;
+  },
   async (error) => {
     if (error.response) {
       // Handle specific error cases
       switch (error.response.status) {
+        case 401:
+          console.error('Authentication error:', error.response.data);
+          // Check if we're not already on the login page to avoid redirect loops
+          if (!window.location.pathname.includes('/login')) {
+            // Clear auth state and redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/login';
+          }
+          break;
         case 403:
           toast.error('You do not have permission to perform this action');
           break;
