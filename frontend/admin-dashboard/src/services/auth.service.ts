@@ -40,7 +40,7 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       console.log('Sending login request...'); // Debug log
-      console.log('API URL:', `${api.defaults.baseURL}/api/auth/login/json`); // Debug the full API URL
+      console.log('API URL:', `${api.defaults.baseURL}/auth/login/json`); // Debug the full API URL
 
       const response = await api.post<{
         access_token: string;
@@ -54,7 +54,7 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/auth/login/json',
+        '/auth/login/json',
         {
           email: credentials.email,
           password: credentials.password
@@ -115,7 +115,7 @@ class AuthService {
         role: string;
         full_name?: string;
         token_limit: number;
-      }>('/api/auth/validate');
+      }>('/auth/validate');
 
       console.log('Token validation response:', {
         rawData: validateResponse.data,
@@ -169,7 +169,7 @@ class AuthService {
     // First clear local state
     this.clearAuthState();
     // Then attempt to clear server session
-    api.post('/api/auth/logout').catch((error) => {
+    api.post('/auth/logout').catch((error) => {
       // Ignore 401 errors as they're expected if token is already invalid
       if (error.response?.status !== 401) {
         console.warn('Error during logout:', error);
@@ -248,8 +248,13 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/auth/register',
-        credentials
+        '/auth/register',
+        {
+          email: credentials.email,
+          password: credentials.password,
+          full_name: credentials.full_name,
+          referral_code: credentials.referral_code
+        }
       );
 
       console.log('Registration response:', response.data); // Debug log

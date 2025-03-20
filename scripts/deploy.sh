@@ -406,7 +406,7 @@ elif [ ! -f "$NGINX_CONF" ]; then
           # Add CORS headers for actual requests
           add_header 'Access-Control-Allow-Origin' '*';
           add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
-          add_header 'Access-Control-Allow-Headers' 'X-API-Key, Authorization, Content-Type, Accept';
+          add_header 'Access-Control-Allow-Headers' 'X-API-Key, Authorization, Content-Type, Accept, Origin, X-Requested-With';
       }
   
       # Health check endpoint
@@ -432,6 +432,23 @@ elif [ ! -f "$NGINX_CONF" ]; then
       # Client-side routing - all routes that don't match other locations should serve index.html
       location @rewrites {
           rewrite ^(.+)$ /index.html last;
+      }
+      
+      # Special location for auth endpoints to ensure they work without issues
+      location /api/auth {
+          proxy_pass http://localhost:8000/api/auth;
+          proxy_http_version 1.1;
+          proxy_set_header Host \$host;
+          proxy_set_header X-Real-IP \$remote_addr;
+          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto \$scheme;
+          proxy_connect_timeout 300s;
+          proxy_send_timeout 300s;
+          proxy_read_timeout 300s;
+          
+          # Enable debug logging for auth endpoints
+          error_log /var/log/nginx/auth_error.log debug;
+          access_log /var/log/nginx/auth_access.log;
       }
       
       # Log configuration
