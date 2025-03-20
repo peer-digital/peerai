@@ -9,7 +9,8 @@ mkdir -p /home/ubuntu/peer-ai/frontend
 # Extract frontend build directly to the dist directory
 # The frontend build should create a 'dist' folder inside.
 echo "Extracting frontend build..."
-tar -xzf /home/ubuntu/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
+# Update the path to look in the deployment directory instead
+tar -xzf /home/ubuntu/deployment/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/ || echo "Warning: Failed to extract frontend build, file may be missing"
 
 # Run database initialization if needed
 echo "Initializing database if needed..."
