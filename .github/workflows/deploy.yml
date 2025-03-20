@@ -66,10 +66,9 @@ jobs:
           mv scripts.tar.gz deployment/
           mv frontend/admin-dashboard/frontend-build.tar.gz deployment/
           
-          # Copy Nginx configuration
-          cp deployment/nginx.conf deployment/
+          # No need to copy nginx.conf as it's already in the deployment directory
           
-          # Copy our run_deploy.sh script directly (not generating it inline)
+          # Ensure run_deploy.sh is executable
           chmod +x deployment/run_deploy.sh
       
       # Transfer deployment package to VM
