@@ -95,13 +95,18 @@ if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
 
-# Activate virtual environment and install dependencies
-echo "Installing backend dependencies..."
-source venv/bin/activate
-pip install --upgrade pip
+# Ensure venv/bin/activate exists before trying to source it
+if [ -f "venv/bin/activate" ]; then
+    echo "Installing backend dependencies..."
+    source venv/bin/activate
+    pip install --upgrade pip
 
-# Install dependencies from the existing requirements.txt
-pip install -r requirements.txt
+    # Install dependencies from the existing requirements.txt
+    pip install -r requirements.txt
+else
+    echo "ERROR: Failed to create virtual environment. Check Python installation."
+    exit 1
+fi
 
 # Check if alembic directory exists, initialize if it doesn't
 if [ ! -d "migrations" ]; then
