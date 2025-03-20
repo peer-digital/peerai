@@ -93,12 +93,44 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
+          command_timeout: 30m  # @note: Increased timeout for long-running deployment operations
           script: |
+            # Set up error handling and logging
+            exec > >(tee -a /tmp/deployment.log) 2>&1
+            echo "=== Starting deployment at $(date) ==="
+            set -e
+            
+            # Run the deployment script
             echo "Starting deployment script..."
             chmod +x /home/ubuntu/deployment/run_deploy.sh
-            /home/ubuntu/deployment/run_deploy.sh || echo "Deployment script encountered errors but will continue"
+            /home/ubuntu/deployment/run_deploy.sh || { echo "ERROR: Frontend deployment script failed"; exit 1; }
             
             # Execute the comprehensive deploy.sh script to set up the entire stack
             echo "Setting up the complete backend stack..."
             chmod +x /home/ubuntu/scripts/deploy.sh
-            /home/ubuntu/scripts/deploy.sh 
+            
+            # Run the backend deployment script with verbose output
+            bash -x /home/ubuntu/scripts/deploy.sh || { echo "ERROR: Backend deployment script failed"; exit 1; }
+            
+            echo "=== Deployment completed at $(date) ==="
+            
+      # Verify deployment
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: 158.174.210.91  # @note: Production server IP address
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            echo "=== Verifying deployment ==="
+            
+            # Check if services are running
+            echo "Checking services status..."
+            systemctl status nginx
+            systemctl status postgresql
+            systemctl status peerai
+            
+            # Check if website is accessible
+            echo "Checking if website is accessible..."
+            curl -s -o /dev/null -w "%{http_code}" http://localhost 

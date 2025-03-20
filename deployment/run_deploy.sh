@@ -3,8 +3,29 @@ set -e
 
 echo "Starting deployment process on VM..."
 
+# Install prerequisites if needed
+echo "Checking and installing prerequisites..."
+if ! command -v nginx &> /dev/null; then
+  echo "Installing Nginx..."
+  sudo apt-get update
+  sudo apt-get install -y nginx
+fi
+
+if ! command -v postgresql &> /dev/null; then
+  echo "Installing PostgreSQL..."
+  sudo apt-get update
+  sudo apt-get install -y postgresql postgresql-contrib
+fi
+
+if ! command -v python3 &> /dev/null; then
+  echo "Installing Python..."
+  sudo apt-get update
+  sudo apt-get install -y python3 python3-pip python3-venv
+fi
+
 # Create application directory if it doesn't exist
 mkdir -p /home/ubuntu/peer-ai/frontend
+mkdir -p /home/ubuntu/peer-ai/backend
 
 # Extract frontend build directly to the dist directory
 # The frontend build should create a 'dist' folder inside.
@@ -45,6 +66,12 @@ if [ -f "/etc/nginx/sites-available/peerai" ] && [ ! -f "/etc/nginx/sites-enable
   sudo ln -s /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/peerai
 fi
 
+# Disable default site if enabled
+if [ -f "/etc/nginx/sites-enabled/default" ]; then
+  echo "Disabling default Nginx site..."
+  sudo rm -f /etc/nginx/sites-enabled/default
+fi
+
 # Test and reload Nginx
 if [ -f "/etc/nginx/sites-available/peerai" ]; then
   echo "Testing NGINX configuration..."
@@ -64,6 +91,6 @@ sudo systemctl restart peerai
 echo "Running basic service checks..."
 systemctl is-active --quiet nginx && echo "Nginx is running." || echo "Warning: Nginx is not running."
 systemctl is-active --quiet postgresql && echo "PostgreSQL is running." || echo "Warning: PostgreSQL is not running."
-systemctl is-active --quiet peerai && echo "Backend service is running." || echo "Warning: Backend service is not running."
+# Don't check for the backend service yet, as it will be set up by deploy.sh
 
-echo "Deployment process completed!" 
+echo "Frontend deployment process completed!" 
