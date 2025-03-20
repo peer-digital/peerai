@@ -90,8 +90,8 @@ function TabPanel(props: TabPanelProps) {
 
 const MetricCard = ({ title, value, change, suffix = '' }: { 
   title: string;
-  value: number;
-  change: number;
+  value?: number;
+  change?: number;
   suffix?: string;
 }) => (
   <Card elevation={0} sx={{ height: '100%', bgcolor: 'background.default' }}>
@@ -100,14 +100,14 @@ const MetricCard = ({ title, value, change, suffix = '' }: {
         {title}
       </Typography>
       <Typography variant="h4" sx={{ mb: 1 }}>
-        {(value || 0).toLocaleString()}{suffix}
+        {value !== undefined && value !== null ? value.toLocaleString() : '0'}{suffix}
       </Typography>
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip
           size="small"
-          icon={(change || 0) >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-          label={`${Math.abs(change || 0)}% ${(change || 0) >= 0 ? 'increase' : 'decrease'}`}
-          color={(change || 0) >= 0 ? 'success' : 'error'}
+          icon={!change || change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+          label={`${Math.abs(change || 0)}% ${!change || change >= 0 ? 'increase' : 'decrease'}`}
+          color={!change || change >= 0 ? 'success' : 'error'}
           variant="outlined"
         />
         <Typography variant="caption" color="textSecondary">
@@ -317,7 +317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
-                {(stats?.totalTokens || 0).toLocaleString()} / {(user.token_limit || 0).toLocaleString()} tokens
+                {stats?.totalTokens !== undefined ? stats.totalTokens.toLocaleString() : '0'} / {user?.token_limit !== undefined ? user.token_limit.toLocaleString() : '0'} tokens
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 ({tokenUsagePercentage.toFixed(1)}%)
@@ -417,7 +417,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                           {model?.model || 'Unknown Model'}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          {(model?.requests || 0).toLocaleString()} requests
+                          {model?.requests !== undefined ? model.requests.toLocaleString() : '0'} requests
                         </Typography>
                       </Stack>
                       <LinearProgress 
