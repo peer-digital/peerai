@@ -7,14 +7,16 @@ echo "Setting up PeerAI server environment..."
 # Create project directories
 mkdir -p ~/peer-ai/frontend/admin-dashboard/dist
 mkdir -p ~/peer-ai/backend
-mkdir -p ~/peer-ai/deployment/ssl
+mkdir -p ~/peer-ai/deployment
+mkdir -p ~/peer-ai/logs
 
-# Install nginx
-echo "Installing nginx..."
+# Install dependencies
+echo "Installing required packages..."
 sudo apt-get update
-sudo apt-get install -y nginx
+sudo apt-get install -y nginx python3-pip python3-venv
 
 # Create nginx configuration
+echo "Creating nginx configuration..."
 cat > ~/peer-ai/deployment/nginx-config.conf << 'EOF'
 server {
     listen 80;
@@ -63,16 +65,12 @@ server {
 EOF
 
 # Apply nginx configuration
+echo "Applying nginx configuration..."
 sudo cp ~/peer-ai/deployment/nginx-config.conf /etc/nginx/sites-available/peerai
 sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/default
-sudo systemctl restart nginx
 
-# Install Python and dependencies
-echo "Setting up Python environment..."
-sudo apt-get install -y python3-pip python3-venv
-
-# Create systemd service for backend
-echo "Creating backend service..."
+# Add default backend service
+echo "Creating backend systemd service..."
 sudo tee /etc/systemd/system/peerai-backend.service > /dev/null << 'EOF'
 [Unit]
 Description=PeerAI Backend Service
@@ -91,11 +89,33 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+# Reload systemd
 sudo systemctl daemon-reload
 sudo systemctl enable peerai-backend
 
-echo "Server environment setup complete!"
+# Create logs directory
+mkdir -p ~/peer-ai/logs
+touch ~/peer-ai/logs/backend.log
+touch ~/peer-ai/logs/frontend.log
+
+# Setup logrotate for log files
+sudo tee /etc/logrotate.d/peerai > /dev/null << 'EOF'
+/home/ubuntu/peer-ai/logs/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 ubuntu ubuntu
+}
+EOF
+
+echo "Server environment setup completed!"
 echo "Next steps:"
-echo "1. Deploy backend code"
-echo "2. Deploy frontend build"
-echo "3. Start the backend service: sudo systemctl start peerai-backend" 
+echo "1. Upload your backend code to ~/peer-ai/backend/"
+echo "2. Upload your frontend build to ~/peer-ai/frontend/admin-dashboard/dist/"
+echo "3. Set up a Python virtual environment in ~/peer-ai/backend/"
+echo "4. Install dependencies with pip install -r requirements.txt"
+echo "5. Start the backend service with: sudo systemctl start peerai-backend"
+echo "6. Restart nginx with: sudo systemctl restart nginx" 

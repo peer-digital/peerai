@@ -77,7 +77,7 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
-      # Run deployment
+      # Deploy to server
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
@@ -96,30 +96,113 @@ jobs:
             # Make scripts executable
             chmod +x ~/deploy-temp/scripts/*.sh
             
-            # Run server setup script
-            ~/deploy-temp/scripts/setup-server.sh
+            # Create necessary directories
+            mkdir -p ~/peer-ai/backend
+            mkdir -p ~/peer-ai/frontend/admin-dashboard/dist
+            mkdir -p ~/peer-ai/deployment
             
             # Extract backend code
-            mkdir -p ~/peer-ai/backend
             tar -xzf ~/backend-code.tar.gz -C ~/peer-ai
             
             # Extract frontend build
-            mkdir -p ~/peer-ai/frontend/admin-dashboard/dist
             tar -xzf ~/frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard
             
-            # Set up Python environment
+            # Fix nginx configuration
+            cat > ~/peer-ai/deployment/nginx-config.conf << 'EOF'
+server {
+    listen 80;
+    server_name _;
+
+    # API routes - forward to backend
+    location /api/ {
+        proxy_pass http://localhost:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Set timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # OpenAPI documentation
+    location /docs {
+        proxy_pass http://localhost:8000/docs;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://localhost:8000/health;
+        access_log off;
+        add_header Content-Type application/json;
+    }
+
+    # Frontend app - serve static files
+    location / {
+        root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
+            
+            # Apply nginx configuration
+            sudo cp ~/peer-ai/deployment/nginx-config.conf /etc/nginx/sites-available/peerai
+            sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/default
+            sudo systemctl restart nginx
+            
+            # Setup backend environment
             cd ~/peer-ai/backend
-            python3 -m venv venv
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
             source venv/bin/activate
+            pip install --upgrade pip
             pip install -r requirements.txt
             
             # Copy environment file
-            cp ~/.env.example ~/peer-ai/backend/.env
+            if [ -f ~/.env.example ]; then
+              cp ~/.env.example ~/peer-ai/backend/.env
+            fi
             
-            # Start services
-            sudo systemctl restart nginx
+            # Setup backend service
+            cat > ~/peer-ai/deployment/peerai-backend.service << 'EOF'
+[Unit]
+Description=PeerAI Backend Service
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/peer-ai/backend
+Environment="PATH=/home/ubuntu/peer-ai/backend/venv/bin"
+ExecStart=/home/ubuntu/peer-ai/backend/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+            # Install service
+            sudo cp ~/peer-ai/deployment/peerai-backend.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable peerai-backend
             sudo systemctl restart peerai-backend
             
-            echo "Deployment completed!"
+            # Check service status
+            echo "Deployment completed! Service status:"
+            sudo systemctl status peerai-backend --no-pager
+            sudo systemctl status nginx --no-pager
+            
             echo "Frontend available at: http://$(hostname -I | awk '{print $1}')"
             echo "API available at: http://$(hostname -I | awk '{print $1}')/api"
