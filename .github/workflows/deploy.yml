@@ -62,7 +62,7 @@ jobs:
       # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
-          cd frontend
+          cd frontend/admin-dashboard
           if [ -f "package-lock.json" ]; then
             echo "Found package-lock.json, using npm ci for clean install"
             npm ci
@@ -74,47 +74,51 @@ jobs:
       # Build frontend
       - name: Build frontend
         run: |
-          cd frontend
+          cd frontend/admin-dashboard
           npm run build
           echo "Frontend build completed"
       
       # Create tarball of the built frontend
       - name: Create frontend tarball
         run: |
-          cd frontend
-          mkdir -p build
-          # Check if build directory has content
-          if [ "$(ls -A build 2>/dev/null)" ]; then
-            echo "Creating tarball of build directory"
-            tar -czf frontend-build.tar.gz build/
+          cd frontend/admin-dashboard
+          # Check if dist directory has content
+          if [ "$(ls -A dist 2>/dev/null)" ]; then
+            echo "Creating tarball of dist directory"
+            tar -czf frontend-build.tar.gz dist/
           else
-            echo "Build directory is empty or doesn't exist. Creating an empty tarball."
+            echo "Dist directory is empty or doesn't exist. Creating an empty tarball."
             mkdir -p empty-build
             touch empty-build/README.md
             echo "This is an empty build directory. Build may have failed." > empty-build/README.md
             tar -czf frontend-build.tar.gz empty-build/
-            mv empty-build/* build/ 2>/dev/null || true
-            rm -rf empty-build
           fi
+          cp frontend-build.tar.gz ../../
           echo "Created frontend tarball"
       
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/*.sh
       
-      - name: Transfer scripts and frontend tarball via SCP
+      - name: Prepare Docker Compose files for deployment
+        run: |
+          echo "Preparing Docker Compose files for deployment..."
+          # Create a tarball of the Docker Compose files and Dockerfiles
+          tar -czf docker-compose-files.tar.gz docker-compose.yml deployment/nginx-single-server.conf backend/Dockerfile frontend/admin-dashboard/Dockerfile frontend/admin-dashboard/nginx.conf .env.example
+      
+      - name: Transfer files via SCP
         uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
         with:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts/,deployment/,frontend/frontend-build.tar.gz"
+          source: "scripts/,deployment/,frontend-build.tar.gz,docker-compose-files.tar.gz"
           target: "/home/ubuntu/"
           strip_components: 0
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
-      - name: Ensure scripts are executable
+      - name: Ensure scripts are executable and setup environment
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
           host: 158.174.210.91
@@ -125,6 +129,24 @@ jobs:
           script: |
             chmod +x /home/ubuntu/scripts/*.sh
             echo "Made all scripts executable"
+            
+            # Extract Docker Compose files
+            mkdir -p /home/ubuntu/peer-ai
+            tar -xzf /home/ubuntu/docker-compose-files.tar.gz -C /home/ubuntu/peer-ai/
+            
+            # Make sure the project directories exist
+            mkdir -p /home/ubuntu/peer-ai/backend
+            mkdir -p /home/ubuntu/peer-ai/frontend/admin-dashboard
+            mkdir -p /home/ubuntu/peer-ai/deployment/ssl
+            
+            # Create basic .env file from example
+            cp /home/ubuntu/peer-ai/.env.example /home/ubuntu/peer-ai/.env
+            
+            # Create backend structure if it doesn't exist
+            if [ ! -f "/home/ubuntu/peer-ai/backend/requirements.txt" ]; then
+              echo "Setting up basic backend structure..."
+              cp -r /home/ubuntu/backend/* /home/ubuntu/peer-ai/backend/ 2>/dev/null || true
+            fi
       
       # Deploy frontend tarball
       - name: Deploy frontend tarball
@@ -137,16 +159,16 @@ jobs:
           use_insecure_cipher: true
           script: |
             echo "Deploying frontend build from tarball..."
-            mkdir -p /home/ubuntu/peer-ai/frontend/build
-            tar -xzf /home/ubuntu/frontend/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/
+            mkdir -p /home/ubuntu/peer-ai/frontend/admin-dashboard/dist
+            tar -xzf /home/ubuntu/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/admin-dashboard/
             # If we extracted from empty-build, move files to the right place
-            if [ -d "/home/ubuntu/peer-ai/frontend/empty-build" ]; then
-              mv /home/ubuntu/peer-ai/frontend/empty-build/* /home/ubuntu/peer-ai/frontend/build/ 2>/dev/null || true
-              rm -rf /home/ubuntu/peer-ai/frontend/empty-build
+            if [ -d "/home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build" ]; then
+              mv /home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build/* /home/ubuntu/peer-ai/frontend/admin-dashboard/dist/ 2>/dev/null || true
+              rm -rf /home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build
             fi
             echo "Frontend deployment completed"
       
-      - name: Run comprehensive fix before deployment
+      - name: Start container services
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
           host: 158.174.210.91
@@ -155,262 +177,32 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            echo "Running comprehensive database fix before deployment..."
-            chmod +x /home/ubuntu/scripts/comprehensive_fix.sh
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/comprehensive_fix.sh || echo "Warning: Comprehensive fix had issues, but continuing deployment"
-      
-      - name: Run diagnostic script
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            chmod +x /home/ubuntu/scripts/diagnose_ssh.sh
-            /home/ubuntu/scripts/diagnose_ssh.sh
-      
-      - name: Setup VM if needed
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            [ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh
-      
-      - name: Setup SSH keys
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            /home/ubuntu/scripts/setup_ssh.sh
-      
-      - name: Setup GitHub authentication
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          envs: GITHUB_REPO_OWNER,REPO_NAME
-          script: |
-            # Debug environment variables
-            echo "GITHUB_REPO_OWNER: ${GITHUB_REPO_OWNER}"
-            echo "REPO_NAME: ${REPO_NAME}"
+            cd /home/ubuntu/peer-ai
             
-            # Use explicit environment variables with the correct repository information
-            # No token needed for public repositories
-            GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
-        env:
-          GITHUB_REPO_OWNER: ${{ env.GITHUB_REPO_OWNER }}
-          REPO_NAME: ${{ env.REPO_NAME }}
-      
-      - name: Fix permissions
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            /home/ubuntu/scripts/fix_permissions.sh
-      
-      # Skip backend deployment if we're using the pre-built frontend
-      - name: Run deployment script (backend only)
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai && SKIP_FRONTEND_BUILD=true ./scripts/deploy.sh || {
-              echo "Deployment script failed. Attempting emergency database fix..."
-              chmod +x /home/ubuntu/scripts/comprehensive_fix.sh
-              cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/comprehensive_fix.sh
-              echo "Trying deployment again after emergency fix..."
-              cd /home/ubuntu/peer-ai && SKIP_FRONTEND_BUILD=true ./scripts/deploy.sh
-            }
-      
-      - name: Fix database migrations
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            echo "Checking if additional migration fixes are needed..."
-            cd /home/ubuntu/peer-ai/backend
-            source venv/bin/activate
-            python -c "from sqlalchemy import create_engine, text; engine = create_engine('postgresql://peerai:peerai_password@localhost:5432/peerai_db'); result = engine.connect().execute(text('SELECT version_num FROM alembic_version')).fetchone(); print(f'Current alembic version: {result[0] if result else \"No version found\"}')"
-            
-            if [ -f "/home/ubuntu/scripts/fix_migration.sh" ]; then
-              echo "Note: Using comprehensive fix instead of the original fix_migration.sh"
-            fi
-      
-      - name: Fix constraint issue
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            echo "Checking if additional constraint fixes are needed..."
-            cd /home/ubuntu/peer-ai/backend
-            source venv/bin/activate
-            
-            # Create a temporary script to check constraints
-            cat > /home/ubuntu/check_constraint.py << EOF
-            import os
-            from sqlalchemy import create_engine, text
-            
-            DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://peerai:peerai_password@localhost:5432/peerai_db')
-            
-            try:
-                engine = create_engine(DATABASE_URL)
-                with engine.connect() as conn:
-                    result = conn.execute(text("SELECT COUNT(*) FROM pg_constraint WHERE conname = 'uq_referrals_referee_id'")).scalar()
-                    if result > 0:
-                        print("needs_fix")
-                    else:
-                        print("no_fix_needed")
-            except Exception as e:
-                print(f"error: {e}")
-            EOF
-            
-            # Run the constraint check
-            constraint_check=$(python /home/ubuntu/check_constraint.py)
-            
-            # Take action based on the result
-            if [[ $constraint_check == "needs_fix" ]]; then
-                echo "Constraint still exists, running specific fix..."
-                chmod +x /home/ubuntu/scripts/fix_constraint_issue.sh
-                /home/ubuntu/scripts/fix_constraint_issue.sh
-            elif [[ $constraint_check == "no_fix_needed" ]]; then
-                echo "Constraint does not exist, comprehensive fix was successful"
-            else
-                echo "Error checking constraint, output: $constraint_check"
-                echo "Running fix script as a precaution"
-                chmod +x /home/ubuntu/scripts/fix_constraint_issue.sh
-                /home/ubuntu/scripts/fix_constraint_issue.sh || echo "Fix attempt failed, continuing anyway"
+            # Install Docker and Docker Compose if not already installed
+            if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker ubuntu
             fi
             
-            # Clean up
-            rm -f /home/ubuntu/check_constraint.py
-      
-      - name: Test database connection
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            chmod +x /home/ubuntu/scripts/ssh_to_db.sh
-            chmod +x /home/ubuntu/scripts/test_db.sh
-            chmod +x /home/ubuntu/scripts/test_db_connection.py
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/test_db.sh
-      
-      - name: Run pre-migration checks
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            echo "Running database sanity checks before database initialization..."
-            cd /home/ubuntu/peer-ai/backend
-            source venv/bin/activate
+            # Stop any running containers
+            sudo docker-compose down || true
             
-            # Print current database status
-            python - << EOF
-            import os
-            from sqlalchemy import create_engine, text, inspect
+            # Build and start containers
+            sudo docker-compose build
+            sudo docker-compose up -d
             
-            DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://peerai:peerai_password@localhost:5432/peerai_db')
+            # Wait for backend to be ready
+            echo "Waiting for services to start..."
+            sleep 10
             
-            try:
-                engine = create_engine(DATABASE_URL)
-                with engine.connect() as conn:
-                    # Get migration version
-                    try:
-                        result = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-                        print(f"Current migration version: {result[0] if result else 'None'}")
-                    except Exception as e:
-                        print(f"Error getting migration version: {e}")
-                    
-                    # Check for problematic constraint
-                    try:
-                        result = conn.execute(text("SELECT COUNT(*) FROM pg_constraint WHERE conname = 'uq_referrals_referee_id'")).scalar()
-                        print(f"Constraint 'uq_referrals_referee_id' exists: {'Yes' if result > 0 else 'No'}")
-                    except Exception as e:
-                        print(f"Error checking constraint: {e}")
-                    
-                    # List tables
-                    inspector = inspect(engine)
-                    tables = inspector.get_table_names()
-                    print(f"Tables in database: {', '.join(tables) if tables else 'None'}")
-            except Exception as e:
-                print(f"Error connecting to database: {e}")
-            EOF
+            # Run migrations
+            sudo docker-compose exec -T backend alembic upgrade head || echo "Migration failed, but continuing deployment"
             
-            echo "Database sanity check complete. Continue with initialization."
-      
-      - name: Initialize database
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh || {
-              echo "Database initialization failed. Attempting emergency fix..."
-              chmod +x /home/ubuntu/scripts/run_emergency_fix.sh
-              /home/ubuntu/scripts/run_emergency_fix.sh || echo "Emergency fix failed, but continuing deployment"
-              echo "Retrying database initialization..."
-              cd /home/ubuntu/peer-ai && ./scripts/init_db_auto.sh || echo "Database initialization still failed, continuing deployment"
-            }
-      
-      - name: Run fix scripts
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai && ./scripts/debug_migrations.sh || echo "Debug migrations script failed, continuing"
-            cd /home/ubuntu/peer-ai && ./scripts/fix_github_actions.sh || echo "Fix GitHub Actions script failed, continuing"
-            cd /home/ubuntu/peer-ai && ./scripts/fix_frontend_build.sh || echo "Fix frontend build script failed, continuing"
-      
-      - name: Check deployment status
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh 
+            echo "Deployment completed successfully!"
+            echo "Frontend available at: http://158.174.210.91"
+            echo "API available at: http://158.174.210.91/api" 

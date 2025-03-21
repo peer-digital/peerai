@@ -12,7 +12,7 @@ from backend.core.roles import Role, has_permission, Permission
 from backend.models.auth import User
 from backend.schemas.admin_models import AIModelCreate, AIModelUpdate, AIModelResponse, ModelProviderResponse
 
-router = APIRouter(tags=["Admin - Models"])
+router = APIRouter(prefix="/models", tags=["Admin - Models"])
 
 def super_admin_check(current_user: User):
     """Utility to verify the user has system configuration permission."""
@@ -22,7 +22,7 @@ def super_admin_check(current_user: User):
             detail="Only users with system configuration permission can manage models."
         )
 
-@router.get("/models", response_model=List[AIModelResponse])
+@router.get("/", response_model=List[AIModelResponse])
 async def list_models(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """List all models in the registry."""
     super_admin_check(current_user)
@@ -34,7 +34,7 @@ async def list_providers(db: Session = Depends(get_db), current_user: User = Dep
     super_admin_check(current_user)
     return db.query(ModelProvider).all()
 
-@router.get("/models/{model_id}", response_model=AIModelResponse)
+@router.get("/{model_id}", response_model=AIModelResponse)
 async def get_model(model_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get a specific model by ID."""
     super_admin_check(current_user)
@@ -43,7 +43,7 @@ async def get_model(model_id: int, db: Session = Depends(get_db), current_user: 
         raise HTTPException(status_code=404, detail="Model not found.")
     return model
 
-@router.post("/models", response_model=AIModelResponse)
+@router.post("/", response_model=AIModelResponse)
 async def create_model(payload: AIModelCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new model in the registry."""
     super_admin_check(current_user)
@@ -71,7 +71,7 @@ async def create_model(payload: AIModelCreate, db: Session = Depends(get_db), cu
     db.refresh(model)
     return model
 
-@router.put("/models/{model_id}", response_model=AIModelResponse)
+@router.put("/{model_id}", response_model=AIModelResponse)
 async def update_model(model_id: int, payload: AIModelUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update an existing model in the registry."""
     super_admin_check(current_user)
@@ -111,7 +111,7 @@ async def update_model(model_id: int, payload: AIModelUpdate, db: Session = Depe
     db.refresh(model)
     return model
 
-@router.delete("/models/{model_id}")
+@router.delete("/{model_id}")
 async def delete_model(model_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete a model from the registry."""
     super_admin_check(current_user)

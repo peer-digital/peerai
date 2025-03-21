@@ -51,6 +51,58 @@ The frontend is built with React and is located in the `frontend/` directory. It
 - Frontend development server runs on: http://localhost:3000
 - API documentation available at: http://localhost:8000/docs
 
+## Single Server Deployment
+
+You can run the entire platform (frontend, backend, and database) on a single server using Docker Compose:
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Git
+- Basic knowledge of terminal/command line
+
+### Setup
+
+1. Clone the repository
+```bash
+git clone https://github.com/peerdigital/peerai.git
+cd peerai
+```
+
+2. Start all services using the provided script
+```bash
+./scripts/start-single-server.sh
+```
+
+This will:
+- Build and start PostgreSQL, backend and frontend containers
+- Run database migrations
+- Configure nginx to serve everything from a single domain
+
+3. Access the application
+- Frontend: http://localhost
+- API: http://localhost/api
+- API Documentation: http://localhost/docs
+
+### Manual Setup
+
+If you prefer to set up manually:
+
+1. Build the Docker images
+```bash
+docker-compose build
+```
+
+2. Start the services
+```bash
+docker-compose up -d
+```
+
+3. Run migrations
+```bash
+docker-compose exec backend alembic upgrade head
+```
+
 ## Features
 
 - 🇸🇪 **Swedish Data Residency**: All data processing and storage within Sweden (Bahnhof Cloud)

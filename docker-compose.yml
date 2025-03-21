@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: peerai-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: peerai
+      POSTGRES_PASSWORD: peerai_password
+      POSTGRES_DB: peerai_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peerai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: peerai-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # @important: Database connection
+      DATABASE_URL: postgresql://peerai:peerai_password@postgres:5432/peerai_db
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_in_production}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      MOCK_MODE: ${MOCK_MODE:-true}
+      # @important: Frontend URL for CORS
+      ALLOWED_ORIGIN: http://localhost
+      FE_URL: http://localhost
+    volumes:
+      - ./backend:/app
+    expose:
+      - "8000"
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./frontend/admin-dashboard
+      dockerfile: Dockerfile
+    container_name: peerai-frontend
+    restart: always
+    environment:
+      # @important: API base URL - pointing to the backend through nginx
+      VITE_API_BASE_URL: /api
+    volumes:
+      - ./frontend/admin-dashboard:/app
+      - /app/node_modules
+    expose:
+      - "3000"
+
+  # Nginx Service for Routing and SSL Termination
+  nginx:
+    image: nginx:alpine
+    container_name: peerai-nginx
+    restart: always
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/nginx-single-server.conf:/etc/nginx/conf.d/default.conf
+      - ./deployment/ssl:/etc/nginx/ssl
+    command: [nginx-debug, '-g', 'daemon off;']
+
+volumes:
+  postgres_data: 

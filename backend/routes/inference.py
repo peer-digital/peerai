@@ -29,7 +29,8 @@ from services.model_orchestrator import ModelOrchestrator
 # Configure logging
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+# Update to maintain consistent API structure
+router = APIRouter(prefix="", tags=["inference"])
 
 
 class TextCompletionRequest(BaseModel):
