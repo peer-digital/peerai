@@ -2,7 +2,20 @@
 set -e
 
 # Main deployment script for PeerAI
-echo "Starting PeerAI deployment..."
+echo "=== Starting PeerAI deployment ==="
+
+# Clean up before deployment
+echo "=== Cleaning up before deployment ==="
+# Stop running services
+sudo systemctl stop peerai-backend 2>/dev/null || true
+sudo systemctl stop nginx 2>/dev/null || true
+
+# Clean existing directories but maintain structure
+echo "=== Removing old deployment files ==="
+rm -rf ~/peer-ai/backend/*
+rm -rf ~/peer-ai/frontend/admin-dashboard/dist/*
+mkdir -p ~/peer-ai/deployment
+mkdir -p ~/peer-ai/logs
 
 # Create project directories if they don't exist
 mkdir -p ~/peer-ai/frontend/admin-dashboard/dist
@@ -10,11 +23,14 @@ mkdir -p ~/peer-ai/backend
 mkdir -p ~/peer-ai/deployment
 
 # Deploy backend code
-echo "Deploying backend code..."
+echo "=== Deploying backend code ==="
 
 # Extract backend code if it exists as tarball
-if [ -f "backend-code.tar.gz" ]; then
+if [ -f "~/backend-code.tar.gz" ]; then
   echo "Extracting backend code from tarball..."
+  tar -xzf ~/backend-code.tar.gz -C ~/peer-ai/
+elif [ -f "backend-code.tar.gz" ]; then
+  echo "Extracting backend code from tarball in current directory..."
   tar -xzf backend-code.tar.gz -C ~/peer-ai/
 else
   # Check if backend code exists in current directory
@@ -22,14 +38,17 @@ else
     echo "Copying backend code from current directory..."
     cp -r backend/* ~/peer-ai/backend/
   else
-    echo "Error: Backend code not found."
+    echo "ERROR: Backend code not found."
     exit 1
   fi
 fi
 
 # Extract frontend build if it exists as tarball
-if [ -f "frontend-build.tar.gz" ]; then
+if [ -f "~/frontend-build.tar.gz" ]; then
   echo "Extracting frontend build from tarball..."
+  tar -xzf ~/frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
+elif [ -f "frontend-build.tar.gz" ]; then
+  echo "Extracting frontend build from tarball in current directory..."
   tar -xzf frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
 else
   # Check if frontend build exists in current directory
@@ -37,13 +56,13 @@ else
     echo "Copying frontend build from current directory..."
     cp -r frontend/admin-dashboard/dist/* ~/peer-ai/frontend/admin-dashboard/dist/
   else
-    echo "Error: Frontend build not found."
+    echo "ERROR: Frontend build not found."
     exit 1
   fi
 fi
 
 # Setup backend environment
-echo "Setting up backend environment..."
+echo "=== Setting up backend environment ==="
 cd ~/peer-ai/backend
 if [ ! -d "venv" ]; then
   echo "Creating Python virtual environment..."
@@ -56,12 +75,27 @@ pip install -r requirements.txt
 
 # Copy environment file if it exists
 if [ -f ~/.env.example ]; then
-  echo "Copying environment file..."
+  echo "Copying environment file from home directory..."
   cp ~/.env.example ~/peer-ai/backend/.env
+elif [ -f "../.env.example" ]; then
+  echo "Copying environment file from parent directory..."
+  cp ../.env.example ~/peer-ai/backend/.env
+elif [ -f ".env.example" ]; then
+  echo "Copying environment file from current directory..."
+  cp .env.example ~/peer-ai/backend/.env
+else
+  echo "WARNING: No .env file found. Creating a basic one..."
+  cat > ~/peer-ai/backend/.env << 'EOF'
+# Basic environment file
+DATABASE_URL=postgresql://peerai:peerai_password@localhost:5432/peerai_db
+JWT_SECRET_KEY=change_me_in_production
+ENVIRONMENT=production
+DEBUG=false
+EOF
 fi
 
 # Ensure nginx config exists
-echo "Setting up nginx configuration..."
+echo "=== Setting up nginx configuration ==="
 mkdir -p ~/peer-ai/deployment
 cat > ~/peer-ai/deployment/nginx-config.conf << 'EOF'
 server {
@@ -111,11 +145,24 @@ server {
 EOF
 
 # Apply nginx configuration
+echo "=== Applying nginx configuration ==="
 sudo cp ~/peer-ai/deployment/nginx-config.conf /etc/nginx/sites-available/peerai
 sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/default
 
+# Remove default nginx site if it exists
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/peerai
+
+# Install required packages if missing
+echo "=== Checking required packages ==="
+if ! command -v nginx &> /dev/null; then
+  echo "Installing nginx..."
+  sudo apt-get update
+  sudo apt-get install -y nginx
+fi
+
 # Setup backend service
-echo "Setting up backend service..."
+echo "=== Setting up backend service ==="
 cat > ~/peer-ai/deployment/peerai-backend.service << 'EOF'
 [Unit]
 Description=PeerAI Backend Service
@@ -140,15 +187,31 @@ sudo systemctl daemon-reload
 sudo systemctl enable peerai-backend
 
 # Restart services
-echo "Restarting services..."
-sudo systemctl restart nginx
-sudo systemctl restart peerai-backend
+echo "=== Restarting services ==="
+sudo systemctl restart nginx || {
+  echo "ERROR: Failed to restart nginx. Checking configuration..."
+  sudo nginx -t
+  exit 1
+}
+
+sudo systemctl restart peerai-backend || {
+  echo "ERROR: Failed to restart backend service. Checking logs..."
+  sudo systemctl status peerai-backend
+  exit 1
+}
 
 # Check if services are running
-echo "Checking service status..."
+echo "=== Checking service status ==="
 sudo systemctl status nginx --no-pager
 sudo systemctl status peerai-backend --no-pager
 
-echo "Deployment completed successfully!"
+# Clean up temporary files
+echo "=== Cleaning up temporary files ==="
+rm -f ~/backend-code.tar.gz
+rm -f ~/frontend-build.tar.gz
+rm -f ~/scripts.tar.gz
+rm -rf ~/deploy-temp
+
+echo "=== Deployment completed successfully! ==="
 echo "Frontend available at: http://$(hostname -I | awk '{print $1}')"
 echo "API available at: http://$(hostname -I | awk '{print $1}')/api" 
