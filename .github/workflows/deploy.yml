@@ -20,36 +20,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
-      - name: Set default repository values
+      - name: Extract repository info
         run: |
-          # Set hardcoded values for the correct repository
-          echo "GITHUB_REPO_OWNER=peer-digital" >> $GITHUB_ENV
-          echo "REPO_NAME=peerai" >> $GITHUB_ENV
-          echo "Using hardcoded repository: peer-digital/peerai"
-      
-      - name: Extract repository name (for reference only)
-        run: |
-          # Extract repository name from full repository path
-          REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
-          echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Full repository: ${{ github.repository }}"
-          echo "Repository name: $REPO_NAME"
-          echo "NOTE: Using hardcoded repository peer-digital/peerai for deployment"
-      
-      - name: Verify GitHub token
-        run: |
-          # For public repositories, we don't need to verify repository access with a token
-          # Just check if the repository exists
-          echo "Testing repository access..."
-          REPO_PATH="${{ env.GITHUB_REPO_OWNER }}/${{ env.REPO_NAME }}"
-          echo "Checking access to repository: $REPO_PATH"
-          if curl -s "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
-            echo "✅ Repository access confirmed"
-          else
-            echo "❌ Cannot access repository"
-            echo "Please ensure the repository exists at https://github.com/${REPO_PATH}"
-            exit 1
-          fi
+          echo "Repository: ${{ github.repository }}"
       
       # Setup Node.js for frontend build
       - name: Setup Node.js
@@ -57,19 +30,13 @@ jobs:
         with:
           node-version: '18'  # @note: Node.js version - adjust if your project requires a different version
           cache: 'npm'
-          cache-dependency-path: '**/package.json'
+          cache-dependency-path: 'frontend/admin-dashboard/package-lock.json'
       
       # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
           cd frontend/admin-dashboard
-          if [ -f "package-lock.json" ]; then
-            echo "Found package-lock.json, using npm ci for clean install"
-            npm ci
-          else
-            echo "No package-lock.json found, using npm install instead"
-            npm install
-          fi
+          npm ci
       
       # Build frontend
       - name: Build frontend
@@ -78,47 +45,40 @@ jobs:
           npm run build
           echo "Frontend build completed"
       
-      # Create tarball of the built frontend
-      - name: Create frontend tarball
-        run: |
-          cd frontend/admin-dashboard
-          # Check if dist directory has content
-          if [ "$(ls -A dist 2>/dev/null)" ]; then
-            echo "Creating tarball of dist directory"
-            tar -czf frontend-build.tar.gz dist/
-          else
-            echo "Dist directory is empty or doesn't exist. Creating an empty tarball."
-            mkdir -p empty-build
-            touch empty-build/README.md
-            echo "This is an empty build directory. Build may have failed." > empty-build/README.md
-            tar -czf frontend-build.tar.gz empty-build/
-          fi
-          cp frontend-build.tar.gz ../../
-          echo "Created frontend tarball"
-      
+      # Make scripts executable
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/*.sh
       
-      - name: Prepare Docker Compose files for deployment
+      # Create necessary tarballs
+      - name: Package deployment files
         run: |
-          echo "Preparing Docker Compose files for deployment..."
-          # Create a tarball of the Docker Compose files and Dockerfiles
-          tar -czf docker-compose-files.tar.gz docker-compose.yml deployment/nginx-single-server.conf backend/Dockerfile frontend/admin-dashboard/Dockerfile frontend/admin-dashboard/nginx.conf .env.example
+          # Package backend code
+          tar -czf backend-code.tar.gz backend/
+          
+          # Package frontend build
+          tar -czf frontend-build.tar.gz -C frontend/admin-dashboard dist/
+          
+          # Package scripts
+          tar -czf scripts.tar.gz scripts/
+          
+          echo "Files packaged successfully"
       
-      - name: Transfer files via SCP
+      # Transfer files to server
+      - name: Transfer files to server
         uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
         with:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts/,deployment/,frontend-build.tar.gz,docker-compose-files.tar.gz"
+          source: "backend-code.tar.gz,frontend-build.tar.gz,scripts.tar.gz,.env.example"
           target: "/home/ubuntu/"
           strip_components: 0
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
-      - name: Ensure scripts are executable and setup environment
+      # Run deployment
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
           host: 158.174.210.91
@@ -127,82 +87,39 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/*.sh
-            echo "Made all scripts executable"
+            echo "Starting deployment process..."
             
-            # Extract Docker Compose files
-            mkdir -p /home/ubuntu/peer-ai
-            tar -xzf /home/ubuntu/docker-compose-files.tar.gz -C /home/ubuntu/peer-ai/
+            # Extract files
+            mkdir -p ~/deploy-temp
+            tar -xzf ~/scripts.tar.gz -C ~/deploy-temp
             
-            # Make sure the project directories exist
-            mkdir -p /home/ubuntu/peer-ai/backend
-            mkdir -p /home/ubuntu/peer-ai/frontend/admin-dashboard
-            mkdir -p /home/ubuntu/peer-ai/deployment/ssl
+            # Make scripts executable
+            chmod +x ~/deploy-temp/scripts/*.sh
             
-            # Create basic .env file from example
-            cp /home/ubuntu/peer-ai/.env.example /home/ubuntu/peer-ai/.env
+            # Run server setup script
+            ~/deploy-temp/scripts/setup-server.sh
             
-            # Create backend structure if it doesn't exist
-            if [ ! -f "/home/ubuntu/peer-ai/backend/requirements.txt" ]; then
-              echo "Setting up basic backend structure..."
-              cp -r /home/ubuntu/backend/* /home/ubuntu/peer-ai/backend/ 2>/dev/null || true
-            fi
-      
-      # Deploy frontend tarball
-      - name: Deploy frontend tarball
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            echo "Deploying frontend build from tarball..."
-            mkdir -p /home/ubuntu/peer-ai/frontend/admin-dashboard/dist
-            tar -xzf /home/ubuntu/frontend-build.tar.gz -C /home/ubuntu/peer-ai/frontend/admin-dashboard/
-            # If we extracted from empty-build, move files to the right place
-            if [ -d "/home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build" ]; then
-              mv /home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build/* /home/ubuntu/peer-ai/frontend/admin-dashboard/dist/ 2>/dev/null || true
-              rm -rf /home/ubuntu/peer-ai/frontend/admin-dashboard/empty-build
-            fi
-            echo "Frontend deployment completed"
-      
-      - name: Start container services
-        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
-        with:
-          host: 158.174.210.91
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Disable host key checking to handle host key changes
-          use_insecure_cipher: true
-          script: |
-            cd /home/ubuntu/peer-ai
+            # Extract backend code
+            mkdir -p ~/peer-ai/backend
+            tar -xzf ~/backend-code.tar.gz -C ~/peer-ai
             
-            # Install Docker and Docker Compose if not already installed
-            if ! command -v docker &> /dev/null; then
-              echo "Installing Docker..."
-              sudo apt-get update
-              sudo apt-get install -y docker.io docker-compose
-              sudo systemctl enable docker
-              sudo systemctl start docker
-              sudo usermod -aG docker ubuntu
-            fi
+            # Extract frontend build
+            mkdir -p ~/peer-ai/frontend/admin-dashboard/dist
+            tar -xzf ~/frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard
             
-            # Stop any running containers
-            sudo docker-compose down || true
+            # Set up Python environment
+            cd ~/peer-ai/backend
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
             
-            # Build and start containers
-            sudo docker-compose build
-            sudo docker-compose up -d
+            # Copy environment file
+            cp ~/.env.example ~/peer-ai/backend/.env
             
-            # Wait for backend to be ready
-            echo "Waiting for services to start..."
-            sleep 10
+            # Start services
+            sudo systemctl restart nginx
+            sudo systemctl restart peerai-backend
             
-            # Run migrations
-            sudo docker-compose exec -T backend alembic upgrade head || echo "Migration failed, but continuing deployment"
-            
-            echo "Deployment completed successfully!"
-            echo "Frontend available at: http://158.174.210.91"
-            echo "API available at: http://158.174.210.91/api" 
+            echo "Deployment completed!"
+            echo "Frontend available at: http://$(hostname -I | awk '{print $1}')"
+            echo "API available at: http://$(hostname -I | awk '{print $1}')/api"
