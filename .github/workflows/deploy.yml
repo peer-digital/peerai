@@ -55,6 +55,24 @@ jobs:
         run: |
           chmod +x ./scripts/*.sh
       
+      # Verify code for packaging
+      - name: Verify code before packaging
+        run: |
+          echo "Verifying code files before packaging..."
+          if [ ! -d "backend" ]; then
+            echo "ERROR: Backend directory not found!"
+            ls -la
+            exit 1
+          fi
+          
+          if [ ! -d "frontend/admin-dashboard/dist" ]; then
+            echo "ERROR: Frontend build directory not found!"
+            ls -la frontend/admin-dashboard
+            exit 1
+          fi
+          
+          echo "All required directories found. Proceeding with packaging."
+      
       # Create necessary tarballs
       - name: Package deployment files
         run: |
@@ -66,6 +84,17 @@ jobs:
           
           # Package scripts
           tar -czf scripts.tar.gz scripts/
+          
+          # Verify tarballs
+          if [ ! -f "backend-code.tar.gz" ]; then
+            echo "ERROR: Failed to create backend-code.tar.gz"
+            exit 1
+          fi
+          
+          if [ ! -f "frontend-build.tar.gz" ]; then
+            echo "ERROR: Failed to create frontend-build.tar.gz"
+            exit 1
+          fi
           
           echo "Files packaged successfully"
       
@@ -82,6 +111,30 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
+      # Verify files on server
+      - name: Verify files on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            echo "Verifying files on server..."
+            ls -lah ~/*.tar.gz
+            
+            if [ ! -f "~/backend-code.tar.gz" ]; then
+              echo "WARNING: ~/backend-code.tar.gz not found, checking absolute path..."
+              if [ ! -f "/home/ubuntu/backend-code.tar.gz" ]; then
+                echo "ERROR: Backend code tarball not found at /home/ubuntu/backend-code.tar.gz"
+                exit 1
+              else
+                echo "Found backend code at /home/ubuntu/backend-code.tar.gz"
+              fi
+            fi
+            
+            echo "All required files found on server."
+      
       # Clean up VM before deployment if requested
       - name: Clean VM (if requested)
         if: ${{ github.event.inputs.clean_install == 'true' }}
@@ -94,7 +147,7 @@ jobs:
           script: |
             echo "Running thorough cleanup before deployment..."
             mkdir -p ~/deploy-temp
-            tar -xzf ~/scripts.tar.gz -C ~/deploy-temp
+            tar -xzf /home/ubuntu/scripts.tar.gz -C ~/deploy-temp
             chmod +x ~/deploy-temp/scripts/cleanup.sh
             ~/deploy-temp/scripts/cleanup.sh
       
@@ -110,9 +163,14 @@ jobs:
           script: |
             echo "Starting deployment process..."
             
+            # Verify files
+            echo "Verifying deployment files..."
+            ls -la /home/ubuntu/backend-code.tar.gz || echo "Backend code tarball not found!"
+            ls -la /home/ubuntu/frontend-build.tar.gz || echo "Frontend build tarball not found!"
+            
             # Extract files
             mkdir -p ~/deploy-temp
-            tar -xzf ~/scripts.tar.gz -C ~/deploy-temp
+            tar -xzf /home/ubuntu/scripts.tar.gz -C ~/deploy-temp
             
             # Make scripts executable
             chmod +x ~/deploy-temp/scripts/*.sh

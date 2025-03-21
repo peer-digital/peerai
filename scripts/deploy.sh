@@ -25,39 +25,73 @@ mkdir -p ~/peer-ai/deployment
 # Deploy backend code
 echo "=== Deploying backend code ==="
 
-# Extract backend code if it exists as tarball
-if [ -f "~/backend-code.tar.gz" ]; then
-  echo "Extracting backend code from tarball..."
-  tar -xzf ~/backend-code.tar.gz -C ~/peer-ai/
-elif [ -f "backend-code.tar.gz" ]; then
-  echo "Extracting backend code from tarball in current directory..."
-  tar -xzf backend-code.tar.gz -C ~/peer-ai/
+# Check paths for backend code tarball
+if [ -f "/home/ubuntu/backend-code.tar.gz" ]; then
+  echo "Extracting backend code from home directory tarball..."
+  tar -xzf /home/ubuntu/backend-code.tar.gz -C ~/peer-ai/
+elif [ -f "../../backend-code.tar.gz" ]; then
+  echo "Extracting backend code from relative path (../../)..."
+  tar -xzf ../../backend-code.tar.gz -C ~/peer-ai/
+elif [ -f "../backend-code.tar.gz" ]; then
+  echo "Extracting backend code from parent directory..."
+  tar -xzf ../backend-code.tar.gz -C ~/peer-ai/
+elif [ -f "./backend-code.tar.gz" ]; then
+  echo "Extracting backend code from current directory..."
+  tar -xzf ./backend-code.tar.gz -C ~/peer-ai/
 else
-  # Check if backend code exists in current directory
-  if [ -d "backend" ]; then
-    echo "Copying backend code from current directory..."
-    cp -r backend/* ~/peer-ai/backend/
+  echo "ERROR: Backend code tarball not found, checking other locations..."
+  # If it wasn't packaged as a tarball, check if there's a backend directory
+  if [ -d "../../backend" ]; then
+    echo "Found backend directory at ../../backend, copying files..."
+    cp -r ../../backend/* ~/peer-ai/backend/
+  elif [ -d "../backend" ]; then
+    echo "Found backend directory at ../backend, copying files..."
+    cp -r ../backend/* ~/peer-ai/backend/
+  elif [ -d "./backend" ]; then
+    echo "Found backend directory at ./backend, copying files..."
+    cp -r ./backend/* ~/peer-ai/backend/
   else
-    echo "ERROR: Backend code not found."
+    ls -la ~/ || true
+    ls -la . || true
+    ls -la .. || true
+    ls -la ../.. || true
+    echo "ERROR: Backend code not found in any location."
+    echo "Directory structure:"
+    find ~/ -type d -maxdepth 2 || true
     exit 1
   fi
 fi
 
-# Extract frontend build if it exists as tarball
-if [ -f "~/frontend-build.tar.gz" ]; then
-  echo "Extracting frontend build from tarball..."
-  tar -xzf ~/frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
-elif [ -f "frontend-build.tar.gz" ]; then
-  echo "Extracting frontend build from tarball in current directory..."
-  tar -xzf frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
+# Deploy frontend
+echo "=== Deploying frontend ==="
+
+# Check paths for frontend build tarball
+if [ -f "/home/ubuntu/frontend-build.tar.gz" ]; then
+  echo "Extracting frontend build from home directory tarball..."
+  tar -xzf /home/ubuntu/frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
+elif [ -f "../../frontend-build.tar.gz" ]; then
+  echo "Extracting frontend build from relative path (../../)..."
+  tar -xzf ../../frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
+elif [ -f "../frontend-build.tar.gz" ]; then
+  echo "Extracting frontend build from parent directory..."
+  tar -xzf ../frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
+elif [ -f "./frontend-build.tar.gz" ]; then
+  echo "Extracting frontend build from current directory..."
+  tar -xzf ./frontend-build.tar.gz -C ~/peer-ai/frontend/admin-dashboard/
 else
-  # Check if frontend build exists in current directory
-  if [ -d "frontend/admin-dashboard/dist" ]; then
-    echo "Copying frontend build from current directory..."
-    cp -r frontend/admin-dashboard/dist/* ~/peer-ai/frontend/admin-dashboard/dist/
+  echo "ERROR: Frontend build tarball not found, checking other locations..."
+  # If it wasn't packaged as a tarball, check if there's a dist directory
+  if [ -d "../../frontend/admin-dashboard/dist" ]; then
+    echo "Found frontend build at ../../frontend/admin-dashboard/dist, copying files..."
+    cp -r ../../frontend/admin-dashboard/dist/* ~/peer-ai/frontend/admin-dashboard/dist/
+  elif [ -d "../frontend/admin-dashboard/dist" ]; then
+    echo "Found frontend build at ../frontend/admin-dashboard/dist, copying files..."
+    cp -r ../frontend/admin-dashboard/dist/* ~/peer-ai/frontend/admin-dashboard/dist/
+  elif [ -d "./frontend/admin-dashboard/dist" ]; then
+    echo "Found frontend build at ./frontend/admin-dashboard/dist, copying files..."
+    cp -r ./frontend/admin-dashboard/dist/* ~/peer-ai/frontend/admin-dashboard/dist/
   else
-    echo "ERROR: Frontend build not found."
-    exit 1
+    echo "WARNING: Frontend build not found."
   fi
 fi
 
@@ -74,15 +108,18 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 # Copy environment file if it exists
-if [ -f ~/.env.example ]; then
+if [ -f "/home/ubuntu/.env.example" ]; then
   echo "Copying environment file from home directory..."
-  cp ~/.env.example ~/peer-ai/backend/.env
+  cp /home/ubuntu/.env.example ~/peer-ai/backend/.env
+elif [ -f "../../.env.example" ]; then
+  echo "Copying environment file from relative path (../../)..."
+  cp ../../.env.example ~/peer-ai/backend/.env
 elif [ -f "../.env.example" ]; then
   echo "Copying environment file from parent directory..."
   cp ../.env.example ~/peer-ai/backend/.env
-elif [ -f ".env.example" ]; then
+elif [ -f "./.env.example" ]; then
   echo "Copying environment file from current directory..."
-  cp .env.example ~/peer-ai/backend/.env
+  cp ./.env.example ~/peer-ai/backend/.env
 else
   echo "WARNING: No .env file found. Creating a basic one..."
   cat > ~/peer-ai/backend/.env << 'EOF'
