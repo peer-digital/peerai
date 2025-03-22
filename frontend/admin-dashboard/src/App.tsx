@@ -51,7 +51,7 @@ function App() {
       <ThemeProvider>
         <SnackbarProvider>
           <AuthProvider>
-            <Router>
+            <Router basename="/app">
               <CssBaseline />
               <React.Suspense fallback={<PageLoader />}>
                 <Routes>

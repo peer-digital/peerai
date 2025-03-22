@@ -1,4 +1,5 @@
 """Configuration module for the application."""
+import os
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 from dotenv import load_dotenv
@@ -9,6 +10,8 @@ load_dotenv()
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:8000",
+    "http://158.174.210.91",  # Server IP
     "https://app.peerdigital.se",
     "https://peerai-fe.onrender.com",
     "https://peerai-be.onrender.com",
@@ -31,12 +34,12 @@ class Settings(BaseSettings):
     # @important: CORS allowed origins - modify with caution
     # @important: Default single allowed origin, update with care
     ALLOWED_ORIGIN: str = Field(
-        default="http://localhost:3000", description="CORS allowed origin"
+        default="http://localhost:8000", description="CORS allowed origin"
     )
 
     # Frontend URL for email verification and other client-side links
     FE_URL: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:8000",
         description="Frontend URL for email verification and other client-side links",
     )
 
@@ -58,6 +61,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Peer AI"
     VERSION: str = "1.0.0"
 
+    # Server configuration for single server setup
+    HOST: str = Field(default="0.0.0.0", description="Server host")
+    PORT: int = Field(default=8000, description="Server port")
+    WORKERS: int = Field(default=4, description="Number of Uvicorn workers")
+
     # @important: Environment settings
     ENVIRONMENT: str = Field(
         default="development",
@@ -68,6 +76,12 @@ class Settings(BaseSettings):
         description="Debug mode - defaults to True in development, False in production",
     )
     MOCK_MODE: bool = Field(default=False, description="Mock external services")
+
+    # Frontend path for serving static files
+    FRONTEND_PATH: str = Field(
+        default="../frontend/admin-dashboard/dist",
+        description="Path to built frontend files"
+    )
 
     # LLM Configuration
     # @url: https://llm-api.bahnhof.se/v1/completions
@@ -90,6 +104,12 @@ class Settings(BaseSettings):
     # @model: mistral-tiny
     EXTERNAL_MODEL: str = Field(
         default="mistral-tiny", description="External LLM model name"
+    )
+
+    # Single server mode (unified frontend and backend)
+    SINGLE_SERVER_MODE: bool = Field(
+        default=True, 
+        description="Run as a single server serving both API and frontend"
     )
 
     model_config = {

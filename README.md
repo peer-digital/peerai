@@ -211,3 +211,53 @@ When adding new API calls:
 2. Never hardcode absolute URLs
 3. Keep the API prefix consistent (`/api`)
 4. Ensure proper error handling for both same-origin and cross-origin scenarios 
+
+## Single Server Setup
+
+The application can now be run as a single unified server which combines the backend API and frontend in one process. This simplifies deployment and development.
+
+### Running the Single Server
+
+To start the application in single server mode:
+
+```bash
+# Run the start script
+./deployment/start_single_server.sh
+```
+
+This script will:
+1. Build the frontend if needed
+2. Set up a Python virtual environment
+3. Install dependencies
+4. Run database migrations
+5. Start the unified server
+
+### Configuration
+
+The single server mode is controlled by the `SINGLE_SERVER_MODE` setting in `backend/config.py` which is enabled by default.
+
+Key settings for the single server mode:
+- `HOST`: Server host (default: 0.0.0.0)
+- `PORT`: Server port (default: 8000)
+- `FRONTEND_PATH`: Path to the built frontend files (default: ../frontend/admin-dashboard/dist)
+
+### Development Workflow
+
+During development, you can:
+
+1. Run the backend server with:
+   ```bash
+   cd backend
+   python -m server
+   ```
+
+2. Run the frontend development server separately:
+   ```bash
+   cd frontend/admin-dashboard
+   npm run dev
+   ```
+
+3. Or use the integrated mode which serves both:
+   ```bash
+   ./deployment/start_single_server.sh
+   ``` 

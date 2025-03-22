@@ -1,0 +1,135 @@
+"""Configuration module for the application."""
+import os
+from pydantic_settings import BaseSettings
+from pydantic import Field, validator
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# @important: Default allowed origins - do not remove without security review
+DEFAULT_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://158.174.210.91",  # Server IP
+    "https://app.peerdigital.se",
+    "https://peerai-fe.onrender.com",
+    "https://peerai-be.onrender.com",
+]
+
+
+class Settings(BaseSettings):
+    # @url: https://www.postgresql.org/
+    # @important: Database configuration - override with environment variables
+    DATABASE_URL: str = Field(
+        default="postgresql://peerai:peerai_password@localhost:5432/peerai_db",
+        description="Main database URL",
+    )
+    TEST_DATABASE_URL: str = Field(
+        default="postgresql://peerai:peerai_password@localhost:5432/peerai_test",
+        description="Test database URL",
+    )
+
+    # @url: https://peerdigital.se
+    # @important: CORS allowed origins - modify with caution
+    # @important: Default single allowed origin, update with care
+    ALLOWED_ORIGIN: str = Field(
+        default="http://localhost:3000", description="CORS allowed origin"
+    )
+
+    # Frontend URL for email verification and other client-side links
+    FE_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL for email verification and other client-side links",
+    )
+
+    # @important: JWT settings for authentication
+    # @url: https://jwt.io/
+    JWT_SECRET_KEY: str = Field(
+        default="development-only-key",
+        description="JWT secret key - MUST be overridden in production",
+    )
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # Rate limiting settings
+    RATE_LIMIT_MINUTE: int = Field(default=60, description="API requests per minute")
+    RATE_LIMIT_DAILY: int = Field(default=1000, description="API requests per day")
+
+    # API settings
+    API_V1_PREFIX: str = "/api"
+    PROJECT_NAME: str = "Peer AI"
+    VERSION: str = "1.0.0"
+
+    # Server configuration for single server setup
+    HOST: str = Field(default="0.0.0.0", description="Server host")
+    PORT: int = Field(default=8000, description="Server port")
+    WORKERS: int = Field(default=4, description="Number of Uvicorn workers")
+
+    # @important: Environment settings
+    ENVIRONMENT: str = Field(
+        default="development",
+        description="Current environment (development/staging/production)",
+    )
+    DEBUG: bool = Field(
+        default=False,
+        description="Debug mode - defaults to True in development, False in production",
+    )
+    MOCK_MODE: bool = Field(default=False, description="Mock external services")
+
+    # Frontend path for serving static files
+    FRONTEND_PATH: str = Field(
+        default="../frontend/admin-dashboard/dist",
+        description="Path to built frontend files"
+    )
+
+    # LLM Configuration
+    # @url: https://llm-api.bahnhof.se/v1/completions
+    HOSTED_LLM_URL: str = Field(default="", description="Hosted LLM API URL")
+
+    # @url: https://mistral.ai/
+    # @important: Mistral API endpoint
+    EXTERNAL_LLM_URL: str = Field(
+        default="https://api.mistral.ai/v1/chat/completions",
+        description="External LLM API URL",
+    )
+
+    HOSTED_LLM_API_KEY: str = Field(default="", description="Hosted LLM API key")
+    # @important: Mistral API key
+    EXTERNAL_LLM_API_KEY: str = Field(
+        default="", description="External LLM API key - Required for production"
+    )
+
+    # @important: Model Configuration
+    # @model: mistral-tiny
+    EXTERNAL_MODEL: str = Field(
+        default="mistral-tiny", description="External LLM model name"
+    )
+
+    # Single server mode (unified frontend and backend)
+    SINGLE_SERVER_MODE: bool = Field(
+        default=True, 
+        description="Run as a single server serving both API and frontend"
+    )
+
+    model_config = {
+        "case_sensitive": True,
+        "env_prefix": "",
+        "use_enum_values": True,
+    }
+
+    @validator("DEBUG", pre=True)
+    def set_debug_based_on_environment(cls, v, values):
+        """Set debug mode based on environment if not explicitly set."""
+        if v is None:
+            return values.get("ENVIRONMENT", "development") == "development"
+        return v
+
+    def get_database_url(self) -> str:
+        """Get environment-specific database URL."""
+        if self.ENVIRONMENT == "test":
+            return self.TEST_DATABASE_URL
+        return self.DATABASE_URL
+
+
+settings = Settings()

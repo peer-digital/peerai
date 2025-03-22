@@ -11,12 +11,13 @@ export default defineConfig(({ mode }) => {
   console.log('API Base URL:', env.VITE_API_BASE_URL)
 
   return {
+    base: '/app/',
     define: {
       // Expose environment variables to client
       'import.meta.env.VITE_APP_ENV': JSON.stringify(env.VITE_APP_ENV || mode),
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
         mode === 'production' 
-          ? (env.VITE_API_BASE_URL || 'http://158.174.210.91')
+          ? (env.VITE_API_BASE_URL || '') // Leave blank to use relative URL in production
           : (env.VITE_API_BASE_URL || 'http://localhost:8000')
       ),
     },
@@ -38,16 +39,19 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
+      port: 3000,
+      // Allow both local and production domains
       allowedHosts: [
-        // Allow both frontend and backend Render domains
+        'localhost',
+        '158.174.210.91',
         'peerai-fe.onrender.com',
         'peerai-be.onrender.com',
-        '158.174.210.91',
       ],
+      // Add CORS headers to allow requests from multiple domains
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-        'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
+        'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization, X-API-Key'
       }
     },
     build: {

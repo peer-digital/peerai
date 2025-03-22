@@ -1,10 +1,10 @@
 // @important: API base URL configuration
 const isDevelopment = import.meta.env.VITE_APP_ENV !== 'production';
 
-// @important: Set different default base URLs based on environment
-export const API_BASE_URL = isDevelopment 
-  ? 'http://localhost:8000' 
-  : (import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91');
+// @important: Always prioritize environment variable for API base URL
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
+  ? import.meta.env.VITE_API_BASE_URL
+  : (isDevelopment ? 'http://localhost:8000' : 'http://158.174.210.91');
 
 // @important: API prefix is now consistent between environments
 export const API_PREFIX = '/api';
