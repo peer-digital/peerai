@@ -36,6 +36,16 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Initialize Alembic if needed
+if [ ! -d "alembic" ]; then
+    echo "Initializing Alembic migrations..."
+    alembic init alembic
+    # Update alembic.ini with correct database URL
+    sed -i "s|sqlalchemy.url = driver://user:pass@localhost/dbname|sqlalchemy.url = postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME|" alembic.ini
+    # Update env.py to import models
+    echo "from backend.models import *" >> alembic/env.py
+fi
+
 # Run database migrations
 echo "Running database migrations..."
 python -m alembic upgrade head
