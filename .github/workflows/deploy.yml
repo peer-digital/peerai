@@ -100,17 +100,18 @@ jobs:
             echo "=== Starting deployment at $(date) ==="
             set -e
             
-            # Run the deployment script
-            echo "Starting deployment script..."
-            chmod +x /home/ubuntu/deployment/run_deploy.sh
-            /home/ubuntu/deployment/run_deploy.sh || { echo "ERROR: Frontend deployment script failed"; exit 1; }
-            
-            # Execute the comprehensive deploy.sh script to set up the entire stack
+            # Execute the comprehensive deploy.sh script to set up the entire stack FIRST
+            # This includes database migrations that the frontend script depends on
             echo "Setting up the complete backend stack..."
             chmod +x /home/ubuntu/scripts/deploy.sh
             
             # Run the backend deployment script with verbose output
             bash -x /home/ubuntu/scripts/deploy.sh || { echo "ERROR: Backend deployment script failed"; exit 1; }
+            
+            # Run the frontend deployment script AFTER backend is set up
+            echo "Starting frontend deployment script..."
+            chmod +x /home/ubuntu/deployment/run_deploy.sh
+            /home/ubuntu/deployment/run_deploy.sh || { echo "ERROR: Frontend deployment script failed"; exit 1; }
             
             echo "=== Deployment completed at $(date) ==="
             

@@ -397,6 +397,12 @@ def downgrade() -> None:
 EOL
 fi
 
+# Check if ensure_migrations.sh exists, and use it to ensure all migration files are present
+if [ -f "$(dirname "$0")/ensure_migrations.sh" ]; then
+    echo "Running migration dependency check..."
+    bash "$(dirname "$0")/ensure_migrations.sh"
+fi
+
 # Run database migrations
 echo "Running database migrations..."
 mkdir -p /home/ubuntu/peer-ai/logs
