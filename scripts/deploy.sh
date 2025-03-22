@@ -19,7 +19,7 @@ mkdir -p "$APP_DIR/logs"
 echo "Updating environment variables..."
 cat > "$BACKEND_DIR/.env" << EOL
 # Database configuration
-DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
+DATABASE_URL=postgresql://peerai_pg_user:fdfdjP0fwMC70duWT9Q6BkH3vEe0YUhQ@dpg-cut20bjtq21c73bb6leg-a.oregon-postgres.render.com/peerai_pg
 
 # Security
 SECRET_KEY=${{ secrets.SECRET_KEY }}
