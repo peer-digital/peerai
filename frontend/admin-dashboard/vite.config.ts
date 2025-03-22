@@ -22,7 +22,6 @@ export default defineConfig({
     },
   },
   preview: {
-    // @ts-expect-error - allowedHosts is valid but not typed
     allowedHosts: [
       // Allow both frontend and backend Render domains
       'peerai-fe.onrender.com',
@@ -35,10 +34,15 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist',
+    outDir: '../../backend/static/admin-dashboard',
     sourcemap: true,
-    // Configure chunks for better performance
+    assetsDir: 'assets',
+    // Copy manifest.json to the build output
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        manifest: path.resolve(__dirname, 'public/manifest.json'),
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],

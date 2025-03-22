@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.utils import get_openapi
+import os
 
 from backend.config import settings
 from backend.core.security import get_current_user
@@ -15,6 +17,8 @@ ADMIN_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.peerdigital.se",
+    "http://127.0.0.1:8000",  # Add local development origin
+    "http://localhost:8000",  # Add local development origin
 ]
 
 app = FastAPI(
@@ -26,6 +30,10 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+# Mount static files for the admin dashboard
+app.mount("/assets", StaticFiles(directory="backend/static/admin-dashboard/assets"), name="assets")
+app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 # Create a sub-application for LLM API endpoints with its own CORS settings
 llm_app = FastAPI(
@@ -50,11 +58,11 @@ llm_app.add_middleware(
     max_age=3600,
 )
 
-# CORS for main app - allow both admin origins and all origins for LLM endpoints
+# CORS for main app - allow specific origins with credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when using "*"
+    allow_origins=ADMIN_ALLOWED_ORIGINS,  # Use specific origins instead of "*"
+    allow_credentials=True,  # Enable credentials
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
         "Content-Type",
@@ -144,4 +152,8 @@ app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)  # Mount under /api/v1/llm i
 
 @app.get("/")
 async def root():
+    """Serve the admin dashboard frontend"""
+    index_path = os.path.join("backend", "static", "admin-dashboard", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {"message": "Welcome to Peer AI API"}
