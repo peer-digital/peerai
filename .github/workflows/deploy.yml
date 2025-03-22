@@ -56,6 +56,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: frontend/admin-dashboard/package-lock.json
       
       - name: Build frontend
         run: |
