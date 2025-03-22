@@ -38,16 +38,21 @@ jobs:
       
       - name: Verify GitHub token
         run: |
-          # For public repositories, we don't need to verify repository access with a token
-          # Just check if the repository exists
+          # Verify repository access using GitHub token
           echo "Testing repository access..."
           REPO_PATH="${{ env.GITHUB_REPO_OWNER }}/${{ env.REPO_NAME }}"
           echo "Checking access to repository: $REPO_PATH"
-          if curl -s "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
+          
+          # Use GitHub token for authentication
+          if curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
             echo "✅ Repository access confirmed"
           else
             echo "❌ Cannot access repository"
-            echo "Please ensure the repository exists at https://github.com/${REPO_PATH}"
+            echo "Please ensure:"
+            echo "1. The repository exists at https://github.com/${REPO_PATH}"
+            echo "2. The workflow has proper permissions to access the repository"
+            echo "3. The GITHUB_TOKEN has the necessary scopes"
             exit 1
           fi
       
