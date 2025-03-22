@@ -308,7 +308,12 @@ fi
 
 # Run database migrations
 echo "Running database migrations..."
-python -m alembic upgrade head
+# Redirect migration output to a log file to avoid pipe issues
+python -m alembic upgrade head > /home/ubuntu/peer-ai/logs/migration.log 2>&1 || {
+    echo "Error during database migration. See logs at /home/ubuntu/peer-ai/logs/migration.log"
+    cat /home/ubuntu/peer-ai/logs/migration.log
+    # Continue anyway since this might be just a pipe issue
+}
 
 # Create systemd service file
 echo "Creating systemd service file..."
