@@ -3,7 +3,6 @@ set -e
 
 # Define variables
 APP_DIR="/home/ubuntu/peer-ai"
-FRONTEND_DIR="$APP_DIR/frontend/admin-dashboard"
 BACKEND_DIR="$APP_DIR/backend"
 SYSTEMD_SERVICE="/etc/systemd/system/peerai.service"
 DB_NAME="peerai_db"
@@ -30,30 +29,21 @@ EOL
 echo "Deploying backend..."
 cd "$BACKEND_DIR"
 
-# Create Python virtual environment if it doesn't exist
+# Create and activate virtual environment
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
-
-# Activate virtual environment and install dependencies
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Skip backup restoration and always use migrations
+# Run database migrations
 echo "Running database migrations..."
 python -m alembic upgrade head
 
-# Option to initialize database with basic data
-if [ -f "$APP_DIR/scripts/init_db.sh" ]; then
-    read -p "Do you want to initialize the database with basic data? (y/n): " init_db
-    if [[ $init_db == "y" || $init_db == "Y" ]]; then
-        echo "Initializing database with basic data..."
-        chmod +x "$APP_DIR/scripts/init_db.sh"
-        "$APP_DIR/scripts/init_db.sh"
-    else
-        echo "Skipping database initialization."
-    fi
-fi
+# Move pre-built frontend to backend static directory
+echo "Setting up pre-built frontend..."
+mkdir -p "$BACKEND_DIR/static/admin-dashboard"
+cp -r "$APP_DIR/dist/"* "$BACKEND_DIR/static/admin-dashboard/"
 
 # Create systemd service file
 echo "Creating systemd service file..."
@@ -76,24 +66,13 @@ RestartSec=5
 WantedBy=multi-user.target
 EOL
 
-# Reload systemd, enable and restart service
-sudo systemctl daemon-reload
-sudo systemctl enable peerai.service
-sudo systemctl restart peerai.service
-
-# Move pre-built frontend to backend static directory
-echo "Setting up pre-built frontend..."
-mkdir -p "$BACKEND_DIR/static/admin-dashboard"
-cp -r "$APP_DIR/dist/"* "$BACKEND_DIR/static/admin-dashboard/"
-
-# Create nginx configuration for unified deployment
+# Create nginx configuration
 echo "Creating nginx configuration..."
 sudo tee "/etc/nginx/sites-available/peerai" > /dev/null << EOL
 server {
     listen 80;
     server_name $SERVER_IP;
 
-    # Serve static files and handle API requests
     location / {
         proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
@@ -106,7 +85,6 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 
-    # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
         access_log off;
@@ -120,14 +98,12 @@ if [ ! -f "/etc/nginx/sites-enabled/peerai" ]; then
     sudo ln -s "/etc/nginx/sites-available/peerai" "/etc/nginx/sites-enabled/peerai"
 fi
 
-# Test nginx configuration and reload
-sudo nginx -t
-sudo systemctl reload nginx
-
-# Set up cron jobs
-echo "Setting up cron jobs..."
-chmod +x "$APP_DIR/scripts/setup_cron.sh"
-"$APP_DIR/scripts/setup_cron.sh"
+# Restart services
+echo "Restarting services..."
+sudo systemctl daemon-reload
+sudo systemctl enable peerai.service
+sudo systemctl restart peerai.service
+sudo nginx -t && sudo systemctl reload nginx
 
 echo "Deployment completed successfully!"
 echo "Application available at: http://$SERVER_IP"
