@@ -12,13 +12,54 @@ on:
           - production
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend/admin-dashboard
+          npm ci
+      
+      - name: Build frontend
+        run: |
+          cd frontend/admin-dashboard
+          npm run build
+      
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy-package
+          cp -r backend deploy-package/
+          cp -r frontend/admin-dashboard/dist deploy-package/backend/static/admin-dashboard/
+          cp -r scripts deploy-package/
+          cp -r deployment deploy-package/
+          tar -czf deploy-package.tar.gz deploy-package/
+      
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v3
+        with:
+          name: deploy-package
+          path: deploy-package.tar.gz
+
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      - name: Download deployment package
+        uses: actions/download-artifact@v3
+        with:
+          name: deploy-package
+          path: deploy-package
       
       - name: Set default repository values
         run: |
@@ -53,17 +94,17 @@ jobs:
       
       - name: Make scripts executable
         run: |
-          chmod +x ./scripts/*.sh
+          chmod +x ./deploy-package/scripts/*.sh
       
-      - name: Transfer scripts via SCP
+      - name: Transfer deployment package via SCP
         uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
         with:
           host: 158.174.210.91
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts/,deployment/"
-          target: "/home/ubuntu/"
-          strip_components: 0
+          source: "deploy-package/*"
+          target: "/home/ubuntu/peer-ai"
+          strip_components: 1
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
       
@@ -76,7 +117,7 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/*.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/*.sh
             echo "Made all scripts executable"
       
       - name: Run diagnostic script
@@ -88,8 +129,8 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/diagnose_ssh.sh
-            /home/ubuntu/scripts/diagnose_ssh.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/diagnose_ssh.sh
+            /home/ubuntu/peer-ai/scripts/diagnose_ssh.sh
       
       - name: Setup VM if needed
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -100,7 +141,7 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            [ -d /home/ubuntu/peer-ai ] || /home/ubuntu/scripts/setup_vm.sh
+            [ -d /home/ubuntu/peer-ai ] || /home/ubuntu/peer-ai/scripts/setup_vm.sh
       
       - name: Setup SSH keys
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -111,7 +152,7 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            /home/ubuntu/scripts/setup_ssh.sh
+            /home/ubuntu/peer-ai/scripts/setup_ssh.sh
       
       - name: Setup GitHub authentication
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -129,7 +170,7 @@ jobs:
             
             # Use explicit environment variables with the correct repository information
             # No token needed for public repositories
-            GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/scripts/setup_github_auth.sh
+            GITHUB_USER="${GITHUB_REPO_OWNER}" GITHUB_REPO="${REPO_NAME}" /home/ubuntu/peer-ai/scripts/setup_github_auth.sh
         env:
           GITHUB_REPO_OWNER: ${{ env.GITHUB_REPO_OWNER }}
           REPO_NAME: ${{ env.REPO_NAME }}
@@ -143,7 +184,7 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            /home/ubuntu/scripts/fix_permissions.sh
+            /home/ubuntu/peer-ai/scripts/fix_permissions.sh
       
       - name: Run deployment script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -165,8 +206,8 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/fix_migration.sh
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/fix_migration.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/fix_migration.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/peer-ai/scripts/fix_migration.sh
       
       - name: Fix constraint issue
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -177,8 +218,8 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/fix_constraint_issue.sh
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/fix_constraint_issue.sh || echo "Constraint fix script failed, but continuing deployment"
+            chmod +x /home/ubuntu/peer-ai/scripts/fix_constraint_issue.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/peer-ai/scripts/fix_constraint_issue.sh || echo "Constraint fix script failed, but continuing deployment"
       
       - name: Test database connection
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -189,10 +230,10 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/ssh_to_db.sh
-            chmod +x /home/ubuntu/scripts/test_db.sh
-            chmod +x /home/ubuntu/scripts/test_db_connection.py
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/test_db.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/ssh_to_db.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/test_db.sh
+            chmod +x /home/ubuntu/peer-ai/scripts/test_db_connection.py
+            cd /home/ubuntu/peer-ai && /home/ubuntu/peer-ai/scripts/test_db.sh
       
       - name: Run pre-migration checks
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -203,8 +244,8 @@ jobs:
           # Disable host key checking to handle host key changes
           use_insecure_cipher: true
           script: |
-            chmod +x /home/ubuntu/scripts/pre_migration_checker.sh
-            cd /home/ubuntu/peer-ai && /home/ubuntu/scripts/pre_migration_checker.sh || echo "Pre-migration check failed, but continuing deployment"
+            chmod +x /home/ubuntu/peer-ai/scripts/pre_migration_checker.sh
+            cd /home/ubuntu/peer-ai && /home/ubuntu/peer-ai/scripts/pre_migration_checker.sh || echo "Pre-migration check failed, but continuing deployment"
       
       - name: Initialize database
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions

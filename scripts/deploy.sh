@@ -3,7 +3,6 @@ set -e
 
 # Define variables
 APP_DIR="/home/ubuntu/peer-ai"
-FRONTEND_DIR="$APP_DIR/frontend/admin-dashboard"
 BACKEND_DIR="$APP_DIR/backend"
 SYSTEMD_SERVICE="/etc/systemd/system/peerai.service"
 DB_NAME="peerai_db"
@@ -80,14 +79,6 @@ EOL
 sudo systemctl daemon-reload
 sudo systemctl enable peerai.service
 sudo systemctl restart peerai.service
-
-# Deploy frontend
-echo "Deploying frontend..."
-cd "$FRONTEND_DIR"
-
-# Install dependencies and build
-npm ci
-npm run build
 
 # Create nginx configuration for unified deployment
 echo "Creating nginx configuration..."
