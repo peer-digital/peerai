@@ -18,11 +18,43 @@ mkdir -p "$APP_DIR/logs"
 # Update environment variables
 echo "Updating environment variables..."
 cat > "$BACKEND_DIR/.env" << EOL
+# Database configuration
 DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
-SECRET_KEY=your-secret-key-here
+
+# Security
+SECRET_KEY=${{ secrets.SECRET_KEY }}
+JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+JWT_ALGORITHM=${{ secrets.JWT_ALGORITHM }}
+ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+
+# API Configuration
+API_V1_STR=${{ secrets.API_V1_STR }}
+PROJECT_NAME=${{ secrets.PROJECT_NAME }}
+
+# CORS
+BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}
+ALLOWED_ORIGINS=http://$SERVER_IP,https://$SERVER_IP
+
+# Logging
 LOG_LEVEL=INFO
 DEBUG=False
-ALLOWED_ORIGINS=http://$SERVER_IP,https://$SERVER_IP
+
+# Email Configuration
+SMTP_TLS=${{ secrets.SMTP_TLS }}
+SMTP_PORT=${{ secrets.SMTP_PORT }}
+SMTP_HOST=${{ secrets.SMTP_HOST }}
+SMTP_USER=${{ secrets.SMTP_USER }}
+SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+EMAILS_FROM_EMAIL=${{ secrets.EMAILS_FROM_EMAIL }}
+EMAILS_FROM_NAME=${{ secrets.EMAILS_FROM_NAME }}
+
+# OpenAI Configuration
+OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
 EOL
 
 # Deploy backend
