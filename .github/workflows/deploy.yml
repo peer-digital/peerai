@@ -97,6 +97,9 @@ jobs:
           script: |
             chmod +x /home/ubuntu/scripts/*.sh
             echo "Made all scripts executable"
+            # Copy the latest deploy script to the peer-ai directory
+            cp /home/ubuntu/scripts/deploy.sh /home/ubuntu/peer-ai/scripts/
+            echo "Copied latest deploy.sh to peer-ai directory"
       
       - name: Run deployment script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
