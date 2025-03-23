@@ -24,9 +24,12 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   fi
 done
 
-# Create and transfer backend environment file
-echo "Creating and transferring backend environment file..."
-cat > .env.temp << EOL
+# Function to create environment files on the server
+create_server_env_files() {
+    echo "Creating environment files on server..."
+    
+    # Create backend .env
+    cat > backend/.env << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -62,28 +65,25 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
-# Create and transfer frontend environment file
-echo "Creating and transferring frontend environment file..."
-cat > frontend.env.temp << EOL
+    # Create frontend .env.production
+    mkdir -p frontend/admin-dashboard
+    cat > frontend/admin-dashboard/.env.production << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
-# Transfer environment files to server
-echo "Transferring environment files to server..."
-scp -i "$SSH_KEY" .env.temp "$SSH_USER@$VM_IP:$DEPLOY_DIR/backend/.env.new"
-scp -i "$SSH_KEY" frontend.env.temp "$SSH_USER@$VM_IP:$DEPLOY_DIR/frontend/admin-dashboard/.env.production.new"
+    # Set proper permissions
+    chmod 600 backend/.env
+    chmod 644 frontend/admin-dashboard/.env.production
+}
 
-# Move files to their final locations and set permissions
-echo "Setting up environment files on server..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo mv $DEPLOY_DIR/backend/.env.new $DEPLOY_DIR/backend/.env && \
-    sudo mv $DEPLOY_DIR/frontend/admin-dashboard/.env.production.new $DEPLOY_DIR/frontend/admin-dashboard/.env.production && \
-    sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production && \
-    sudo chmod 600 $DEPLOY_DIR/backend/.env && \
-    sudo chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
-
-# Clean up local temp files
-rm -f .env.temp frontend.env.temp
+# Check if we're running on the remote server
+if [ "$(hostname)" = "ubuntu" ]; then
+    echo "Running on remote server, creating environment files..."
+    create_server_env_files
+else
+    echo "Running locally, skipping environment file creation..."
+fi
 
 # Check if the private key exists
 if [ ! -f "$SSH_KEY" ]; then
