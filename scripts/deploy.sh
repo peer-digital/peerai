@@ -96,10 +96,23 @@ else
     echo "Database tables already exist. Skipping initialization."
 fi
 
-# Move pre-built frontend to backend static directory
-echo "Setting up pre-built frontend..."
-mkdir -p "$BACKEND_DIR/static/admin-dashboard"
-cp -r "$APP_DIR/dist/"* "$BACKEND_DIR/static/admin-dashboard/"
+# Set up frontend
+echo "Setting up frontend..."
+FRONTEND_STATIC_DIR="$BACKEND_DIR/static/admin-dashboard"
+mkdir -p "$FRONTEND_STATIC_DIR"
+
+# Copy pre-built frontend files if they exist
+if [ -d "$APP_DIR/dist" ]; then
+    echo "Copying pre-built frontend files..."
+    cp -r "$APP_DIR/dist/"* "$FRONTEND_STATIC_DIR/"
+    # Set proper permissions
+    chmod -R 755 "$FRONTEND_STATIC_DIR"
+    chown -R ubuntu:ubuntu "$FRONTEND_STATIC_DIR"
+else
+    echo "Warning: Pre-built frontend files not found at $APP_DIR/dist"
+    echo "Please ensure the frontend is built before deployment"
+    exit 1
+fi
 
 # Create systemd service file
 echo "Creating systemd service file..."
