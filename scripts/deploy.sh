@@ -24,10 +24,13 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   fi
 done
 
-# Create production environment file from environment variables immediately
-echo "Creating production environment files locally..."
-# Create local environment files that will be included in the tarball
-cat > .env.production << EOL
+# Function to create environment files
+create_env_files() {
+    local target_dir="$1"
+    echo "Creating production environment files in $target_dir..."
+    
+    # Create main .env.production
+    cat > "${target_dir}/.env.production" << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -63,28 +66,38 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
-# Ensure frontend .env file is set correctly
-mkdir -p frontend/admin-dashboard
-cat > frontend/admin-dashboard/.env.production << EOL
+    # Create frontend .env.production
+    mkdir -p "${target_dir}/frontend/admin-dashboard"
+    cat > "${target_dir}/frontend/admin-dashboard/.env.production" << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
-# Debug: Check if environment files were created locally
-if [ -f ".env.production" ]; then
-    echo ".env.production file created successfully"
-    ls -l .env.production
-else
-    echo "Error: Failed to create .env.production"
-    exit 1
-fi
+    # Debug: Check if environment files were created
+    if [ -f "${target_dir}/.env.production" ]; then
+        echo ".env.production file created successfully"
+        ls -l "${target_dir}/.env.production"
+    else
+        echo "Error: Failed to create .env.production"
+        return 1
+    fi
 
-if [ -f "frontend/admin-dashboard/.env.production" ]; then
-    echo "Frontend .env.production file created successfully"
-    ls -l frontend/admin-dashboard/.env.production
+    if [ -f "${target_dir}/frontend/admin-dashboard/.env.production" ]; then
+        echo "Frontend .env.production file created successfully"
+        ls -l "${target_dir}/frontend/admin-dashboard/.env.production"
+    else
+        echo "Error: Failed to create frontend .env.production"
+        return 1
+    fi
+}
+
+# Check if we're running on the remote server
+if [ "$(hostname)" = "ubuntu" ]; then
+    echo "Running on remote server, creating environment files in current directory..."
+    create_env_files "."
 else
-    echo "Error: Failed to create frontend .env.production"
-    exit 1
+    echo "Running locally, creating environment files for deployment..."
+    create_env_files "."
 fi
 
 # Check if the private key exists
