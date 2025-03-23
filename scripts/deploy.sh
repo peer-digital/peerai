@@ -131,10 +131,6 @@ rm backend/cors_update.py"
 echo "Setting up Python environment on VM..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && pip install -r backend/requirements.txt"
 
-# Run database migrations
-echo "Running database migrations..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && source .venv/bin/activate && cd backend && alembic upgrade head"
-
 # Create systemd service files
 echo "Creating systemd service files..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo tee /etc/systemd/system/peerai-backend.service > /dev/null << EOF
