@@ -14,10 +14,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       // Proxy API requests to the backend during development
-      '/api': {
+      '/api/v1': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/api\/v1/, '')
       },
     },
   },

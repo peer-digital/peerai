@@ -1,153 +1,236 @@
 #!/bin/bash
+
+# deploy.sh - Deployment script for PeerAI application
+# @author: PeerAI Developer
+# @description: Creates a tarball of the app and uploads to remote VM
+
+# Stop script on errors
 set -e
 
-# Define variables
-APP_DIR="/home/ubuntu/peer-ai"
-FRONTEND_DIR="$APP_DIR/frontend/admin-dashboard"
-BACKEND_DIR="$APP_DIR/backend"
-NGINX_CONF="/etc/nginx/sites-available/peerai"
-NGINX_ENABLED="/etc/nginx/sites-enabled/peerai"
-SYSTEMD_SERVICE="/etc/systemd/system/peerai.service"
-DB_NAME="peerai_db"
-DB_USER="peerai"
-DB_PASSWORD="peerai_password"
-SERVER_IP="158.174.210.91"
+# Configuration
+VM_IP="158.174.210.91"  # @url: http://158.174.210.91
+SSH_KEY="$(pwd)/PrivateKey.rsa"
+DEPLOY_DIR="/home/ubuntu/peerai"
+TARBALL_NAME="peerai-deploy.tar.gz"
+SSH_USER="ubuntu"
 
-echo "Starting deployment process..."
-
-# Create logs directory
-mkdir -p "$APP_DIR/logs"
-
-# Update environment variables
-echo "Updating environment variables..."
-cat > "$BACKEND_DIR/.env" << EOL
-DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
-SECRET_KEY=your-secret-key-here
-LOG_LEVEL=INFO
-DEBUG=False
-ALLOWED_ORIGINS=http://$SERVER_IP,https://$SERVER_IP
-EOL
-
-# Create frontend environment file
-echo "Creating frontend environment file..."
-cat > "$FRONTEND_DIR/.env" << EOL
-VITE_API_URL=http://$SERVER_IP/api/v1
-VITE_APP_ENV=production
-EOL
-
-# Deploy backend
-echo "Deploying backend..."
-cd "$BACKEND_DIR"
-
-# Create Python virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
+# Check if the private key exists
+if [ ! -f "$SSH_KEY" ]; then
+    echo "Error: SSH key not found at $SSH_KEY"
+    exit 1
 fi
 
-# Activate virtual environment and install dependencies
-source venv/bin/activate
-pip install -r requirements.txt
+# Ensure SSH key has correct permissions
+chmod 600 "$SSH_KEY"
 
-# Skip backup restoration and always use migrations
-echo "Running database migrations..."
-python -m alembic upgrade head
-
-# Option to initialize database with basic data
-if [ -f "$APP_DIR/scripts/init_db.sh" ]; then
-    read -p "Do you want to initialize the database with basic data? (y/n): " init_db
-    if [[ $init_db == "y" || $init_db == "Y" ]]; then
-        echo "Initializing database with basic data..."
-        chmod +x "$APP_DIR/scripts/init_db.sh"
-        "$APP_DIR/scripts/init_db.sh"
+# Create a production .env file if not exists
+if [ ! -f ".env.production" ]; then
+    if [ -f ".env.production.example" ]; then
+        echo "Creating .env.production from example file..."
+        cp .env.production.example .env.production
+        echo "Please review .env.production and update any necessary values before continuing."
+        echo "Press Enter to continue or Ctrl+C to abort..."
+        read -r
     else
-        echo "Skipping database initialization."
+        echo "Error: No .env.production or .env.production.example file found"
+        exit 1
     fi
 fi
 
-# Create systemd service file
-echo "Creating systemd service file..."
-sudo tee "$SYSTEMD_SERVICE" > /dev/null << EOL
+# Ensure frontend .env file is set correctly
+if [ ! -f "frontend/admin-dashboard/.env.production" ]; then
+    echo "Creating frontend production environment file..."
+    cat > frontend/admin-dashboard/.env.production << EOL
+VITE_API_BASE_URL=http://${VM_IP}
+VITE_AUTH_ENABLED=true
+EOL
+fi
+
+# Build the frontend
+echo "Building frontend..."
+cd frontend/admin-dashboard
+npm install
+npm run build
+cd ../..
+
+# Clean up any existing tarball
+rm -f "$TARBALL_NAME"
+
+# Clean up Apple metadata files from the dist directory
+echo "Cleaning up Apple metadata files..."
+find frontend/admin-dashboard/dist -name "._*" -delete
+find frontend/admin-dashboard/dist -name ".DS_Store" -delete
+
+# Create tarball of the application, excluding unnecessary files
+echo "Creating deployment tarball..."
+tar --exclude="node_modules" \
+    --exclude=".git" \
+    --exclude=".venv" \
+    --exclude="venv" \
+    --exclude="__pycache__" \
+    --exclude="*.pyc" \
+    --exclude=".pytest_cache" \
+    --exclude="frontend/admin-dashboard/node_modules" \
+    --exclude=".DS_Store" \
+    --exclude="._*" \
+    -czf "$TARBALL_NAME" \
+    backend \
+    frontend/admin-dashboard/dist \
+    .env.production \
+    frontend/admin-dashboard/.env.production \
+    scripts \
+    requirements.txt \
+    package.json \
+    package-lock.json
+
+# Check if we can connect to the VM
+echo "Checking connection to VM..."
+ssh -i "$SSH_KEY" -o "StrictHostKeyChecking=no" "$SSH_USER@$VM_IP" "echo 'SSH connection successful'"
+
+# Clean up existing deployment directory and create new one with proper permissions
+echo "Cleaning up and creating deployment directory on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo rm -rf $DEPLOY_DIR && sudo mkdir -p $DEPLOY_DIR && sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR"
+
+# Upload tarball to VM
+echo "Uploading tarball to VM..."
+scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/"
+
+# Extract tarball on VM with proper permissions
+echo "Extracting tarball on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && tar -xzf $TARBALL_NAME && chmod -R 755 ."
+
+# Create or update backend .env file on the server with production settings
+echo "Setting up production environment on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && cp .env.production backend/.env"
+
+# Update CORS settings in backend config
+echo "Updating backend CORS settings..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && cat > backend/cors_update.py << EOF
+#!/usr/bin/env python3
+with open('backend/config.py', 'r') as f:
+    config = f.read()
+
+# Update ALLOWED_ORIGINS to include VM IP
+import re
+pattern = r'ADMIN_ALLOWED_ORIGINS\s*=\s*\['
+replacement = f'ADMIN_ALLOWED_ORIGINS = [\n    \"http://${VM_IP}\", \"http://${VM_IP}:80\", \"http://${VM_IP}:8000\", \"http://${VM_IP}:5173\",'
+config = re.sub(pattern, replacement, config)
+
+with open('backend/config.py', 'w') as f:
+    f.write(config)
+EOF
+chmod +x backend/cors_update.py
+python3 backend/cors_update.py
+rm backend/cors_update.py"
+
+# Create Python virtual environment on VM
+echo "Setting up Python environment on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && pip install -r backend/requirements.txt"
+
+# Create systemd service files
+echo "Creating systemd service files..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo tee /etc/systemd/system/peerai-backend.service > /dev/null << EOF
 [Unit]
-Description=PeerAI API Service
-After=network.target postgresql.service
+Description=PeerAI Backend Service
+After=network.target
 
 [Service]
-User=ubuntu
-Group=ubuntu
-WorkingDirectory=$BACKEND_DIR
-Environment=PYTHONPATH=$APP_DIR
-EnvironmentFile=$BACKEND_DIR/.env
-ExecStart=$BACKEND_DIR/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4 --log-level info
+User=$SSH_USER
+WorkingDirectory=$DEPLOY_DIR/backend
+ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 Restart=always
-RestartSec=5
+Environment=\"PATH=$DEPLOY_DIR/.venv/bin:/usr/bin\"
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOF"
 
-# Reload systemd, enable and restart service
-sudo systemctl daemon-reload
-sudo systemctl enable peerai.service
-sudo systemctl restart peerai.service
+# Start the services
+echo "Starting services..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo systemctl daemon-reload && sudo systemctl enable peerai-backend && sudo systemctl restart peerai-backend"
 
-# Deploy frontend
-echo "Deploying frontend..."
-cd "$FRONTEND_DIR"
-
-# Install dependencies and build
-npm ci
-npm run build
-
-# Create nginx configuration
-echo "Creating nginx configuration..."
-sudo tee "$NGINX_CONF" > /dev/null << EOL
+# Add nginx configuration to serve the frontend
+echo "Setting up nginx to serve the frontend..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo apt-get update && sudo apt-get install -y nginx"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo tee /etc/nginx/sites-available/peerai > /dev/null << 'EOF'
 server {
     listen 80;
-    server_name $SERVER_IP;
+    server_name ${VM_IP};
 
-    # Frontend
-    location / {
-        root $FRONTEND_DIR/dist;
-        index index.html;
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    # Backend API
-    location /api {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
+    root $DEPLOY_DIR/frontend/admin-dashboard/dist;
+    index index.html;
 
     # Health check endpoint
     location /health {
         proxy_pass http://localhost:8000/health;
-        access_log off;
-        add_header Content-Type application/json;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
+
+    # API endpoints
+    location /api/v1/ {
+        proxy_pass http://localhost:8000/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # Add CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key' always;
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+
+        # Handle OPTIONS requests
+        if (\$request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH';
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
+    # Frontend routes
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Detailed error logs
+    error_log /var/log/nginx/peerai_error.log debug;
+    access_log /var/log/nginx/peerai_access.log;
 }
-EOL
+EOF"
 
-# Enable nginx site if not already enabled
-if [ ! -f "$NGINX_ENABLED" ]; then
-    sudo ln -s "$NGINX_CONF" "$NGINX_ENABLED"
-fi
+# Fix nginx config variables
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\${VM_IP}|$VM_IP|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\$DEPLOY_DIR|$DEPLOY_DIR|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$uri|\$uri|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$host|\$host|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$remote_addr|\$remote_addr|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$proxy_add_x_forwarded_for|\$proxy_add_x_forwarded_for|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$scheme|\$scheme|g' /etc/nginx/sites-available/peerai"
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$request_method|\$request_method|g' /etc/nginx/sites-available/peerai"
 
-# Test nginx configuration and reload
-sudo nginx -t
-sudo systemctl reload nginx
+# Ensure nginx sites-enabled has our config and remove default if it exists
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo rm -f /etc/nginx/sites-enabled/default && sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/"
 
-# Set up cron jobs
-echo "Setting up cron jobs..."
-chmod +x "$APP_DIR/scripts/setup_cron.sh"
-"$APP_DIR/scripts/setup_cron.sh"
+# Set proper permissions for nginx access
+echo "Setting up proper permissions for nginx..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo chown -R www-data:www-data $DEPLOY_DIR && sudo chmod -R 755 $DEPLOY_DIR && sudo chmod 755 /home/ubuntu && sudo systemctl restart nginx"
 
-echo "Deployment completed successfully!"
-echo "Frontend available at: http://$SERVER_IP"
-echo "Backend API available at: http://$SERVER_IP/api" 
+# Test and restart nginx
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo nginx -t && sudo systemctl restart nginx"
+
+# Clean up local tarball
+echo "Cleaning up local tarball..."
+rm "$TARBALL_NAME"
+
+echo "Deployment complete!"
+echo "Frontend available at: http://${VM_IP}"
+echo "Backend API available at: http://${VM_IP}/api/v1"
+echo "Raw backend access at: http://${VM_IP}:8000" 
