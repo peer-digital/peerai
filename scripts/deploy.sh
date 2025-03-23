@@ -10,7 +10,7 @@ set -e
 # Configuration
 VM_IP="158.174.210.91"  # @url: http://158.174.210.91
 SSH_KEY="$(pwd)/PrivateKey.rsa"
-DEPLOY_DIR="/home/ubuntu/peerai"
+DEPLOY_DIR="/home/ubuntu/peer-ai"  # @note: Fixed hyphen in directory name
 TARBALL_NAME="peerai-deploy.tar.gz"
 SSH_USER="ubuntu"
 
@@ -27,7 +27,7 @@ done
 # Create production environment file from environment variables immediately
 echo "Creating production environment files..."
 # Use absolute path for .env.production
-ENV_FILE="/home/ubuntu/peer-ai/.env.production"
+ENV_FILE="${DEPLOY_DIR}/.env.production"
 mkdir -p "$(dirname "$ENV_FILE")"
 cat > "$ENV_FILE" << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
@@ -66,7 +66,7 @@ VITE_APP_ENV=production
 EOL
 
 # Ensure frontend .env file is set correctly
-FRONTEND_ENV_FILE="/home/ubuntu/peer-ai/frontend/admin-dashboard/.env.production"
+FRONTEND_ENV_FILE="${DEPLOY_DIR}/frontend/admin-dashboard/.env.production"
 mkdir -p "$(dirname "$FRONTEND_ENV_FILE")"
 cat > "$FRONTEND_ENV_FILE" << EOL
 VITE_API_BASE_URL=http://${VM_IP}
