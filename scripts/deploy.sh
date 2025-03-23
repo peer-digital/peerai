@@ -20,22 +20,12 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   if [ ! -z "${!var}" ]; then 
     echo "$var is set"
   else 
-    echo "Error: Required environment variable $var is not set"
-    exit 1
+    echo "Warning: Environment variable $var is not set"
   fi
 done
 
-# Check if the private key exists
-if [ ! -f "$SSH_KEY" ]; then
-    echo "Error: SSH key not found at $SSH_KEY"
-    exit 1
-fi
-
-# Ensure SSH key has correct permissions
-chmod 600 "$SSH_KEY"
-
-# Create production environment file from environment variables
-echo "Creating production environment file..."
+# Create production environment file from environment variables immediately
+echo "Creating production environment files..."
 mkdir -p "$(dirname .env.production)"
 cat > .env.production << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
@@ -73,7 +63,14 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
-# Debug: Check if .env.production was created
+# Ensure frontend .env file is set correctly
+mkdir -p frontend/admin-dashboard
+cat > frontend/admin-dashboard/.env.production << EOL
+VITE_API_BASE_URL=http://${VM_IP}
+VITE_AUTH_ENABLED=true
+EOL
+
+# Debug: Check if environment files were created
 if [ -f ".env.production" ]; then
     echo ".env.production file created successfully"
     ls -l .env.production
@@ -82,15 +79,6 @@ else
     exit 1
 fi
 
-# Ensure frontend .env file is set correctly
-echo "Creating frontend production environment file..."
-mkdir -p frontend/admin-dashboard
-cat > frontend/admin-dashboard/.env.production << EOL
-VITE_API_BASE_URL=http://${VM_IP}
-VITE_AUTH_ENABLED=true
-EOL
-
-# Debug: Check if frontend .env.production was created
 if [ -f "frontend/admin-dashboard/.env.production" ]; then
     echo "Frontend .env.production file created successfully"
     ls -l frontend/admin-dashboard/.env.production
@@ -98,6 +86,15 @@ else
     echo "Error: Failed to create frontend .env.production"
     exit 1
 fi
+
+# Check if the private key exists
+if [ ! -f "$SSH_KEY" ]; then
+    echo "Error: SSH key not found at $SSH_KEY"
+    exit 1
+fi
+
+# Ensure SSH key has correct permissions
+chmod 600 "$SSH_KEY"
 
 # Build the frontend
 echo "Building frontend..."
