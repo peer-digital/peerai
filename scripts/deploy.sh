@@ -68,78 +68,28 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Initialize Alembic if needed
-if [ ! -d "alembic" ]; then
-    echo "Initializing Alembic migrations..."
-    alembic init alembic
-    
-    # Update alembic.ini with correct database URL
-    sed -i "s|sqlalchemy.url = driver://user:pass@localhost/dbname|sqlalchemy.url = postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME|" alembic.ini
-    
-    # Update env.py to import models and set target metadata
-    cat > alembic/env.py << 'EOF'
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
-from backend.models import Base
+# Create models directory structure if needed
+echo "Setting up models directory..."
+mkdir -p "$BACKEND_DIR/backend/models"
+touch "$BACKEND_DIR/backend/models/__init__.py"
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
-# add your model's MetaData object here
-# for 'autogenerate' support
-target_metadata = Base.metadata
-
-def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+# Create base.py with SQLAlchemy Base class
+echo "Creating base.py..."
+cat > "$BACKEND_DIR/backend/models/base.py" << 'EOF'
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
 EOF
 
-    # Create initial migration
-    echo "Creating initial migration..."
-    alembic revision --autogenerate -m "Initial migration"
+# Copy config.py to correct location if needed
+if [ -f "$BACKEND_DIR/config.py" ] && [ ! -f "$BACKEND_DIR/backend/config.py" ]; then
+    echo "Moving config.py to correct location..."
+    cp "$BACKEND_DIR/config.py" "$BACKEND_DIR/backend/config.py"
 fi
 
-# Run database migrations
-echo "Running database migrations..."
-alembic upgrade head
+# Initialize database tables
+echo "Initializing database tables..."
+cd "$APP_DIR"
+PYTHONPATH="$APP_DIR" python3 "$BACKEND_DIR/create_model_tables.py"
 
 # Move pre-built frontend to backend static directory
 echo "Setting up pre-built frontend..."
