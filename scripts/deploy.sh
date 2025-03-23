@@ -105,34 +105,22 @@ mkdir -p "$FRONTEND_STATIC_DIR"
 echo "Current directory: $(pwd)"
 echo "APP_DIR: $APP_DIR"
 echo "FRONTEND_STATIC_DIR: $FRONTEND_STATIC_DIR"
-echo "Checking for dist.tar.gz..."
-ls -la "$APP_DIR/dist.tar.gz"
+echo "Checking for frontend files..."
+ls -la "/home/ubuntu/frontend/admin-dashboard/dist"
 
-# Extract frontend files if they exist
-if [ -f "$APP_DIR/dist.tar.gz" ]; then
-    echo "Extracting frontend files..."
-    tar -xzf "$APP_DIR/dist.tar.gz" -C "$APP_DIR"
-    echo "Checking extracted files..."
-    ls -la "$APP_DIR/dist"
-    
-    if [ -d "$APP_DIR/dist" ]; then
-        echo "Copying frontend files to static directory..."
-        cp -r "$APP_DIR/dist/"* "$FRONTEND_STATIC_DIR/"
-        echo "Setting permissions..."
-        chmod -R 755 "$FRONTEND_STATIC_DIR"
-        chown -R ubuntu:ubuntu "$FRONTEND_STATIC_DIR"
-        echo "Frontend setup completed successfully"
-    else
-        echo "Warning: dist directory not found after extraction"
-        echo "Contents of APP_DIR:"
-        ls -la "$APP_DIR"
-        exit 1
-    fi
+# Copy frontend files if they exist
+if [ -d "/home/ubuntu/frontend/admin-dashboard/dist" ]; then
+    echo "Copying frontend files to static directory..."
+    cp -r "/home/ubuntu/frontend/admin-dashboard/dist/"* "$FRONTEND_STATIC_DIR/"
+    echo "Setting permissions..."
+    chmod -R 755 "$FRONTEND_STATIC_DIR"
+    chown -R ubuntu:ubuntu "$FRONTEND_STATIC_DIR"
+    echo "Frontend setup completed successfully"
 else
-    echo "Warning: Frontend files (dist.tar.gz) not found at $APP_DIR"
-    echo "Contents of APP_DIR:"
-    ls -la "$APP_DIR"
-    echo "Please ensure the frontend is built and compressed before deployment"
+    echo "Warning: Frontend files not found at /home/ubuntu/frontend/admin-dashboard/dist"
+    echo "Contents of /home/ubuntu:"
+    ls -la "/home/ubuntu"
+    echo "Please ensure the frontend is built and transferred correctly"
     exit 1
 fi
 
