@@ -26,8 +26,10 @@ done
 
 # Create production environment file from environment variables immediately
 echo "Creating production environment files..."
-mkdir -p "$(dirname .env.production)"
-cat > .env.production << EOL
+# Use absolute path for .env.production
+ENV_FILE="/home/ubuntu/peer-ai/.env.production"
+mkdir -p "$(dirname "$ENV_FILE")"
+cat > "$ENV_FILE" << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -64,24 +66,25 @@ VITE_APP_ENV=production
 EOL
 
 # Ensure frontend .env file is set correctly
-mkdir -p frontend/admin-dashboard
-cat > frontend/admin-dashboard/.env.production << EOL
+FRONTEND_ENV_FILE="/home/ubuntu/peer-ai/frontend/admin-dashboard/.env.production"
+mkdir -p "$(dirname "$FRONTEND_ENV_FILE")"
+cat > "$FRONTEND_ENV_FILE" << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
 # Debug: Check if environment files were created
-if [ -f ".env.production" ]; then
+if [ -f "$ENV_FILE" ]; then
     echo ".env.production file created successfully"
-    ls -l .env.production
+    ls -l "$ENV_FILE"
 else
     echo "Error: Failed to create .env.production"
     exit 1
 fi
 
-if [ -f "frontend/admin-dashboard/.env.production" ]; then
+if [ -f "$FRONTEND_ENV_FILE" ]; then
     echo "Frontend .env.production file created successfully"
-    ls -l frontend/admin-dashboard/.env.production
+    ls -l "$FRONTEND_ENV_FILE"
 else
     echo "Error: Failed to create frontend .env.production"
     exit 1
