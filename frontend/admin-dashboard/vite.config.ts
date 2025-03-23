@@ -18,7 +18,7 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api\/v1/, '')
+        rewrite: (path) => path  // Keep the /api/v1 prefix
       },
     },
   },

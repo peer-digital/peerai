@@ -140,8 +140,9 @@ After=network.target
 
 [Service]
 User=$SSH_USER
-WorkingDirectory=$DEPLOY_DIR/backend
-ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+WorkingDirectory=$DEPLOY_DIR
+Environment=\"PYTHONPATH=$DEPLOY_DIR\"
+ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
 Restart=always
 Environment=\"PATH=$DEPLOY_DIR/.venv/bin:/usr/bin\"
 
@@ -192,9 +193,9 @@ server {
             add_header 'Access-Control-Allow-Origin' '*';
             add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH';
             add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key';
-            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Access-Control-Max-Age' '1728000';
             add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
+            add_header 'Content-Length' '0';
             return 204;
         }
     }
@@ -202,9 +203,9 @@ server {
     # Frontend routes
     location / {
         try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        add_header Pragma "no-cache";
-        add_header Expires "0";
+        add_header 'Cache-Control' 'no-cache, no-store, must-revalidate';
+        add_header 'Pragma' 'no-cache';
+        add_header 'Expires' '0';
     }
 
     # Detailed error logs

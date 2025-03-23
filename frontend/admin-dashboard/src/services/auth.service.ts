@@ -58,7 +58,7 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/v1/auth/login',
+        '/auth/login',
         formData,
         {
           headers: {
@@ -121,7 +121,7 @@ class AuthService {
         role: string;
         full_name?: string;
         token_limit: number;
-      }>('/api/v1/auth/validate');
+      }>('/auth/validate');
 
       console.log('Token validation response:', {
         rawData: validateResponse.data,
@@ -175,7 +175,7 @@ class AuthService {
     // First clear local state
     this.clearAuthState();
     // Then attempt to clear server session
-    api.post('/api/v1/auth/logout').catch((error) => {
+    api.post('/auth/logout').catch((error) => {
       // Ignore 401 errors as they're expected if token is already invalid
       if (error.response?.status !== 401) {
         console.warn('Error during logout:', error);
@@ -254,7 +254,7 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/v1/auth/register',
+        '/auth/register',
         credentials
       );
 

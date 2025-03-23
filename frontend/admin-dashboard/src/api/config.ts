@@ -10,7 +10,9 @@ const API_BASE_URL = import.meta.env.DEV
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: import.meta.env.DEV
+    ? '/api/v1'  // In development, just use /api/v1 as the base URL
+    : `${API_BASE_URL}/api/v1`,  // In production, include the full URL
   headers: {
     'Content-Type': 'application/json',
   },
