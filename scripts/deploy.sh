@@ -24,12 +24,10 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   fi
 done
 
-# Function to create environment files on the server
-create_server_env_files() {
-    echo "Creating environment files on server..."
-    
-    # Create backend .env
-    cat > backend/.env << EOL
+# Create environment files directly on the server
+echo "Creating environment files on server..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "mkdir -p $DEPLOY_DIR/backend $DEPLOY_DIR/frontend/admin-dashboard && \
+cat > $DEPLOY_DIR/backend/.env << 'EOL'
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -41,7 +39,7 @@ EXTERNAL_LLM_API_KEY=${EXTERNAL_LLM_API_KEY}
 EXTERNAL_MODEL=mistral-tiny
 EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
 # @important: Production uses the VM IP
-ALLOWED_ORIGIN="http://${VM_IP}"
+ALLOWED_ORIGIN=\"http://${VM_IP}\"
 # Google service account credentials - Base64 encoded JSON
 GOOGLE_SERVICE_ACCOUNT_CREDS=${GOOGLE_SERVICE_ACCOUNT_CREDS}
 
@@ -65,25 +63,14 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
-    # Create frontend .env.production
-    mkdir -p frontend/admin-dashboard
-    cat > frontend/admin-dashboard/.env.production << EOL
+cat > $DEPLOY_DIR/frontend/admin-dashboard/.env.production << 'EOL'
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
-    # Set proper permissions
-    chmod 600 backend/.env
-    chmod 644 frontend/admin-dashboard/.env.production
-}
-
-# Check if we're running on the remote server
-if [ "$(hostname)" = "ubuntu" ]; then
-    echo "Running on remote server, creating environment files..."
-    create_server_env_files
-else
-    echo "Running locally, skipping environment file creation..."
-fi
+chmod 600 $DEPLOY_DIR/backend/.env
+chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production
+chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
 
 # Check if the private key exists
 if [ ! -f "$SSH_KEY" ]; then
