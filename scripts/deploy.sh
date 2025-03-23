@@ -39,27 +39,43 @@ fi
 # Ensure SSH key has correct permissions
 chmod 600 "$SSH_KEY"
 
-# Create a production .env file if not exists
-if [ ! -f ".env.production" ]; then
-    if [ -f ".env.production.example" ]; then
-        echo "Creating .env.production from example file..."
-        cp .env.production.example .env.production
-        echo "Please review .env.production and update any necessary values before continuing."
-        echo "Press Enter to continue or Ctrl+C to abort..."
-        read -r
-    else
-        echo "Error: No .env.production or .env.production.example file found"
-        exit 1
-    fi
-fi
+# Create production environment file from environment variables
+echo "Creating production environment file..."
+cat > .env.production << EOL
+# @important: Render hosted PostgreSQL database - do not modify without approval
+DATABASE_URL=$DATABASE_URL
+ENVIRONMENT=production
+DEBUG=false
+MOCK_MODE=false
+LOG_LEVEL=INFO
+HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY
+EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY
+EXTERNAL_MODEL=mistral-tiny
+EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
+# @important: Production uses the VM IP
+ALLOWED_ORIGIN="http://${VM_IP}"
+# Google service account credentials - Base64 encoded JSON
+GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS
 
-# Update sensitive values in .env.production
-echo "Updating sensitive values in .env.production..."
-sed -i "s|DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" .env.production
-sed -i "s|EXTERNAL_LLM_API_KEY=.*|EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY|" .env.production
-sed -i "s|HOSTED_LLM_API_KEY=.*|HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY|" .env.production
-sed -i "s|JWT_SECRET_KEY=.*|JWT_SECRET_KEY=$JWT_SECRET_KEY|" .env.production
-sed -i "s|GOOGLE_SERVICE_ACCOUNT_CREDS=.*|GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS|" .env.production
+# Email configurations
+GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se
+NOTIFICATION_EMAIL_ALIAS=notifications@peerdigital.se
+VITE_TEST_EMAIL=admin@peerai.se
+VITE_TEST_PASSWORD=admin123
+
+# JWT and authentication settings
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_ALGORITHM=HS256
+JWT_SECRET_KEY=$JWT_SECRET_KEY
+
+# Application settings
+MOCK_MODE=false
+
+# @important: API base URL - do not change without updating nginx config
+VITE_API_BASE_URL=http://${VM_IP}
+MOCK_MODE=false
+VITE_APP_ENV=production
+EOL
 
 # Ensure frontend .env file is set correctly
 if [ ! -f "frontend/admin-dashboard/.env.production" ]; then
