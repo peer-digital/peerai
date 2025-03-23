@@ -2,17 +2,28 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // @important: API base URL configuration
-// In development, we use the Vite proxy which is configured to localhost:8000
-// In production, this will be overridden by VITE_API_BASE_URL environment variable
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:8000' : (import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com');
+// Use environment variable with fallback to VM IP address
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://158.174.210.91';
+
+console.log('Environment:', import.meta.env.MODE);
+console.log('API Base URL from env:', import.meta.env.VITE_API_BASE_URL);
+console.log('API Base URL from config:', API_BASE_URL);
+
+// Add a compatibility layer for different backend versions
+const API_PREFIX = '/api';
+const FULL_API_URL = `${API_BASE_URL}${API_PREFIX}`;
+
+console.log('Using API Base URL:', FULL_API_URL);
+console.log('Development mode:', import.meta.env.DEV === true);
+console.log('Same Origin Deployment:', API_BASE_URL === window.location.origin);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: FULL_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for handling cookies/sessions
+  withCredentials: false, // Set to false to avoid CORS issues with credentials
 });
 
 // Request interceptor

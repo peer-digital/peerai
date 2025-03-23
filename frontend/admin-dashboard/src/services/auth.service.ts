@@ -39,12 +39,8 @@ class AuthService {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      // Create form data for OAuth2 token request
-      const formData = new URLSearchParams();
-      formData.append('username', credentials.email);
-      formData.append('password', credentials.password);
-
       console.log('Sending login request...'); // Debug log
+      console.log('API URL:', api.defaults.baseURL + '/auth/login');
 
       const response = await api.post<{
         access_token: string;
@@ -58,11 +54,14 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/v1/auth/login',
-        formData,
+        '/auth/login',
+        {
+          email: credentials.email,
+          password: credentials.password
+        },
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
           },
         }
       );
@@ -121,7 +120,7 @@ class AuthService {
         role: string;
         full_name?: string;
         token_limit: number;
-      }>('/api/v1/auth/validate');
+      }>('/auth/validate');
 
       console.log('Token validation response:', {
         rawData: validateResponse.data,
@@ -175,7 +174,7 @@ class AuthService {
     // First clear local state
     this.clearAuthState();
     // Then attempt to clear server session
-    api.post('/api/v1/auth/logout').catch((error) => {
+    api.post('/auth/logout').catch((error) => {
       // Ignore 401 errors as they're expected if token is already invalid
       if (error.response?.status !== 401) {
         console.warn('Error during logout:', error);
@@ -254,7 +253,7 @@ class AuthService {
           token_limit?: number;
         };
       }>(
-        '/api/v1/auth/register',
+        '/auth/register',
         credentials
       );
 
