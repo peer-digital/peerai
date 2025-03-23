@@ -43,17 +43,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
           envs: |
-            DATABASE_URL
-            EXTERNAL_LLM_API_KEY
-            HOSTED_LLM_API_KEY
-            JWT_SECRET_KEY
-            GOOGLE_SERVICE_ACCOUNT_CREDS
-          env:
-            DATABASE_URL: ${{ secrets.DATABASE_URL }}
-            EXTERNAL_LLM_API_KEY: ${{ secrets.EXTERNAL_LLM_API_KEY }}
-            HOSTED_LLM_API_KEY: ${{ secrets.HOSTED_LLM_API_KEY }}
-            JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-            GOOGLE_SERVICE_ACCOUNT_CREDS: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            EXTERNAL_LLM_API_KEY=${{ secrets.EXTERNAL_LLM_API_KEY }}
+            HOSTED_LLM_API_KEY=${{ secrets.HOSTED_LLM_API_KEY }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            GOOGLE_SERVICE_ACCOUNT_CREDS=${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}
           script: |
             cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
       
