@@ -35,20 +35,36 @@ jobs:
           strip_components: 0
           use_insecure_cipher: true
       
+      - name: Debug Environment
+        run: |
+          echo "Checking if environment variables are set (values hidden):"
+          if [ ! -z "${{ secrets.DATABASE_URL }}" ]; then echo "DATABASE_URL is set"; else echo "DATABASE_URL is NOT set"; fi
+          if [ ! -z "${{ secrets.EXTERNAL_LLM_API_KEY }}" ]; then echo "EXTERNAL_LLM_API_KEY is set"; else echo "EXTERNAL_LLM_API_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.HOSTED_LLM_API_KEY }}" ]; then echo "HOSTED_LLM_API_KEY is set"; else echo "HOSTED_LLM_API_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "JWT_SECRET_KEY is set"; else echo "JWT_SECRET_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}" ]; then echo "GOOGLE_SERVICE_ACCOUNT_CREDS is set"; else echo "GOOGLE_SERVICE_ACCOUNT_CREDS is NOT set"; fi
+      
       - name: Run deployment script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EXTERNAL_LLM_API_KEY: ${{ secrets.EXTERNAL_LLM_API_KEY }}
+          HOSTED_LLM_API_KEY: ${{ secrets.HOSTED_LLM_API_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_CREDS: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}
         with:
           host: 158.174.210.91  # @url: Production VM IP
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
-          envs: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            EXTERNAL_LLM_API_KEY=${{ secrets.EXTERNAL_LLM_API_KEY }}
-            HOSTED_LLM_API_KEY=${{ secrets.HOSTED_LLM_API_KEY }}
-            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-            GOOGLE_SERVICE_ACCOUNT_CREDS=${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}
+          envs: DATABASE_URL,EXTERNAL_LLM_API_KEY,HOSTED_LLM_API_KEY,JWT_SECRET_KEY,GOOGLE_SERVICE_ACCOUNT_CREDS
           script: |
+            # Debug: Print environment variable status (not values)
+            echo "Checking environment variables on remote server:"
+            for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY GOOGLE_SERVICE_ACCOUNT_CREDS; do
+              if [ ! -z "${!var}" ]; then echo "$var is set"; else echo "$var is NOT set"; fi
+            done
+            
             cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
       
       - name: Check deployment status

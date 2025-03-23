@@ -14,17 +14,12 @@ DEPLOY_DIR="/home/ubuntu/peerai"
 TARBALL_NAME="peerai-deploy.tar.gz"
 SSH_USER="ubuntu"
 
-# Check if required environment variables are set
-required_vars=(
-  "DATABASE_URL"
-  "EXTERNAL_LLM_API_KEY"
-  "HOSTED_LLM_API_KEY"
-  "JWT_SECRET_KEY"
-  "GOOGLE_SERVICE_ACCOUNT_CREDS"
-)
-
-for var in "${required_vars[@]}"; do
-  if [ -z "${!var}" ]; then
+# Debug: Print environment variable status (not values)
+echo "Checking environment variables in deploy.sh:"
+for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY GOOGLE_SERVICE_ACCOUNT_CREDS; do
+  if [ ! -z "${!var}" ]; then 
+    echo "$var is set"
+  else 
     echo "Error: Required environment variable $var is not set"
     exit 1
   fi
@@ -41,21 +36,22 @@ chmod 600 "$SSH_KEY"
 
 # Create production environment file from environment variables
 echo "Creating production environment file..."
+mkdir -p "$(dirname .env.production)"
 cat > .env.production << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
-DATABASE_URL=$DATABASE_URL
+DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
 DEBUG=false
 MOCK_MODE=false
 LOG_LEVEL=INFO
-HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY
-EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY
+HOSTED_LLM_API_KEY=${HOSTED_LLM_API_KEY}
+EXTERNAL_LLM_API_KEY=${EXTERNAL_LLM_API_KEY}
 EXTERNAL_MODEL=mistral-tiny
 EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
 # @important: Production uses the VM IP
 ALLOWED_ORIGIN="http://${VM_IP}"
 # Google service account credentials - Base64 encoded JSON
-GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS
+GOOGLE_SERVICE_ACCOUNT_CREDS=${GOOGLE_SERVICE_ACCOUNT_CREDS}
 
 # Email configurations
 GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se
@@ -66,7 +62,7 @@ VITE_TEST_PASSWORD=admin123
 # JWT and authentication settings
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 JWT_ALGORITHM=HS256
-JWT_SECRET_KEY=$JWT_SECRET_KEY
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
 # Application settings
 MOCK_MODE=false
@@ -77,13 +73,30 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
+# Debug: Check if .env.production was created
+if [ -f ".env.production" ]; then
+    echo ".env.production file created successfully"
+    ls -l .env.production
+else
+    echo "Error: Failed to create .env.production"
+    exit 1
+fi
+
 # Ensure frontend .env file is set correctly
-if [ ! -f "frontend/admin-dashboard/.env.production" ]; then
-    echo "Creating frontend production environment file..."
-    cat > frontend/admin-dashboard/.env.production << EOL
+echo "Creating frontend production environment file..."
+mkdir -p frontend/admin-dashboard
+cat > frontend/admin-dashboard/.env.production << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
+
+# Debug: Check if frontend .env.production was created
+if [ -f "frontend/admin-dashboard/.env.production" ]; then
+    echo "Frontend .env.production file created successfully"
+    ls -l frontend/admin-dashboard/.env.production
+else
+    echo "Error: Failed to create frontend .env.production"
+    exit 1
 fi
 
 # Build the frontend
