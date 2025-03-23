@@ -1,0 +1,319 @@
+name: Modular Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+      steps_to_run:
+        description: 'Deployment steps to run (comma-separated)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - checkout-code
+          - build-frontend
+          - transfer-files
+          - deploy-backend
+          - deploy-frontend
+          - configure-nginx
+          - test-deployment
+
+jobs:
+  checkout-code:
+    name: Checkout and Setup
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'checkout-code' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # @important: GitHub's official checkout action - do not change URL
+      
+      - name: Set default repository values
+        run: |
+          # Set hardcoded values for the correct repository
+          echo "GITHUB_REPO_OWNER=peer-digital" >> $GITHUB_ENV
+          echo "REPO_NAME=peerai" >> $GITHUB_ENV
+          echo "Using hardcoded repository: peer-digital/peerai"
+      
+      - name: Verify GitHub token
+        run: |
+          # Verify repository access using GitHub token
+          echo "Testing repository access..."
+          REPO_PATH="${{ env.GITHUB_REPO_OWNER }}/${{ env.REPO_NAME }}"
+          echo "Checking access to repository: $REPO_PATH"
+          
+          # Use GitHub token for authentication
+          if curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${REPO_PATH}" | grep -q "\"name\":"; then
+            echo "✅ Repository access confirmed"
+          else
+            echo "❌ Cannot access repository"
+            echo "Please ensure:"
+            echo "1. The repository exists at https://github.com/${REPO_PATH}"
+            echo "2. The workflow has proper permissions to access the repository"
+            echo "3. The GITHUB_TOKEN has the necessary scopes"
+            exit 1
+          fi
+      
+      # Upload the repository as an artifact for the next jobs to use
+      - name: Upload repository artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: repository
+          path: .
+          retention-days: 1
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: checkout-code
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'build-frontend' }}
+    steps:
+      - name: Download repository artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: repository
+          path: .
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/admin-dashboard/package-lock.json
+      
+      - name: Build frontend
+        run: |
+          cd frontend/admin-dashboard
+          npm ci
+          npm run build
+          echo "Frontend build completed"
+      
+      # Upload the built frontend as an artifact for the next job
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/admin-dashboard/dist/
+          retention-days: 1
+
+  transfer-files:
+    name: Transfer Files to Server
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: [checkout-code, build-frontend]
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'transfer-files' }}
+    steps:
+      - name: Download repository artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: repository
+          path: .
+      
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/admin-dashboard/dist/
+      
+      - name: Make scripts executable
+        run: |
+          chmod +x ./scripts/*.sh
+      
+      - name: Upload fixed deployment script
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "fixed_deploy.sh"
+          target: "/home/ubuntu/"
+          strip_components: 0
+          use_insecure_cipher: true
+      
+      - name: Transfer scripts and built frontend via SCP
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts/,deployment/,frontend/admin-dashboard/dist/"
+          target: "/home/ubuntu/"
+          strip_components: 0
+          use_insecure_cipher: true
+      
+      - name: Ensure directory permissions
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            chmod +x /home/ubuntu/scripts/*.sh
+            chmod +x /home/ubuntu/fixed_deploy.sh
+            sudo mkdir -p /home/ubuntu/peer-ai/backend/static/admin-dashboard
+            sudo chown -R ubuntu:ubuntu /home/ubuntu/peer-ai/backend/static
+            sudo chmod -R 755 /home/ubuntu/peer-ai/backend/static
+            sudo mkdir -p /var/www/peerai
+            sudo chown -R ubuntu:ubuntu /var/www/peerai
+            sudo chmod -R 755 /var/www/peerai
+
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: transfer-files
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'deploy-backend' }}
+    steps:
+      - name: Deploy backend components
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            cd /home/ubuntu/peer-ai
+            chmod +x /home/ubuntu/fixed_deploy.sh
+            
+            # Execute only the backend portion of the deployment
+            source /home/ubuntu/fixed_deploy.sh
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: deploy-backend
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'deploy-frontend' }}
+    steps:
+      - name: Copy frontend files to static directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            # Create static directories
+            sudo mkdir -p /var/www/peerai
+            sudo chown -R ubuntu:ubuntu /var/www/peerai
+            sudo chmod -R 755 /var/www/peerai
+            
+            # Copy frontend files to static directory
+            if [ -d "/home/ubuntu/frontend/admin-dashboard/dist" ]; then
+              cp -r /home/ubuntu/frontend/admin-dashboard/dist/* /var/www/peerai/
+              echo "Frontend files copied to /var/www/peerai"
+            else
+              echo "Error: Frontend dist directory not found"
+              exit 1
+            fi
+            
+            # Set proper permissions
+            find /var/www/peerai -type f -exec chmod 644 {} \;
+            find /var/www/peerai -type d -exec chmod 755 {} \;
+            
+            echo "Frontend deployment completed"
+
+  configure-nginx:
+    name: Configure Nginx
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: [deploy-backend, deploy-frontend]
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'configure-nginx' }}
+    steps:
+      - name: Configure Nginx and restart services
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            # Create nginx configuration
+            echo "Creating nginx configuration..."
+            SERVER_IP="158.174.210.91"
+            
+            sudo tee "/etc/nginx/sites-available/peerai" > /dev/null << EOL
+            server {
+                listen 80;
+                server_name $SERVER_IP;
+                
+                root /var/www/peerai;
+                index index.html;
+                
+                # Handle client-side routing
+                location /app/ {
+                    alias /var/www/peerai/;
+                }
+                
+                location / {
+                    try_files \$uri \$uri/ /index.html =404;
+                }
+                
+                # API endpoints
+                location /api/v1/ {
+                    proxy_pass http://localhost:8000/api/v1/;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                }
+                
+                location /api/ {
+                    proxy_pass http://localhost:8000/;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                }
+                
+                location = /health {
+                    proxy_pass http://localhost:8000/health;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                }
+            }
+            EOL
+            
+            # Enable nginx site if not already enabled
+            if [ ! -f "/etc/nginx/sites-enabled/peerai" ]; then
+                sudo ln -s "/etc/nginx/sites-available/peerai" "/etc/nginx/sites-enabled/peerai"
+            fi
+            
+            # Test and reload Nginx
+            sudo nginx -t && sudo systemctl reload nginx
+            
+            echo "Nginx configuration completed"
+
+  test-deployment:
+    name: Test Deployment
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    needs: configure-nginx
+    if: ${{ github.event.inputs.steps_to_run == 'all' || github.event.inputs.steps_to_run == 'test-deployment' }}
+    steps:
+      - name: Test deployment endpoints
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 158.174.210.91
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            echo "Testing API endpoints..."
+            curl -s http://localhost/health | grep -q "healthy" && echo "Health endpoint: OK" || echo "Health endpoint: FAILED"
+            curl -s http://localhost/api/v1/auth/me | grep -q "super_admin" && echo "Auth endpoint: OK" || echo "Auth endpoint: FAILED"
+            
+            echo "Testing frontend..."
+            curl -s http://localhost/ | grep -q "html" && echo "Frontend: OK" || echo "Frontend: FAILED"
+            
+            echo "Checking services..."
+            sudo systemctl status peerai | grep -q "running" && echo "Backend service: OK" || echo "Backend service: FAILED"
+            sudo systemctl status nginx | grep -q "running" && echo "Nginx service: OK" || echo "Nginx service: FAILED"
+            
+            echo "Deployment testing completed" 
