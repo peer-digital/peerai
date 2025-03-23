@@ -14,6 +14,22 @@ DEPLOY_DIR="/home/ubuntu/peerai"
 TARBALL_NAME="peerai-deploy.tar.gz"
 SSH_USER="ubuntu"
 
+# Check if required environment variables are set
+required_vars=(
+  "DATABASE_URL"
+  "EXTERNAL_LLM_API_KEY"
+  "HOSTED_LLM_API_KEY"
+  "JWT_SECRET_KEY"
+  "GOOGLE_SERVICE_ACCOUNT_CREDS"
+)
+
+for var in "${required_vars[@]}"; do
+  if [ -z "${!var}" ]; then
+    echo "Error: Required environment variable $var is not set"
+    exit 1
+  fi
+done
+
 # Check if the private key exists
 if [ ! -f "$SSH_KEY" ]; then
     echo "Error: SSH key not found at $SSH_KEY"
@@ -37,6 +53,14 @@ if [ ! -f ".env.production" ]; then
     fi
 fi
 
+# Update sensitive values in .env.production
+echo "Updating sensitive values in .env.production..."
+sed -i "s|DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" .env.production
+sed -i "s|EXTERNAL_LLM_API_KEY=.*|EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY|" .env.production
+sed -i "s|HOSTED_LLM_API_KEY=.*|HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY|" .env.production
+sed -i "s|JWT_SECRET_KEY=.*|JWT_SECRET_KEY=$JWT_SECRET_KEY|" .env.production
+sed -i "s|GOOGLE_SERVICE_ACCOUNT_CREDS=.*|GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS|" .env.production
+
 # Ensure frontend .env file is set correctly
 if [ ! -f "frontend/admin-dashboard/.env.production" ]; then
     echo "Creating frontend production environment file..."
@@ -49,9 +73,13 @@ fi
 # Build the frontend
 echo "Building frontend..."
 cd frontend/admin-dashboard
-# Ensure we have the latest dependencies
-rm -rf node_modules package-lock.json
-npm install
+# Only install dependencies if package.json has changed
+if [ ! -f "node_modules/.package.json.hash" ] || [ "$(md5sum package.json | cut -d' ' -f1)" != "$(cat node_modules/.package.json.hash)" ]; then
+    echo "Installing frontend dependencies..."
+    rm -rf node_modules package-lock.json
+    npm install
+    md5sum package.json > node_modules/.package.json.hash
+fi
 # Create a clean build
 rm -rf dist
 npm run build
@@ -103,7 +131,7 @@ scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/"
 echo "Extracting tarball on VM..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && tar -xzf $TARBALL_NAME && chmod -R 755 ."
 
-# Create or update backend .env file on the server with production settings
+# Set up backend environment file with production settings
 echo "Setting up production environment on VM..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && cp .env.production backend/.env"
 
@@ -127,11 +155,21 @@ chmod +x backend/cors_update.py
 python3 backend/cors_update.py
 rm backend/cors_update.py"
 
-# Create Python virtual environment on VM
-echo "Setting up Python environment on VM..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && pip install -r backend/requirements.txt"
+# Check if virtual environment exists and requirements have changed
+echo "Checking Python dependencies..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && 
+    if [ ! -d '.venv' ] || [ ! -f '.venv/requirements.hash' ] || [ \"\$(md5sum requirements.txt | cut -d' ' -f1)\" != \"\$(cat .venv/requirements.hash)\" ]; then
+        echo 'Installing Python dependencies...'
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
+        md5sum requirements.txt > .venv/requirements.hash
+    else
+        echo 'Python dependencies are up to date'
+    fi"
 
-# Create systemd service files
+# Create systemd service files with environment variables
 echo "Creating systemd service files..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo tee /etc/systemd/system/peerai-backend.service > /dev/null << EOF
 [Unit]
@@ -142,6 +180,17 @@ After=network.target
 User=$SSH_USER
 WorkingDirectory=$DEPLOY_DIR
 Environment=\"PYTHONPATH=$DEPLOY_DIR\"
+Environment=\"DATABASE_URL=$DATABASE_URL\"
+Environment=\"EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY\"
+Environment=\"HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY\"
+Environment=\"JWT_SECRET_KEY=$JWT_SECRET_KEY\"
+Environment=\"GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS\"
+Environment=\"ACCESS_TOKEN_EXPIRE_MINUTES=30\"
+Environment=\"RATE_LIMIT_MINUTE=60\"
+Environment=\"ENVIRONMENT=production\"
+Environment=\"ALLOWED_ORIGIN=http://${VM_IP}\"
+Environment=\"EXTERNAL_MODEL=mistral-tiny\"
+Environment=\"EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions\"
 ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
 Restart=always
 Environment=\"PATH=$DEPLOY_DIR/.venv/bin:/usr/bin\"
