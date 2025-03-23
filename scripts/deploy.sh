@@ -49,7 +49,11 @@ fi
 # Build the frontend
 echo "Building frontend..."
 cd frontend/admin-dashboard
+# Ensure we have the latest dependencies
+rm -rf node_modules package-lock.json
 npm install
+# Create a clean build
+rm -rf dist
 npm run build
 cd ../..
 
@@ -198,6 +202,9 @@ server {
     # Frontend routes
     location / {
         try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
     }
 
     # Detailed error logs
