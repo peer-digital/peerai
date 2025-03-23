@@ -25,11 +25,9 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
 done
 
 # Create production environment file from environment variables immediately
-echo "Creating production environment files..."
-# Use absolute path for .env.production
-ENV_FILE="${DEPLOY_DIR}/.env.production"
-mkdir -p "$(dirname "$ENV_FILE")"
-cat > "$ENV_FILE" << EOL
+echo "Creating production environment files locally..."
+# Create local environment files that will be included in the tarball
+cat > .env.production << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -66,25 +64,24 @@ VITE_APP_ENV=production
 EOL
 
 # Ensure frontend .env file is set correctly
-FRONTEND_ENV_FILE="${DEPLOY_DIR}/frontend/admin-dashboard/.env.production"
-mkdir -p "$(dirname "$FRONTEND_ENV_FILE")"
-cat > "$FRONTEND_ENV_FILE" << EOL
+mkdir -p frontend/admin-dashboard
+cat > frontend/admin-dashboard/.env.production << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
-# Debug: Check if environment files were created
-if [ -f "$ENV_FILE" ]; then
+# Debug: Check if environment files were created locally
+if [ -f ".env.production" ]; then
     echo ".env.production file created successfully"
-    ls -l "$ENV_FILE"
+    ls -l .env.production
 else
     echo "Error: Failed to create .env.production"
     exit 1
 fi
 
-if [ -f "$FRONTEND_ENV_FILE" ]; then
+if [ -f "frontend/admin-dashboard/.env.production" ]; then
     echo "Frontend .env.production file created successfully"
-    ls -l "$FRONTEND_ENV_FILE"
+    ls -l frontend/admin-dashboard/.env.production
 else
     echo "Error: Failed to create frontend .env.production"
     exit 1
@@ -98,21 +95,6 @@ fi
 
 # Ensure SSH key has correct permissions
 chmod 600 "$SSH_KEY"
-
-# Build the frontend
-echo "Building frontend..."
-cd frontend/admin-dashboard
-# Only install dependencies if package.json has changed
-if [ ! -f "node_modules/.package.json.hash" ] || [ "$(md5sum package.json | cut -d' ' -f1)" != "$(cat node_modules/.package.json.hash)" ]; then
-    echo "Installing frontend dependencies..."
-    rm -rf node_modules package-lock.json
-    npm install
-    md5sum package.json > node_modules/.package.json.hash
-fi
-# Create a clean build
-rm -rf dist
-npm run build
-cd ../..
 
 # Clean up any existing tarball
 rm -f "$TARBALL_NAME"
