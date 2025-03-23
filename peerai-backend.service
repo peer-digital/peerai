@@ -1,0 +1,16 @@
+[Unit]
+Description=PeerAI Backend Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/peerai
+Environment=PYTHONPATH=/home/ubuntu/peerai
+# @important: Render hosted PostgreSQL database
+Environment=DATABASE_URL=postgresql://peerai_pg_user:fdfdjP0fwMC70duWT9Q6BkH3vEe0YUhQ@dpg-cut20bjtq21c73bb6leg-a.oregon-postgres.render.com/peerai_pg
+ExecStart=/home/ubuntu/peerai/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Restart=always
+Environment=PATH=/home/ubuntu/peerai/.venv/bin:/usr/bin
+
+[Install]
+WantedBy=multi-user.target 
