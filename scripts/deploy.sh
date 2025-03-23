@@ -86,10 +86,15 @@ if [ -f "$BACKEND_DIR/config.py" ] && [ ! -f "$BACKEND_DIR/backend/config.py" ];
     cp "$BACKEND_DIR/config.py" "$BACKEND_DIR/backend/config.py"
 fi
 
-# Initialize database tables
-echo "Initializing database tables..."
-cd "$APP_DIR"
-PYTHONPATH="$APP_DIR" python3 "$BACKEND_DIR/create_model_tables.py"
+# Check if database tables exist
+echo "Checking database tables..."
+if ! PGPASSWORD=$DB_PASSWORD psql -h localhost -U $DB_USER -d $DB_NAME -c "\dt" | grep -q "model_providers"; then
+    echo "Database tables not found. Initializing tables..."
+    cd "$APP_DIR"
+    PYTHONPATH="$APP_DIR" python3 "$BACKEND_DIR/create_model_tables.py"
+else
+    echo "Database tables already exist. Skipping initialization."
+fi
 
 # Move pre-built frontend to backend static directory
 echo "Setting up pre-built frontend..."
