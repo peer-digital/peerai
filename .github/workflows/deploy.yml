@@ -100,6 +100,17 @@ jobs:
             # Copy the latest deploy script to the peer-ai directory
             cp /home/ubuntu/scripts/deploy.sh /home/ubuntu/peer-ai/scripts/
             echo "Copied latest deploy.sh to peer-ai directory"
+            
+            # Create frontend directory structure
+            mkdir -p /home/ubuntu/frontend/admin-dashboard/dist
+            
+            # Check what files were transferred
+            echo "Contents of /home/ubuntu:"
+            ls -la /home/ubuntu
+            echo "Contents of /home/ubuntu/frontend:"
+            ls -la /home/ubuntu/frontend || echo "Frontend directory not found"
+            echo "Contents of frontend/admin-dashboard/dist from repo:"
+            ls -la /home/ubuntu/frontend/admin-dashboard/dist || echo "No frontend files found"
       
       - name: Run deployment script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions

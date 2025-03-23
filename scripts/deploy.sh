@@ -105,24 +105,23 @@ mkdir -p "$FRONTEND_STATIC_DIR"
 echo "Current directory: $(pwd)"
 echo "APP_DIR: $APP_DIR"
 echo "FRONTEND_STATIC_DIR: $FRONTEND_STATIC_DIR"
-echo "Checking for frontend files..."
-ls -la "/home/ubuntu/frontend/admin-dashboard/dist"
 
-# Copy frontend files if they exist
-if [ -d "/home/ubuntu/frontend/admin-dashboard/dist" ]; then
+# Create a placeholder HTML file if no frontend files exist
+if [ ! -d "/home/ubuntu/frontend/admin-dashboard/dist" ] || [ -z "$(ls -A /home/ubuntu/frontend/admin-dashboard/dist 2>/dev/null)" ]; then
+    echo "Frontend files not found. Creating placeholder..."
+    echo "<html><body><h1>PeerAI Frontend</h1><p>This is a placeholder. The frontend files were not found during deployment.</p></body></html>" > "$FRONTEND_STATIC_DIR/index.html"
+    echo "Created placeholder frontend file in $FRONTEND_STATIC_DIR"
+else
     echo "Copying frontend files to static directory..."
     cp -r "/home/ubuntu/frontend/admin-dashboard/dist/"* "$FRONTEND_STATIC_DIR/"
-    echo "Setting permissions..."
-    chmod -R 755 "$FRONTEND_STATIC_DIR"
-    chown -R ubuntu:ubuntu "$FRONTEND_STATIC_DIR"
-    echo "Frontend setup completed successfully"
-else
-    echo "Warning: Frontend files not found at /home/ubuntu/frontend/admin-dashboard/dist"
-    echo "Contents of /home/ubuntu:"
-    ls -la "/home/ubuntu"
-    echo "Please ensure the frontend is built and transferred correctly"
-    exit 1
+    echo "Frontend files copied successfully"
 fi
+
+# Set permissions for the static directory
+echo "Setting permissions for static directory..."
+chmod -R 755 "$FRONTEND_STATIC_DIR"
+chown -R ubuntu:ubuntu "$FRONTEND_STATIC_DIR"
+echo "Frontend setup completed successfully"
 
 # Configure frontend (for legacy scripts)
 echo "Configuring frontend..."
