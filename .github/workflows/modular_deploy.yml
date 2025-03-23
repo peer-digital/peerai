@@ -1,4 +1,4 @@
-name: Modular Deployment
+name: Modular VM Deployment
 
 on:
   workflow_dispatch:
