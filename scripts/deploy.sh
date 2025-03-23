@@ -24,13 +24,9 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   fi
 done
 
-# Function to create environment files
-create_env_files() {
-    local target_dir="$1"
-    echo "Creating production environment files in $target_dir..."
-    
-    # Create main .env.production
-    cat > "${target_dir}/.env.production" << EOL
+# Create and transfer backend environment file
+echo "Creating and transferring backend environment file..."
+cat > .env.temp << EOL
 # @important: Render hosted PostgreSQL database - do not modify without approval
 DATABASE_URL=${DATABASE_URL}
 ENVIRONMENT=production
@@ -66,39 +62,28 @@ MOCK_MODE=false
 VITE_APP_ENV=production
 EOL
 
-    # Create frontend .env.production
-    mkdir -p "${target_dir}/frontend/admin-dashboard"
-    cat > "${target_dir}/frontend/admin-dashboard/.env.production" << EOL
+# Create and transfer frontend environment file
+echo "Creating and transferring frontend environment file..."
+cat > frontend.env.temp << EOL
 VITE_API_BASE_URL=http://${VM_IP}
 VITE_AUTH_ENABLED=true
 EOL
 
-    # Debug: Check if environment files were created
-    if [ -f "${target_dir}/.env.production" ]; then
-        echo ".env.production file created successfully"
-        ls -l "${target_dir}/.env.production"
-    else
-        echo "Error: Failed to create .env.production"
-        return 1
-    fi
+# Transfer environment files to server
+echo "Transferring environment files to server..."
+scp -i "$SSH_KEY" .env.temp "$SSH_USER@$VM_IP:$DEPLOY_DIR/backend/.env.new"
+scp -i "$SSH_KEY" frontend.env.temp "$SSH_USER@$VM_IP:$DEPLOY_DIR/frontend/admin-dashboard/.env.production.new"
 
-    if [ -f "${target_dir}/frontend/admin-dashboard/.env.production" ]; then
-        echo "Frontend .env.production file created successfully"
-        ls -l "${target_dir}/frontend/admin-dashboard/.env.production"
-    else
-        echo "Error: Failed to create frontend .env.production"
-        return 1
-    fi
-}
+# Move files to their final locations and set permissions
+echo "Setting up environment files on server..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo mv $DEPLOY_DIR/backend/.env.new $DEPLOY_DIR/backend/.env && \
+    sudo mv $DEPLOY_DIR/frontend/admin-dashboard/.env.production.new $DEPLOY_DIR/frontend/admin-dashboard/.env.production && \
+    sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production && \
+    sudo chmod 600 $DEPLOY_DIR/backend/.env && \
+    sudo chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
 
-# Check if we're running on the remote server
-if [ "$(hostname)" = "ubuntu" ]; then
-    echo "Running on remote server, creating environment files in current directory..."
-    create_env_files "."
-else
-    echo "Running locally, creating environment files for deployment..."
-    create_env_files "."
-fi
+# Clean up local temp files
+rm -f .env.temp frontend.env.temp
 
 # Check if the private key exists
 if [ ! -f "$SSH_KEY" ]; then
@@ -132,8 +117,6 @@ tar --exclude="node_modules" \
     -czf "$TARBALL_NAME" \
     backend \
     frontend/admin-dashboard/dist \
-    .env.production \
-    frontend/admin-dashboard/.env.production \
     scripts \
     requirements.txt \
     package.json \
@@ -154,10 +137,6 @@ scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/"
 # Extract tarball on VM with proper permissions
 echo "Extracting tarball on VM..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && tar -xzf $TARBALL_NAME && chmod -R 755 ."
-
-# Set up backend environment file with production settings
-echo "Setting up production environment on VM..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && cp .env.production backend/.env"
 
 # Update CORS settings in backend config
 echo "Updating backend CORS settings..."
