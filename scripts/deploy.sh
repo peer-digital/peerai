@@ -24,54 +24,6 @@ for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY G
   fi
 done
 
-# Create environment files directly on the server
-echo "Creating environment files on server..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "mkdir -p $DEPLOY_DIR/backend $DEPLOY_DIR/frontend/admin-dashboard && \
-cat > $DEPLOY_DIR/backend/.env << 'EOL'
-# @important: Render hosted PostgreSQL database - do not modify without approval
-DATABASE_URL=${DATABASE_URL}
-ENVIRONMENT=production
-DEBUG=false
-MOCK_MODE=false
-LOG_LEVEL=INFO
-HOSTED_LLM_API_KEY=${HOSTED_LLM_API_KEY}
-EXTERNAL_LLM_API_KEY=${EXTERNAL_LLM_API_KEY}
-EXTERNAL_MODEL=mistral-tiny
-EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
-# @important: Production uses the VM IP
-ALLOWED_ORIGIN=\"http://${VM_IP}\"
-# Google service account credentials - Base64 encoded JSON
-GOOGLE_SERVICE_ACCOUNT_CREDS=${GOOGLE_SERVICE_ACCOUNT_CREDS}
-
-# Email configurations
-GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se
-NOTIFICATION_EMAIL_ALIAS=notifications@peerdigital.se
-VITE_TEST_EMAIL=admin@peerai.se
-VITE_TEST_PASSWORD=admin123
-
-# JWT and authentication settings
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-JWT_ALGORITHM=HS256
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
-
-# Application settings
-MOCK_MODE=false
-
-# @important: API base URL - do not change without updating nginx config
-VITE_API_BASE_URL=http://${VM_IP}
-MOCK_MODE=false
-VITE_APP_ENV=production
-EOL
-
-cat > $DEPLOY_DIR/frontend/admin-dashboard/.env.production << 'EOL'
-VITE_API_BASE_URL=http://${VM_IP}
-VITE_AUTH_ENABLED=true
-EOL
-
-chmod 600 $DEPLOY_DIR/backend/.env
-chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production
-chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
-
 # Check if the private key exists
 if [ ! -f "$SSH_KEY" ]; then
     echo "Error: SSH key not found at $SSH_KEY"
@@ -193,89 +145,53 @@ EOF"
 echo "Starting services..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo systemctl daemon-reload && sudo systemctl enable peerai-backend && sudo systemctl restart peerai-backend"
 
-# Add nginx configuration to serve the frontend
-echo "Setting up nginx to serve the frontend..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo apt-get update && sudo apt-get install -y nginx"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo tee /etc/nginx/sites-available/peerai > /dev/null << 'EOF'
-server {
-    listen 80;
-    server_name ${VM_IP};
+# Create environment files directly on the server
+echo "Creating environment files on server..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "mkdir -p $DEPLOY_DIR/backend $DEPLOY_DIR/frontend/admin-dashboard && \
+cat > $DEPLOY_DIR/backend/.env << 'EOL'
+# @important: Render hosted PostgreSQL database - do not modify without approval
+DATABASE_URL=${DATABASE_URL}
+ENVIRONMENT=production
+DEBUG=false
+MOCK_MODE=false
+LOG_LEVEL=INFO
+HOSTED_LLM_API_KEY=${HOSTED_LLM_API_KEY}
+EXTERNAL_LLM_API_KEY=${EXTERNAL_LLM_API_KEY}
+EXTERNAL_MODEL=mistral-tiny
+EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
+# @important: Production uses the VM IP
+ALLOWED_ORIGIN=\"http://${VM_IP}\"
+# Google service account credentials - Base64 encoded JSON
+GOOGLE_SERVICE_ACCOUNT_CREDS=${GOOGLE_SERVICE_ACCOUNT_CREDS}
 
-    root $DEPLOY_DIR/frontend/admin-dashboard/dist;
-    index index.html;
+# Email configurations
+GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se
+NOTIFICATION_EMAIL_ALIAS=notifications@peerdigital.se
+VITE_TEST_EMAIL=admin@peerai.se
+VITE_TEST_PASSWORD=admin123
 
-    # Health check endpoint
-    location /health {
-        proxy_pass http://localhost:8000/health;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
+# JWT and authentication settings
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_ALGORITHM=HS256
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
-    # API endpoints
-    location /api/v1/ {
-        proxy_pass http://localhost:8000/api/v1/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        
-        # Add CORS headers
-        add_header 'Access-Control-Allow-Origin' '*' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key' always;
-        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+# Application settings
+MOCK_MODE=false
 
-        # Handle OPTIONS requests
-        if (\$request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '*';
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH';
-            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key';
-            add_header 'Access-Control-Max-Age' '1728000';
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' '0';
-            return 204;
-        }
-    }
+# @important: API base URL - do not change without updating nginx config
+VITE_API_BASE_URL=http://${VM_IP}
+MOCK_MODE=false
+VITE_APP_ENV=production
+EOL
 
-    # Frontend routes
-    location / {
-        try_files \$uri \$uri/ /index.html;
-        add_header 'Cache-Control' 'no-cache, no-store, must-revalidate';
-        add_header 'Pragma' 'no-cache';
-        add_header 'Expires' '0';
-    }
+cat > $DEPLOY_DIR/frontend/admin-dashboard/.env.production << 'EOL'
+VITE_API_BASE_URL=http://${VM_IP}
+VITE_AUTH_ENABLED=true
+EOL
 
-    # Detailed error logs
-    error_log /var/log/nginx/peerai_error.log debug;
-    access_log /var/log/nginx/peerai_access.log;
-}
-EOF"
-
-# Fix nginx config variables
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\${VM_IP}|$VM_IP|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\$DEPLOY_DIR|$DEPLOY_DIR|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$uri|\$uri|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$host|\$host|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$remote_addr|\$remote_addr|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$proxy_add_x_forwarded_for|\$proxy_add_x_forwarded_for|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$scheme|\$scheme|g' /etc/nginx/sites-available/peerai"
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo sed -i 's|\\\\$request_method|\$request_method|g' /etc/nginx/sites-available/peerai"
-
-# Ensure nginx sites-enabled has our config and remove default if it exists
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo rm -f /etc/nginx/sites-enabled/default && sudo ln -sf /etc/nginx/sites-available/peerai /etc/nginx/sites-enabled/"
-
-# Set proper permissions for nginx access
-echo "Setting up proper permissions for nginx..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo chown -R www-data:www-data $DEPLOY_DIR && sudo chmod -R 755 $DEPLOY_DIR && sudo chmod 755 /home/ubuntu && sudo systemctl restart nginx"
-
-# Test and restart nginx
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo nginx -t && sudo systemctl restart nginx"
-
-# Clean up local tarball
-echo "Cleaning up local tarball..."
-rm "$TARBALL_NAME"
+chmod 600 $DEPLOY_DIR/backend/.env
+chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production
+chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
 
 echo "Deployment complete!"
 echo "Frontend available at: http://${VM_IP}"
