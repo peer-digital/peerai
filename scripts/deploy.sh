@@ -124,6 +124,42 @@ else
     exit 1
 fi
 
+# Configure frontend (for legacy scripts)
+echo "Configuring frontend..."
+if [ -d "$FRONTEND_DIR" ]; then
+    cd "$FRONTEND_DIR"
+    
+    # Create dist directory if it doesn't exist
+    if [ ! -d "$FRONTEND_DIR/dist" ]; then
+        echo "Creating frontend dist directory..."
+        mkdir -p "$FRONTEND_DIR/dist"
+        
+        # If we have files in the static directory, copy them to dist as well
+        if [ -d "$FRONTEND_STATIC_DIR" ] && [ "$(ls -A "$FRONTEND_STATIC_DIR")" ]; then
+            echo "Copying files from static directory to frontend/dist..."
+            cp -r "$FRONTEND_STATIC_DIR/"* "$FRONTEND_DIR/dist/"
+        else
+            # Create a simple placeholder
+            echo "Creating placeholder index.html..."
+            echo "<html><body><h1>PeerAI Frontend</h1><p>Placeholder page. Please build the frontend.</p></body></html>" > "$FRONTEND_DIR/dist/index.html"
+        fi
+    fi
+    
+    # Set proper permissions for frontend files
+    echo "Setting proper permissions for frontend files..."
+    chmod -R 755 "$FRONTEND_DIR/dist"
+    find "$FRONTEND_DIR/dist" -type f -exec chmod 644 {} \; 2>/dev/null || true
+    find "$FRONTEND_DIR/dist" -type d -exec chmod 755 {} \; 2>/dev/null || true
+    chown -R ubuntu:ubuntu "$FRONTEND_DIR/dist"
+else
+    echo "Warning: Frontend directory not found at $FRONTEND_DIR"
+    echo "Creating frontend directory structure..."
+    mkdir -p "$FRONTEND_DIR/dist"
+    echo "<html><body><h1>PeerAI Frontend</h1><p>Placeholder page. Frontend directory was created by deploy script.</p></body></html>" > "$FRONTEND_DIR/dist/index.html"
+    chmod -R 755 "$FRONTEND_DIR/dist"
+    chown -R ubuntu:ubuntu "$FRONTEND_DIR/dist"
+fi
+
 # Create systemd service file
 echo "Creating systemd service file..."
 sudo tee "$SYSTEMD_SERVICE" > /dev/null << EOL
