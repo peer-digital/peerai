@@ -1,5 +1,8 @@
 name: Modular VM Deployment
 
+# This is a modular workflow for deploying to the VM
+# Added to fix-frontend-api branch to support branch-specific deployment
+
 on:
   workflow_dispatch:
     inputs:
