@@ -32,6 +32,7 @@ import { toast } from 'react-toastify';
 import { useTheme } from '@mui/material/styles';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { apiClient } from '../api/client';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -72,13 +73,13 @@ interface CompletionResponse {
 const ENDPOINTS: Record<string, EndpointConfig> = {
   health: {
     method: 'GET',
-    path: '/health',
+    path: '/api/v1/health',
     requiresBody: false,
     defaultBody: '',
   },
   completions: {
     method: 'POST',
-    path: '/llm/completions',
+    path: '/api/v1/llm/completions',
     requiresBody: true,
     supportedModels: ['hosted-llm', 'mistral-tiny', 'mistral-small', 'mistral-medium'],
     defaultBody: JSON.stringify({
@@ -91,7 +92,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   vision: {
     method: 'POST',
-    path: '/llm/vision',
+    path: '/api/v1/llm/vision',
     requiresBody: true,
     defaultBody: JSON.stringify({
       image_url: "https://example.com/image.jpg",
@@ -101,7 +102,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   audio: {
     method: 'POST',
-    path: '/llm/audio',
+    path: '/api/v1/llm/audio',
     requiresBody: true,
     defaultBody: JSON.stringify({
       audio_url: "https://example.com/audio.mp3",
@@ -111,7 +112,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   models: {
     method: 'GET',
-    path: '/llm/models',
+    path: '/api/v1/llm/models',
     requiresBody: false,
     defaultBody: '',
   },
@@ -255,19 +256,13 @@ function Playground() {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
       
-      const response = await fetch(`${API_BASE_URL}/llm/models`, {
-        method: 'GET',
+      const response = await apiClient.get('/api/v1/llm/models', {
         headers: {
           'X-API-Key': apiKey,
         },
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Error fetching models: ${response.statusText}`);
-      }
-      
-      const models = await response.json();
+      const models = response.data;
       
       if (!Array.isArray(models)) {
         throw new Error('Invalid response format: models data is not an array');
@@ -293,8 +288,9 @@ function Playground() {
     } catch (error) {
       console.error('Error fetching models:', error);
       setAvailableModels([]);
-      setError(`Failed to fetch available models: ${error instanceof Error ? error.message : String(error)}`);
-      toast.error(`Failed to fetch available models: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setError(`Failed to fetch available models: ${errorMessage}`);
+      toast.error(`Failed to fetch available models: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -354,19 +350,14 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_BASE_URL}${endpoint.path}`, {
+      const response = await apiClient({
         method: endpoint.method,
+        url: endpoint.path,
         headers,
-        body: endpoint.requiresBody ? requestBody : undefined,
+        data: endpoint.requiresBody ? JSON.parse(requestBody) : undefined,
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Request failed');
-      }
-
-      setResponse(formatResponse(data));
+      setResponse(formatResponse(response.data));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       setError(errorMessage);
