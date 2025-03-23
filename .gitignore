@@ -59,3 +59,5 @@ pr_review_*.txt
 *.tmp
 *.temp
 .*.swp 
+/node_modules
+*.gz

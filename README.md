@@ -47,6 +47,32 @@ The frontend is built with React and is located in the `frontend/` directory. It
 
 ## Development
 
+### Running Frontend and Backend Together
+
+For local development, you can run both the frontend and backend applications together using:
+
+```bash
+# Using npm
+npm run dev
+
+# Or directly using the script
+./scripts/dev.sh
+```
+
+This script will:
+1. Check for and setup the Python virtual environment
+2. Install backend dependencies if needed
+3. Install frontend dependencies if needed
+4. Start both services concurrently:
+   - Backend will run at http://localhost:8000
+   - Frontend will run at http://localhost:5173
+
+You can access the combined application by navigating to http://localhost:5173 in your web browser.
+
+### Stopping the Application
+
+To stop both the frontend and backend services, press `Ctrl+C` in the terminal where they are running.
+
 - Backend API runs on: http://localhost:8000
 - Frontend development server runs on: http://localhost:3000
 - API documentation available at: http://localhost:8000/docs

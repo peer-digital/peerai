@@ -1,0 +1,16 @@
+{
+  "name": "peerai",
+  "version": "1.0.0",
+  "description": "Peer AI - Combined Frontend and Backend Application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "start": "./scripts/dev.sh"
+  },
+  "author": "PeerAI",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 
