@@ -36,21 +36,28 @@ if [ ! -f ".venv/bin/uvicorn" ]; then
 fi
 echo "✓ Backend environment verified"
 
-# --- Check environment variables ---
-echo "Checking critical environment variables..."
+# --- Check environment variables configured for the service ---
+echo "Checking critical environment variables configured for peerai-backend.service..."
 required_vars=(
     "DATABASE_URL"
     "JWT_SECRET_KEY"
     "GOOGLE_APPLICATION_CREDENTIALS"
 )
 
+# Get the environment variables string from systemd
+service_env=$(systemctl show peerai-backend.service --property=Environment --value)
+
+# Check if each required variable is present in the systemd Environment string
 for var in "${required_vars[@]}"; do
-    if [ -z "${!var}" ]; then
-        echo "ERROR: Required environment variable $var is not set!"
+    # Check if the string contains "VARNAME=" or 'VARNAME='
+    # Use grep -q for silent checking
+    if ! echo "$service_env" | grep -q -E "(${var}=|'${var}=)"; then
+        echo "ERROR: Required environment variable $var does not appear to be set in systemd configuration for peerai-backend.service!"
+        echo "Systemd Environment string: $service_env" # Print the retrieved env string for debugging
         exit 1
     fi
 done
-echo "✓ Environment variables verified"
+echo "✓ Critical environment variables seem configured in systemd"
 
 # --- Check service accessibility ---
 echo "Checking service accessibility..."
