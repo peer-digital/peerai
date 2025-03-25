@@ -63,29 +63,86 @@ jobs:
           HOSTED_LLM_API_KEY: ${{ secrets.HOSTED_LLM_API_KEY }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           GOOGLE_SERVICE_ACCOUNT_CREDS: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}
+          # @note: Add any other non-secret env vars needed
+          PORT: 8000
+          ACCESS_TOKEN_EXPIRE_MINUTES: 30
+          RATE_LIMIT_MINUTE: 60
+          ENVIRONMENT: production
+          ALLOWED_ORIGIN: http://158.174.210.91
+          EXTERNAL_MODEL: mistral-tiny
+          EXTERNAL_LLM_URL: https://api.mistral.ai/v1/chat/completions
+          DEBUG: false
+          MOCK_MODE: false
+          LOG_LEVEL: INFO
+          GOOGLE_WORKSPACE_ADMIN_EMAIL: adam.falkenberg@peerdigital.se
+          NOTIFICATION_EMAIL_ALIAS: notifications@peerdigital.se
+          VITE_TEST_EMAIL: admin@peerai.se
+          VITE_TEST_PASSWORD: admin123
+          JWT_ALGORITHM: HS256
+          VITE_API_BASE_URL: http://158.174.210.91
+          VITE_APP_ENV: production
+          VITE_AUTH_ENABLED: true
         with:
           host: 158.174.210.91  # @url: Production VM IP
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
-          envs: DATABASE_URL,EXTERNAL_LLM_API_KEY,HOSTED_LLM_API_KEY,JWT_SECRET_KEY,GOOGLE_SERVICE_ACCOUNT_CREDS
+          envs: DATABASE_URL,EXTERNAL_LLM_API_KEY,HOSTED_LLM_API_KEY,JWT_SECRET_KEY,GOOGLE_SERVICE_ACCOUNT_CREDS,PORT,ACCESS_TOKEN_EXPIRE_MINUTES,RATE_LIMIT_MINUTE,ENVIRONMENT,ALLOWED_ORIGIN,EXTERNAL_MODEL,EXTERNAL_LLM_URL,DEBUG,MOCK_MODE,LOG_LEVEL,GOOGLE_WORKSPACE_ADMIN_EMAIL,NOTIFICATION_EMAIL_ALIAS,VITE_TEST_EMAIL,VITE_TEST_PASSWORD,JWT_ALGORITHM,VITE_API_BASE_URL,VITE_APP_ENV,VITE_AUTH_ENABLED
           script: |
-            # Debug: Print environment variable status (not values)
-            echo "Checking environment variables on remote server:"
+            # Navigate to the app directory
+            cd /home/ubuntu/peer-ai
+            echo "Current directory: $(pwd)"
+
+            # Create the .env.production file
+            echo "Creating .env.production file..."
+            cat > .env.production <<ENV
+            # Auto-generated .env.production by GitHub Actions
+            DATABASE_URL=$DATABASE_URL
+            EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY
+            HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY
+            JWT_SECRET_KEY=$JWT_SECRET_KEY
+            GOOGLE_SERVICE_ACCOUNT_CREDS=$GOOGLE_SERVICE_ACCOUNT_CREDS
+            PORT=$PORT
+            ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES
+            RATE_LIMIT_MINUTE=$RATE_LIMIT_MINUTE
+            ENVIRONMENT=$ENVIRONMENT
+            ALLOWED_ORIGIN=$ALLOWED_ORIGIN
+            EXTERNAL_MODEL=$EXTERNAL_MODEL
+            EXTERNAL_LLM_URL=$EXTERNAL_LLM_URL
+            DEBUG=$DEBUG
+            MOCK_MODE=$MOCK_MODE
+            LOG_LEVEL=$LOG_LEVEL
+            GOOGLE_WORKSPACE_ADMIN_EMAIL=$GOOGLE_WORKSPACE_ADMIN_EMAIL
+            NOTIFICATION_EMAIL_ALIAS=$NOTIFICATION_EMAIL_ALIAS
+            VITE_TEST_EMAIL=$VITE_TEST_EMAIL
+            VITE_TEST_PASSWORD=$VITE_TEST_PASSWORD
+            JWT_ALGORITHM=$JWT_ALGORITHM
+            VITE_API_BASE_URL=$VITE_API_BASE_URL
+            VITE_APP_ENV=$VITE_APP_ENV
+            VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED
+            ENV
+            echo ".env.production created successfully."
+            ls -l .env.production
+
+            # Debug: Check variables
+            echo "Checking environment variables before running deploy.sh:"
             for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY GOOGLE_SERVICE_ACCOUNT_CREDS; do
-              if [ ! -z "${!var}" ]; then 
+              if [ ! -z "${!var}" ]; then
                 echo "$var is set"
-              else 
+              else
                 echo "Error: $var is NOT set on remote server"
                 exit 1
               fi
             done
-            
+
             # Run deployment script with error handling
-            cd /home/ubuntu/peer-ai && ./scripts/deploy.sh || {
-              echo "Deployment failed"
+            echo "Running deployment script (./scripts/deploy.sh)..."
+            chmod +x ./scripts/deploy.sh
+            ./scripts/deploy.sh || {
+              echo "Deployment script ./scripts/deploy.sh failed"
               exit 1
             }
+            echo "Deployment script completed successfully."
       
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
