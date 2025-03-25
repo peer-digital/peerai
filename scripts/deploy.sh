@@ -48,7 +48,8 @@ tar --exclude="node_modules" \
     --exclude=".DS_Store" \
     --exclude="._*" \
     -czf "$TARBALL_NAME" \
-    frontend/admin-dashboard/dist
+    frontend/admin-dashboard/dist \
+    frontend/admin-dashboard/.env.production
 
 # Check if we can connect to the VM
 echo "Checking connection to VM..."
@@ -64,7 +65,7 @@ scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/frontend/"
 
 # Extract tarball on VM with proper permissions
 echo "Extracting frontend tarball on VM..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR/frontend && tar -xzf $TARBALL_NAME && chmod -R 755 ."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR/frontend && tar -xzf $TARBALL_NAME && chmod -R 755 . && mv .env.production frontend/admin-dashboard/"
 
 # Create systemd service files with environment variables
 echo "Creating systemd service files..."
