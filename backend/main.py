@@ -15,6 +15,7 @@ ADMIN_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.peerdigital.se",
+    "http://158.174.210.91",  # @important: VM IP address for development
 ]
 
 app = FastAPI(
