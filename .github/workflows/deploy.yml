@@ -125,6 +125,13 @@ jobs:
             cd /home/ubuntu/peer-ai
             echo "Current directory: $(pwd)"
 
+            # --- Write Google Credentials JSON File ---
+            echo "Writing Google credentials to google-creds.json..."
+            printf "%s" "$GOOGLE_SERVICE_ACCOUNT_CREDS" > google-creds.json
+            chmod 600 google-creds.json  # Restrict permissions
+            echo "Credentials file written."
+            ls -l google-creds.json
+
             # Extract frontend build
             echo "Extracting frontend build..."
             mkdir -p frontend/admin-dashboard/dist
@@ -137,6 +144,12 @@ jobs:
             chmod +x ./scripts/deploy.sh
             ./scripts/deploy.sh || {
               echo "Deployment script ./scripts/deploy.sh failed"
+              # Attempt to get more details from systemd status
+              echo "--- Attempting to get systemctl status peerai-backend.service ---"
+              systemctl status peerai-backend.service --no-pager || echo "Failed to get systemctl status."
+              echo "--- Attempting to get journalctl for peerai-backend.service ---"
+              journalctl -u peerai-backend.service -n 50 --no-pager || echo "Failed to get journalctl logs."
+              echo "----------------------------------------------------------------"
               exit 1
             }
             echo "Deployment script completed successfully."

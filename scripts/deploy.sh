@@ -9,6 +9,7 @@
 set -e
 
 DEPLOY_DIR="/home/ubuntu/peer-ai"  # @note: Fixed deployment directory path
+CREDENTIALS_FILE="$DEPLOY_DIR/google-creds.json"  # @note: Path to Google credentials file
 
 # Debug: Print environment variable status (confirming they are passed)
 echo "Checking environment variables received by deploy.sh on VM:"
@@ -21,19 +22,24 @@ for var in DATABASE_URL JWT_SECRET_KEY PORT ENVIRONMENT; do
     exit 1
   fi
 done
-# Note: GOOGLE_SERVICE_ACCOUNT_CREDS might be very long, checking if set is enough.
-if [ ! -z "${GOOGLE_SERVICE_ACCOUNT_CREDS}" ]; then 
-  echo "GOOGLE_SERVICE_ACCOUNT_CREDS is set"
-else 
-  echo "ERROR: GOOGLE_SERVICE_ACCOUNT_CREDS is NOT set"
+
+# Verify Google credentials file exists and is readable
+if [ ! -f "$CREDENTIALS_FILE" ]; then
+  echo "ERROR: Google credentials file not found at $CREDENTIALS_FILE"
   exit 1
 fi
+
+if [ ! -r "$CREDENTIALS_FILE" ]; then
+  echo "ERROR: Google credentials file is not readable at $CREDENTIALS_FILE"
+  exit 1
+fi
+
+echo "Google credentials file verified at $CREDENTIALS_FILE"
 
 # Create/Update systemd service file with environment variables from the workflow
 echo "Creating/Updating systemd service file: /etc/systemd/system/peerai-backend.service"
 # Use sudo tee to write the file content. Ensure variables are expanded correctly.
-# Use single quotes around values in Environment= lines if they might contain spaces or special chars
-# Careful with multi-line GOOGLE_SERVICE_ACCOUNT_CREDS
+# Use double quotes around the whole VAR=VALUE assignment for safety
 sudo tee /etc/systemd/system/peerai-backend.service > /dev/null << EOF
 [Unit]
 Description=PeerAI Backend Service
@@ -45,27 +51,27 @@ WorkingDirectory=$DEPLOY_DIR
 # Pass environment variables directly to the service
 # Use the variables provided by the GitHub Actions 'envs' parameter
 Environment="PYTHONPATH=$DEPLOY_DIR"
-Environment="DATABASE_URL='$DATABASE_URL'"
-Environment="EXTERNAL_LLM_API_KEY='$EXTERNAL_LLM_API_KEY'"
-Environment="HOSTED_LLM_API_KEY='$HOSTED_LLM_API_KEY'"
-Environment="JWT_SECRET_KEY='$JWT_SECRET_KEY'"
-Environment="GOOGLE_SERVICE_ACCOUNT_CREDS='$GOOGLE_SERVICE_ACCOUNT_CREDS'"  # @note: Handle multiline JSON
+Environment="DATABASE_URL=$DATABASE_URL"
+Environment="EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY"
+Environment="HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY"
+Environment="JWT_SECRET_KEY=$JWT_SECRET_KEY"
+Environment="GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE"  # @note: Point to credentials file
 Environment="PORT=$PORT"
 Environment="ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
 Environment="RATE_LIMIT_MINUTE=$RATE_LIMIT_MINUTE"
 Environment="ENVIRONMENT=$ENVIRONMENT"
-Environment="ALLOWED_ORIGIN='$ALLOWED_ORIGIN'"
+Environment="ALLOWED_ORIGIN=$ALLOWED_ORIGIN"
 Environment="EXTERNAL_MODEL=$EXTERNAL_MODEL"
-Environment="EXTERNAL_LLM_URL='$EXTERNAL_LLM_URL'"
+Environment="EXTERNAL_LLM_URL=$EXTERNAL_LLM_URL"
 Environment="DEBUG=$DEBUG"
 Environment="MOCK_MODE=$MOCK_MODE"
 Environment="LOG_LEVEL=$LOG_LEVEL"
-Environment="GOOGLE_WORKSPACE_ADMIN_EMAIL='$GOOGLE_WORKSPACE_ADMIN_EMAIL'"
-Environment="NOTIFICATION_EMAIL_ALIAS='$NOTIFICATION_EMAIL_ALIAS'"
-Environment="VITE_TEST_EMAIL='$VITE_TEST_EMAIL'"
-Environment="VITE_TEST_PASSWORD='$VITE_TEST_PASSWORD'"
+Environment="GOOGLE_WORKSPACE_ADMIN_EMAIL=$GOOGLE_WORKSPACE_ADMIN_EMAIL"
+Environment="NOTIFICATION_EMAIL_ALIAS=$NOTIFICATION_EMAIL_ALIAS"
+Environment="VITE_TEST_EMAIL=$VITE_TEST_EMAIL"
+Environment="VITE_TEST_PASSWORD=$VITE_TEST_PASSWORD"
 Environment="JWT_ALGORITHM=$JWT_ALGORITHM"
-Environment="VITE_API_BASE_URL='$VITE_API_BASE_URL'"
+Environment="VITE_API_BASE_URL=$VITE_API_BASE_URL"
 Environment="VITE_APP_ENV=$VITE_APP_ENV"
 Environment="VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED"
 # Ensure the python virtual environment path is correct
@@ -86,7 +92,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable peerai-backend.service  # @note: Ensure it starts on boot
 sudo systemctl restart peerai-backend.service
 
-echo "peerai-backend service restarted."
+echo "peerai-backend service restart command issued."
 
 # Optional: Add commands here to run database migrations if needed
 # Example:
