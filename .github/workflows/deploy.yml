@@ -189,11 +189,26 @@ jobs:
           use_insecure_cipher: true
           script: |
             echo "Configuring Nginx..."
+            # First, remove any existing configuration
+            sudo rm -f /etc/nginx/conf.d/peerai.conf
+            
+            # Create new configuration
             NGINX_CONF='server {
               listen 80;
               server_name 158.174.210.91;
+              
+              # Frontend static files
               location / {
-                proxy_pass http://localhost:8000;
+                root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+                try_files $uri $uri/ /index.html;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+              }
+              
+              # Backend API
+              location /api/ {
+                proxy_pass http://localhost:8000/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "upgrade";
@@ -203,6 +218,8 @@ jobs:
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
               }
+              
+              # Health check endpoint
               location /health {
                 proxy_pass http://localhost:8000/health;
                 proxy_http_version 1.1;
@@ -221,6 +238,14 @@ jobs:
             sudo systemctl reload nginx || { echo "ERROR: Failed to reload Nginx!"; exit 1; }
 
             echo "Nginx configured and reloaded."
+            
+            # Verify frontend files are accessible
+            echo "Verifying frontend files..."
+            ls -l /home/ubuntu/peer-ai/frontend/admin-dashboard/dist || { echo "ERROR: Frontend files not found!"; exit 1; }
+            
+            # Test the login endpoint
+            echo "Testing login endpoint..."
+            curl -v http://localhost/login || { echo "ERROR: Login endpoint not accessible!"; exit 1; }
       
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
