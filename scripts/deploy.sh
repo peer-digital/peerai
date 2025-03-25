@@ -41,75 +41,41 @@ echo "Cleaning up Apple metadata files..."
 find frontend/admin-dashboard/dist -name "._*" -delete
 find frontend/admin-dashboard/dist -name ".DS_Store" -delete
 
-# Create tarball of the application, excluding unnecessary files
-echo "Creating deployment tarball..."
+# Create temporary .env.production file for frontend build
+echo "Creating temporary .env.production file..."
+cat > frontend/admin-dashboard/.env.production << EOL
+VITE_API_BASE_URL=http://${VM_IP}
+VITE_AUTH_ENABLED=true
+EOL
+
+# Create tarball of the frontend application
+echo "Creating frontend deployment tarball..."
 tar --exclude="node_modules" \
     --exclude=".git" \
-    --exclude=".venv" \
-    --exclude="venv" \
-    --exclude="__pycache__" \
-    --exclude="*.pyc" \
-    --exclude=".pytest_cache" \
-    --exclude="frontend/admin-dashboard/node_modules" \
     --exclude=".DS_Store" \
     --exclude="._*" \
     -czf "$TARBALL_NAME" \
-    backend \
     frontend/admin-dashboard/dist \
-    scripts \
-    requirements.txt \
-    package.json \
-    package-lock.json
+    frontend/admin-dashboard/.env.production
+
+# Remove temporary .env.production file
+rm frontend/admin-dashboard/.env.production
 
 # Check if we can connect to the VM
 echo "Checking connection to VM..."
 ssh -i "$SSH_KEY" -o "StrictHostKeyChecking=no" "$SSH_USER@$VM_IP" "echo 'SSH connection successful'"
 
-# Clean up existing deployment directory and create new one with proper permissions
-echo "Cleaning up and creating deployment directory on VM..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo rm -rf $DEPLOY_DIR && sudo mkdir -p $DEPLOY_DIR && sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR"
+# Clean up existing frontend directory and create new one with proper permissions
+echo "Cleaning up and creating frontend directory on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo rm -rf $DEPLOY_DIR/frontend && sudo mkdir -p $DEPLOY_DIR/frontend && sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/frontend"
 
 # Upload tarball to VM
-echo "Uploading tarball to VM..."
-scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/"
+echo "Uploading frontend tarball to VM..."
+scp -i "$SSH_KEY" "$TARBALL_NAME" "$SSH_USER@$VM_IP:$DEPLOY_DIR/frontend/"
 
 # Extract tarball on VM with proper permissions
-echo "Extracting tarball on VM..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && tar -xzf $TARBALL_NAME && chmod -R 755 ."
-
-# Update CORS settings in backend config
-echo "Updating backend CORS settings..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && cat > backend/cors_update.py << EOF
-#!/usr/bin/env python3
-with open('backend/config.py', 'r') as f:
-    config = f.read()
-
-# Update ALLOWED_ORIGINS to include VM IP
-import re
-pattern = r'ADMIN_ALLOWED_ORIGINS\s*=\s*\['
-replacement = f'ADMIN_ALLOWED_ORIGINS = [\n    \"http://${VM_IP}\", \"http://${VM_IP}:80\", \"http://${VM_IP}:8000\", \"http://${VM_IP}:5173\",'
-config = re.sub(pattern, replacement, config)
-
-with open('backend/config.py', 'w') as f:
-    f.write(config)
-EOF
-chmod +x backend/cors_update.py
-python3 backend/cors_update.py
-rm backend/cors_update.py"
-
-# Check if virtual environment exists and requirements have changed
-echo "Checking Python dependencies..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR && 
-    if [ ! -d '.venv' ] || [ ! -f '.venv/requirements.hash' ] || [ \"\$(md5sum requirements.txt | cut -d' ' -f1)\" != \"\$(cat .venv/requirements.hash)\" ]; then
-        echo 'Installing Python dependencies...'
-        python3 -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
-        pip install -r backend/requirements.txt
-        md5sum requirements.txt > .venv/requirements.hash
-    else
-        echo 'Python dependencies are up to date'
-    fi"
+echo "Extracting frontend tarball on VM..."
+ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "cd $DEPLOY_DIR/frontend && tar -xzf $TARBALL_NAME && chmod -R 755 ."
 
 # Create systemd service files with environment variables
 echo "Creating systemd service files..."
