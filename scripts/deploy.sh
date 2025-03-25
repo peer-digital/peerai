@@ -47,8 +47,8 @@ Description=PeerAI Backend Service
 After=network.target
 
 [Service]
-User=ubuntu  # @note: Service runs as ubuntu user
-Group=ubuntu  # @note: Service runs as ubuntu group
+User=1000  # @note: Use numeric UID for ubuntu user
+Group=1000  # @note: Use numeric GID for ubuntu group
 WorkingDirectory=$DEPLOY_DIR
 # Pass environment variables directly to the service
 # Use the variables provided by the GitHub Actions 'envs' parameter
@@ -86,7 +86,7 @@ Environment="PATH=$DEPLOY_DIR/.venv/bin:/usr/bin"
 WantedBy=multi-user.target
 EOF
 
-echo "Systemd service file updated."
+echo "Systemd service file updated (using UID/GID 1000)."
 
 # Reload systemd, enable and restart the service
 echo "Reloading systemd and restarting peerai-backend service..."

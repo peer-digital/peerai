@@ -131,13 +131,15 @@ jobs:
 
             # --- Setup Python Virtual Environment & Install Dependencies ---
             echo "Setting up Python virtual environment..."
-            # Ensure Python3 and venv package are installed (might already be)
-            # sudo apt-get update && sudo apt-get install -y python3-venv # Uncomment if needed, run only once initially
             python3 -m venv .venv  # Creates .venv if it doesn't exist, ensures it's valid
             echo "Activating virtual environment (for this script block)..."
             source .venv/bin/activate  # Activate venv to use its pip
-            echo "Installing/updating dependencies from requirements.txt..."
-            pip install -r requirements.txt
+            echo "Installing/updating dependencies from requirements.txt (verbose)..."
+            # Add -v for verbose output from pip
+            pip install -v -r requirements.txt || { echo "ERROR: pip install failed!"; exit 1; }  # Exit if pip fails
+            echo "Verifying uvicorn installation..."
+            ls -l .venv/bin/uvicorn || { echo "ERROR: uvicorn not found after pip install!"; exit 1; }
+            .venv/bin/uvicorn --version || { echo "ERROR: uvicorn command failed!"; exit 1; }
             echo "Deactivating virtual environment (for this script block)..."
             deactivate  # Good practice, though systemd runs ExecStart directly
             echo "Python environment setup complete."
@@ -157,7 +159,7 @@ jobs:
             echo "Frontend build extracted successfully."
 
             # --- Verify ubuntu user/group ON VM ---
-            echo "--- Verifying ubuntu user/group on VM ---"
+            echo "--- Verifying ubuntu user/group on VM (UID/GID should be 1000) ---"
             id ubuntu || echo "ERROR: Command 'id ubuntu' failed or user not found!"
             getent group ubuntu || echo "ERROR: Command 'getent group ubuntu' failed or group not found!"
             echo "-----------------------------------------"
