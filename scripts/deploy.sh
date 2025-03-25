@@ -133,6 +133,16 @@ Environment=\"ENVIRONMENT=production\"
 Environment=\"ALLOWED_ORIGIN=http://${VM_IP}\"
 Environment=\"EXTERNAL_MODEL=mistral-tiny\"
 Environment=\"EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions\"
+Environment=\"DEBUG=false\"
+Environment=\"MOCK_MODE=false\"
+Environment=\"LOG_LEVEL=INFO\"
+Environment=\"GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se\"
+Environment=\"NOTIFICATION_EMAIL_ALIAS=notifications@peerdigital.se\"
+Environment=\"VITE_TEST_EMAIL=admin@peerai.se\"
+Environment=\"VITE_TEST_PASSWORD=admin123\"
+Environment=\"JWT_ALGORITHM=HS256\"
+Environment=\"VITE_API_BASE_URL=http://${VM_IP}\"
+Environment=\"VITE_APP_ENV=production\"
 ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
 Restart=always
 Environment=\"PATH=$DEPLOY_DIR/.venv/bin:/usr/bin\"
@@ -144,54 +154,6 @@ EOF"
 # Start the services
 echo "Starting services..."
 ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "sudo systemctl daemon-reload && sudo systemctl enable peerai-backend && sudo systemctl restart peerai-backend"
-
-# Create environment files directly on the server
-echo "Creating environment files on server..."
-ssh -i "$SSH_KEY" "$SSH_USER@$VM_IP" "mkdir -p $DEPLOY_DIR/backend $DEPLOY_DIR/frontend/admin-dashboard && \
-cat > $DEPLOY_DIR/backend/.env << 'EOL'
-# @important: Render hosted PostgreSQL database - do not modify without approval
-DATABASE_URL=${DATABASE_URL}
-ENVIRONMENT=production
-DEBUG=false
-MOCK_MODE=false
-LOG_LEVEL=INFO
-HOSTED_LLM_API_KEY=${HOSTED_LLM_API_KEY}
-EXTERNAL_LLM_API_KEY=${EXTERNAL_LLM_API_KEY}
-EXTERNAL_MODEL=mistral-tiny
-EXTERNAL_LLM_URL=https://api.mistral.ai/v1/chat/completions
-# @important: Production uses the VM IP
-ALLOWED_ORIGIN=\"http://${VM_IP}\"
-# Google service account credentials - Base64 encoded JSON
-GOOGLE_SERVICE_ACCOUNT_CREDS=${GOOGLE_SERVICE_ACCOUNT_CREDS}
-
-# Email configurations
-GOOGLE_WORKSPACE_ADMIN_EMAIL=adam.falkenberg@peerdigital.se
-NOTIFICATION_EMAIL_ALIAS=notifications@peerdigital.se
-VITE_TEST_EMAIL=admin@peerai.se
-VITE_TEST_PASSWORD=admin123
-
-# JWT and authentication settings
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-JWT_ALGORITHM=HS256
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
-
-# Application settings
-MOCK_MODE=false
-
-# @important: API base URL - do not change without updating nginx config
-VITE_API_BASE_URL=http://${VM_IP}
-MOCK_MODE=false
-VITE_APP_ENV=production
-EOL
-
-cat > $DEPLOY_DIR/frontend/admin-dashboard/.env.production << 'EOL'
-VITE_API_BASE_URL=http://${VM_IP}
-VITE_AUTH_ENABLED=true
-EOL
-
-chmod 600 $DEPLOY_DIR/backend/.env
-chmod 644 $DEPLOY_DIR/frontend/admin-dashboard/.env.production
-chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR/backend/.env $DEPLOY_DIR/frontend/admin-dashboard/.env.production"
 
 echo "Deployment complete!"
 echo "Frontend available at: http://${VM_IP}"
