@@ -125,6 +125,23 @@ jobs:
             cd /home/ubuntu/peer-ai
             echo "Current directory: $(pwd)"
 
+            # --- Ensure Backend Code / requirements.txt is present ---
+            echo "Checking for requirements.txt..."
+            ls -l requirements.txt || { echo "ERROR: requirements.txt not found!"; exit 1; }
+
+            # --- Setup Python Virtual Environment & Install Dependencies ---
+            echo "Setting up Python virtual environment..."
+            # Ensure Python3 and venv package are installed (might already be)
+            # sudo apt-get update && sudo apt-get install -y python3-venv # Uncomment if needed, run only once initially
+            python3 -m venv .venv  # Creates .venv if it doesn't exist, ensures it's valid
+            echo "Activating virtual environment (for this script block)..."
+            source .venv/bin/activate  # Activate venv to use its pip
+            echo "Installing/updating dependencies from requirements.txt..."
+            pip install -r requirements.txt
+            echo "Deactivating virtual environment (for this script block)..."
+            deactivate  # Good practice, though systemd runs ExecStart directly
+            echo "Python environment setup complete."
+
             # --- Write Google Credentials JSON File ---
             echo "Writing Google credentials to google-creds.json..."
             printf "%s" "$GOOGLE_SERVICE_ACCOUNT_CREDS" > google-creds.json
@@ -132,14 +149,20 @@ jobs:
             echo "Credentials file written."
             ls -l google-creds.json
 
-            # Extract frontend build
+            # --- Extract Frontend Build ---
             echo "Extracting frontend build..."
             mkdir -p frontend/admin-dashboard/dist
             tar -xzvf frontend-build.tar.gz -C frontend/admin-dashboard/dist --strip-components=1
             rm frontend-build.tar.gz  # Clean up tarball
             echo "Frontend build extracted successfully."
 
-            # Run deployment script with error handling
+            # --- Verify ubuntu user/group ON VM ---
+            echo "--- Verifying ubuntu user/group on VM ---"
+            id ubuntu || echo "ERROR: Command 'id ubuntu' failed or user not found!"
+            getent group ubuntu || echo "ERROR: Command 'getent group ubuntu' failed or group not found!"
+            echo "-----------------------------------------"
+
+            # --- Run Deployment Script ---
             echo "Running deployment script (./scripts/deploy.sh)..."
             chmod +x ./scripts/deploy.sh
             ./scripts/deploy.sh || {
