@@ -53,7 +53,7 @@ for var in "${required_vars[@]}"; do
     # Use grep -q for silent checking
     if ! echo "$service_env" | grep -q -E "(${var}=|'${var}=)"; then
         echo "ERROR: Required environment variable $var does not appear to be set in systemd configuration for peerai-backend.service!"
-        echo "Systemd Environment string: $service_env" # Print the retrieved env string for debugging
+        echo "Systemd Environment string: $service_env"
         exit 1
     fi
 done
@@ -62,9 +62,9 @@ echo "✓ Critical environment variables seem configured in systemd"
 # --- Check service accessibility ---
 echo "Checking service accessibility..."
 echo "Waiting 5 seconds for service to fully start..."
-sleep 5  # @note: Give the service time to fully start and bind to port
+sleep 5
 
-PORT=8000  # @note: Default port from deploy.sh
+PORT=8000
 if ! curl --fail --silent --max-time 5 "http://localhost:$PORT/health" > /dev/null; then
     echo "ERROR: Service is not accessible on port $PORT!"
     echo "Checking service logs:"
