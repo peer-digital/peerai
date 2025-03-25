@@ -179,6 +179,48 @@ jobs:
               exit 1
             }
             echo "Deployment script completed successfully."
+
+      - name: Configure and Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3  # @note: Latest version for better reliability
+        with:
+          host: 158.174.210.91  # @url: Production VM IP
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            echo "Configuring Nginx..."
+            NGINX_CONF='server {
+              listen 80;
+              server_name 158.174.210.91;
+              location / {
+                proxy_pass http://localhost:8000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
+              location /health {
+                proxy_pass http://localhost:8000/health;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+              }
+            }'
+            echo "$NGINX_CONF" | sudo tee /etc/nginx/conf.d/peerai.conf
+
+            echo "Checking Nginx configuration..."
+            sudo nginx -t || { echo "ERROR: Nginx configuration test failed!"; exit 1; }
+
+            echo "Reloading Nginx..."
+            sudo systemctl reload nginx || { echo "ERROR: Failed to reload Nginx!"; exit 1; }
+
+            echo "Nginx configured and reloaded."
       
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
