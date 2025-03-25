@@ -23,18 +23,19 @@ for var in DATABASE_URL JWT_SECRET_KEY PORT ENVIRONMENT; do
   fi
 done
 
-# Verify Google credentials file exists and is readable
-if [ ! -f "$CREDENTIALS_FILE" ]; then
-  echo "ERROR: Google credentials file not found at $CREDENTIALS_FILE"
+# --- Add a check for the google credentials file ---
+echo "Verifying Google credentials file..."
+if [ -f "$CREDENTIALS_FILE" ]; then
+  echo "Google credentials file verified at $CREDENTIALS_FILE"
+  if [ ! -r "$CREDENTIALS_FILE" ]; then
+    echo "ERROR: Google credentials file is not readable at $CREDENTIALS_FILE"
+    exit 1
+  fi
+else
+  echo "ERROR: Google credentials file NOT found at $CREDENTIALS_FILE"
   exit 1
 fi
-
-if [ ! -r "$CREDENTIALS_FILE" ]; then
-  echo "ERROR: Google credentials file is not readable at $CREDENTIALS_FILE"
-  exit 1
-fi
-
-echo "Google credentials file verified at $CREDENTIALS_FILE"
+# --- End check ---
 
 # Create/Update systemd service file with environment variables from the workflow
 echo "Creating/Updating systemd service file: /etc/systemd/system/peerai-backend.service"
@@ -47,6 +48,7 @@ After=network.target
 
 [Service]
 User=ubuntu  # @note: Service runs as ubuntu user
+Group=ubuntu  # @note: Service runs as ubuntu group
 WorkingDirectory=$DEPLOY_DIR
 # Pass environment variables directly to the service
 # Use the variables provided by the GitHub Actions 'envs' parameter
