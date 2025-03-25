@@ -57,7 +57,7 @@ Environment="DATABASE_URL=$DATABASE_URL"
 Environment="EXTERNAL_LLM_API_KEY=$EXTERNAL_LLM_API_KEY"
 Environment="HOSTED_LLM_API_KEY=$HOSTED_LLM_API_KEY"
 Environment="JWT_SECRET_KEY=$JWT_SECRET_KEY"
-Environment="GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE"  # @note: Point to credentials file
+Environment="GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE"
 Environment="PORT=$PORT"
 Environment="ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
 Environment="RATE_LIMIT_MINUTE=$RATE_LIMIT_MINUTE"
@@ -77,7 +77,7 @@ Environment="VITE_API_BASE_URL=$VITE_API_BASE_URL"
 Environment="VITE_APP_ENV=$VITE_APP_ENV"
 Environment="VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED"
 # Ensure the python virtual environment path is correct
-ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT  # @note: Use variable for port
+ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 Restart=always
 # Ensure PATH includes the venv if needed, though ExecStart uses absolute path
 Environment="PATH=$DEPLOY_DIR/.venv/bin:/usr/bin"
@@ -86,7 +86,7 @@ Environment="PATH=$DEPLOY_DIR/.venv/bin:/usr/bin"
 WantedBy=multi-user.target
 EOF
 
-echo "Systemd service file updated (removed comments from User/Group lines)."
+echo "Systemd service file updated (removed all inline comments)."
 
 # Reload systemd, enable and restart the service
 echo "Reloading systemd and restarting peerai-backend service..."
