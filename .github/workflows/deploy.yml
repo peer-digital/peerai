@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Build and Deploy Frontend & Backend
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
           - production
 
 jobs:
-  deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'production' }}
     
@@ -23,6 +23,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
       
+      # --- Frontend Build Steps ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4  # @note: Latest Node.js setup action
+        with:
+          node-version: '20'  # @note: Node.js version for frontend build
+          cache: 'npm'  # @note: Cache npm dependencies for faster builds
+      
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend/admin-dashboard
+          npm ci  # @note: Clean install for reproducible builds
+      
+      - name: Build Frontend
+        run: |
+          cd frontend/admin-dashboard
+          npm run build  # @note: Build frontend application
+        env:
+          VITE_API_BASE_URL: http://158.174.210.91  # @url: Production VM IP
+          VITE_APP_ENV: production
+          VITE_AUTH_ENABLED: true
+      
+      - name: Create Frontend Tarball
+        run: |
+          cd frontend/admin-dashboard
+          tar -czvf ../../frontend-build.tar.gz dist/  # @note: Create tarball of build output
+      
+      # --- SSH Setup ---
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0  # @note: Secure SSH key handling
         with:
@@ -35,16 +62,21 @@ jobs:
         run: |
           chmod +x ./scripts/deploy.sh
       
-      - name: Transfer deploy script via SCP
-        uses: appleboy/scp-action@v0.1.4  # @note: Reliable SCP action for GitHub Actions
-        with:
-          host: 158.174.210.91  # @url: Production VM IP
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts/deploy.sh"
-          target: "/home/ubuntu/peer-ai/scripts/"
-          strip_components: 0
-          use_insecure_cipher: true
+      # --- Deployment Steps ---
+      - name: Deploy Files via Rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='frontend-build.tar.gz' \
+            --exclude='frontend/admin-dashboard/node_modules/' \
+            --exclude='frontend/admin-dashboard/dist/' \
+            ./ ubuntu@158.174.210.91:/home/ubuntu/peer-ai/
+          
+          # Copy tarball and deploy script separately
+          scp ./frontend-build.tar.gz ubuntu@158.174.210.91:/home/ubuntu/peer-ai/
+          scp ./scripts/deploy.sh ubuntu@158.174.210.91:/home/ubuntu/peer-ai/scripts/
       
       - name: Debug Environment
         run: |
@@ -123,6 +155,13 @@ jobs:
             ENV
             echo ".env.production created successfully."
             ls -l .env.production
+
+            # Extract frontend build
+            echo "Extracting frontend build..."
+            mkdir -p frontend/admin-dashboard/dist
+            tar -xzvf frontend-build.tar.gz -C frontend/admin-dashboard/dist --strip-components=1
+            rm frontend-build.tar.gz  # Clean up tarball
+            echo "Frontend build extracted successfully."
 
             # Debug: Check variables
             echo "Checking environment variables before running deploy.sh:"
