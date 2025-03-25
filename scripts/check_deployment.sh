@@ -61,8 +61,11 @@ echo "✓ Critical environment variables seem configured in systemd"
 
 # --- Check service accessibility ---
 echo "Checking service accessibility..."
+echo "Waiting 5 seconds for service to fully start..."
+sleep 5  # @note: Give the service time to fully start and bind to port
+
 PORT=8000  # @note: Default port from deploy.sh
-if ! curl -s "http://localhost:$PORT/health" > /dev/null; then
+if ! curl --fail --silent --max-time 5 "http://localhost:$PORT/health" > /dev/null; then
     echo "ERROR: Service is not accessible on port $PORT!"
     echo "Checking service logs:"
     journalctl -u peerai-backend.service -n 50 --no-pager
