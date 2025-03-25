@@ -41,13 +41,6 @@ echo "Cleaning up Apple metadata files..."
 find frontend/admin-dashboard/dist -name "._*" -delete
 find frontend/admin-dashboard/dist -name ".DS_Store" -delete
 
-# Create temporary .env.production file for frontend build
-echo "Creating temporary .env.production file..."
-cat > frontend/admin-dashboard/.env.production << EOL
-VITE_API_BASE_URL=http://${VM_IP}
-VITE_AUTH_ENABLED=true
-EOL
-
 # Create tarball of the frontend application
 echo "Creating frontend deployment tarball..."
 tar --exclude="node_modules" \
@@ -55,11 +48,7 @@ tar --exclude="node_modules" \
     --exclude=".DS_Store" \
     --exclude="._*" \
     -czf "$TARBALL_NAME" \
-    frontend/admin-dashboard/dist \
-    frontend/admin-dashboard/.env.production
-
-# Remove temporary .env.production file
-rm frontend/admin-dashboard/.env.production
+    frontend/admin-dashboard/dist
 
 # Check if we can connect to the VM
 echo "Checking connection to VM..."
@@ -109,6 +98,7 @@ Environment=\"VITE_TEST_PASSWORD=admin123\"
 Environment=\"JWT_ALGORITHM=HS256\"
 Environment=\"VITE_API_BASE_URL=http://${VM_IP}\"
 Environment=\"VITE_APP_ENV=production\"
+Environment=\"VITE_AUTH_ENABLED=true\"
 ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
 Restart=always
 Environment=\"PATH=$DEPLOY_DIR/.venv/bin:/usr/bin\"
