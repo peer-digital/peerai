@@ -8,8 +8,8 @@
 # Stop script on errors
 set -e
 
-DEPLOY_DIR="/home/ubuntu/peer-ai"  # @note: Fixed deployment directory path
-CREDENTIALS_FILE="$DEPLOY_DIR/google-creds.json"  # @note: Path to Google credentials file
+DEPLOY_DIR="/home/ubuntu/peer-ai"
+CREDENTIALS_FILE="$DEPLOY_DIR/google-creds.json"
 
 # Debug: Print environment variable status (confirming they are passed)
 echo "Checking environment variables received by deploy.sh on VM:"
@@ -61,7 +61,7 @@ Environment="GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE"
 Environment="PORT=$PORT"
 Environment="ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
 Environment="RATE_LIMIT_MINUTE=$RATE_LIMIT_MINUTE"
-Environment="RATE_LIMIT_DAILY=$RATE_LIMIT_DAILY"  # @note: Daily rate limit for API calls
+Environment="RATE_LIMIT_DAILY=$RATE_LIMIT_DAILY"
 Environment="ENVIRONMENT=$ENVIRONMENT"
 Environment="ALLOWED_ORIGIN=$ALLOWED_ORIGIN"
 Environment="EXTERNAL_MODEL=$EXTERNAL_MODEL"
@@ -92,7 +92,7 @@ echo "Systemd service file updated (removed all inline comments)."
 # Reload systemd, enable and restart the service
 echo "Reloading systemd and restarting peerai-backend service..."
 sudo systemctl daemon-reload
-sudo systemctl enable peerai-backend.service  # @note: Ensure it starts on boot
+sudo systemctl enable peerai-backend.service
 sudo systemctl restart peerai-backend.service
 
 echo "peerai-backend service restart command issued."
