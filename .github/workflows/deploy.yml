@@ -1,6 +1,9 @@
-name: Manual Deployment
+name: Deploy to Production
 
 on:
+  push:
+    branches:
+      - main  # @note: Trigger deployment on push to main branch
   workflow_dispatch:
     inputs:
       environment:
@@ -14,11 +17,19 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ github.event.inputs.environment || 'production' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0  # @note: Secure SSH key handling
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Add remote host to known_hosts
+        run: ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts  # @url: Production VM IP
       
       - name: Make deploy script executable
         run: |
@@ -38,11 +49,11 @@ jobs:
       - name: Debug Environment
         run: |
           echo "Checking if environment variables are set (values hidden):"
-          if [ ! -z "${{ secrets.DATABASE_URL }}" ]; then echo "DATABASE_URL is set"; else echo "DATABASE_URL is NOT set"; fi
-          if [ ! -z "${{ secrets.EXTERNAL_LLM_API_KEY }}" ]; then echo "EXTERNAL_LLM_API_KEY is set"; else echo "EXTERNAL_LLM_API_KEY is NOT set"; fi
-          if [ ! -z "${{ secrets.HOSTED_LLM_API_KEY }}" ]; then echo "HOSTED_LLM_API_KEY is set"; else echo "HOSTED_LLM_API_KEY is NOT set"; fi
-          if [ ! -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "JWT_SECRET_KEY is set"; else echo "JWT_SECRET_KEY is NOT set"; fi
-          if [ ! -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}" ]; then echo "GOOGLE_SERVICE_ACCOUNT_CREDS is set"; else echo "GOOGLE_SERVICE_ACCOUNT_CREDS is NOT set"; fi
+          if [ ! -z "${{ secrets.DATABASE_URL }}" ]; then echo "DATABASE_URL is set"; else echo "Warning: DATABASE_URL is NOT set"; fi
+          if [ ! -z "${{ secrets.EXTERNAL_LLM_API_KEY }}" ]; then echo "EXTERNAL_LLM_API_KEY is set"; else echo "Warning: EXTERNAL_LLM_API_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.HOSTED_LLM_API_KEY }}" ]; then echo "HOSTED_LLM_API_KEY is set"; else echo "Warning: HOSTED_LLM_API_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "JWT_SECRET_KEY is set"; else echo "Warning: JWT_SECRET_KEY is NOT set"; fi
+          if [ ! -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}" ]; then echo "GOOGLE_SERVICE_ACCOUNT_CREDS is set"; else echo "Warning: GOOGLE_SERVICE_ACCOUNT_CREDS is NOT set"; fi
       
       - name: Run deployment script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -62,10 +73,19 @@ jobs:
             # Debug: Print environment variable status (not values)
             echo "Checking environment variables on remote server:"
             for var in DATABASE_URL EXTERNAL_LLM_API_KEY HOSTED_LLM_API_KEY JWT_SECRET_KEY GOOGLE_SERVICE_ACCOUNT_CREDS; do
-              if [ ! -z "${!var}" ]; then echo "$var is set"; else echo "$var is NOT set"; fi
+              if [ ! -z "${!var}" ]; then 
+                echo "$var is set"
+              else 
+                echo "Error: $var is NOT set on remote server"
+                exit 1
+              fi
             done
             
-            cd /home/ubuntu/peer-ai && ./scripts/deploy.sh
+            # Run deployment script with error handling
+            cd /home/ubuntu/peer-ai && ./scripts/deploy.sh || {
+              echo "Deployment failed"
+              exit 1
+            }
       
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
@@ -75,4 +95,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
           script: |
-            cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh 
+            cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh || {
+              echo "Deployment check failed"
+              exit 1
+            } 
