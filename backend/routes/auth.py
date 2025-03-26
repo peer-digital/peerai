@@ -15,7 +15,7 @@ from core.security import verify_password, get_password_hash
 from services.referral import ReferralService
 from services.email import EmailService
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(tags=["authentication"])
 
 # Security configuration
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
