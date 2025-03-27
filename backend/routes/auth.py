@@ -18,7 +18,7 @@ from services.email import EmailService
 router = APIRouter(tags=["authentication"])
 
 # Security configuration
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/login")
 
 # @important: JWT configuration from settings
 JWT_SECRET_KEY = settings.JWT_SECRET_KEY
@@ -179,7 +179,8 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
 ):
     """Login endpoint that returns a JWT token"""
     user = db.query(User).filter(User.email == form_data.username).first()
