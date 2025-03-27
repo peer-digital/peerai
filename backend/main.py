@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles  # @note: For serving static files
+from fastapi.responses import FileResponse  # @note: For serving index.html
 
 from backend.config import settings
 from backend.core.security import get_current_user
@@ -82,6 +84,20 @@ async def admin_cors_middleware(request: Request, call_next):
             return response
     
     return await call_next(request)
+
+# Mount static files for frontend
+# @note: This will serve the frontend build from the dist directory
+app.mount("/static", StaticFiles(directory="frontend/admin-dashboard/dist"), name="static")
+
+# Serve index.html for all non-API routes
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    # If the path starts with /api, let FastAPI handle it
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # For all other paths, serve index.html
+    return FileResponse("frontend/admin-dashboard/dist/index.html")
 
 def custom_openapi():
     if app.openapi_schema:
