@@ -8,20 +8,21 @@ from sqlalchemy import func, desc, case
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from database import get_db
-from models.auth import User, APIKey, DBSystemSettings
-from models.usage import UsageRecord
-from models.models import ModelProvider, AIModel, ModelRequestMapping
-from core.security import get_current_user
-from schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures, UserUpdate
-from core.roles import Permission, has_permission
-from services.analytics import (
+# @important: Using absolute imports from backend package
+from backend.database import get_db
+from backend.models.auth import User, APIKey, DBSystemSettings
+from backend.models.usage import UsageRecord
+from backend.models.models import ModelProvider, AIModel, ModelRequestMapping
+from backend.core.security import get_current_user
+from backend.schemas.admin import SystemSettings, UserResponse, RateLimitSettings, SecuritySettings, ModelSettings, MonitoringSettings, BetaFeatures, UserUpdate
+from backend.core.roles import Permission, has_permission
+from backend.services.analytics import (
     get_analytics_data,
     get_user_stats,
     export_analytics_data,
 )
-from models.referral import Referral
-from services.referral import ReferralService
+from backend.models.referral import Referral
+from backend.services.referral import ReferralService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

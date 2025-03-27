@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
-from core.roles import Role
-from core.auth import get_current_user
-from database import get_db
-from schemas.rbac import Team, TeamCreate, User, TeamWithMembers
-from services.rbac import RBACService
+from backend.core.roles import Role
+from backend.core.auth import get_current_user
+from backend.database import get_db
+from backend.schemas.rbac import Team, TeamCreate, User, TeamWithMembers
+from backend.services.rbac import RBACService
 
 router = APIRouter(prefix="/rbac", tags=["rbac"])
 

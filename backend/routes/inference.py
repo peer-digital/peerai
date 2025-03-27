@@ -20,11 +20,11 @@ import httpx
 import logging
 from sqlalchemy import func
 
-from models.auth import APIKey, User
-from models.usage import UsageRecord
-from database import get_db
-from config import settings
-from services.model_orchestrator import ModelOrchestrator
+from backend.models.auth import APIKey, User
+from backend.models.usage import UsageRecord
+from backend.database import get_db
+from backend.config import settings
+from backend.services.model_orchestrator import ModelOrchestrator
 
 # Configure logging
 logger = logging.getLogger(__name__)

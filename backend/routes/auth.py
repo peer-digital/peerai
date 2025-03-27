@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 import secrets
 import string
 
-from models.auth import User, APIKey
-from database import get_db
-from config import settings
-from core.security import verify_password, get_password_hash
-from services.referral import ReferralService
-from services.email import EmailService
+# @important: Using absolute imports from backend package
+from backend.models.auth import User, APIKey
+from backend.database import get_db
+from backend.config import settings
+from backend.core.security import verify_password, get_password_hash
+from backend.services.referral import ReferralService
+from backend.services.email import EmailService
 
 router = APIRouter(tags=["authentication"])
 

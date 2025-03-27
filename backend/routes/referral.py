@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 import string
 from pydantic import BaseModel
 
-from database import get_db
-from models.auth import User
-from models.referral import Referral
-from schemas.referral import Referral as ReferralSchema, ReferralCreate, ReferralStats
-from services.referral import ReferralService
-from services.email import EmailService
-from core.security import get_current_user
+from backend.database import get_db
+from backend.models.auth import User
+from backend.models.referral import Referral
+from backend.schemas.referral import Referral as ReferralSchema, ReferralCreate, ReferralStats
+from backend.services.referral import ReferralService
+from backend.services.email import EmailService
+from backend.core.security import get_current_user
 
 router = APIRouter()
 
