@@ -180,6 +180,94 @@ jobs:
             }
             echo "Deployment script completed successfully."
 
+      - name: Configure and Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3  # @note: Latest version for better reliability
+        with:
+          host: 158.174.210.91  # @url: Production VM IP
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            echo "Configuring Nginx..."
+            # First, remove any existing configuration
+            sudo rm -f /etc/nginx/conf.d/peerai.conf
+            
+            # Create new configuration
+            NGINX_CONF='server {
+              listen 80;
+              server_name 158.174.210.91;
+              
+              # Frontend static files
+              location / {
+                root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+                try_files $uri $uri/ /index.html;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+              }
+              
+              # Backend API
+              location /api/v1/ {
+                proxy_pass http://localhost:8000/api/v1/;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Add CORS headers
+                add_header "Access-Control-Allow-Origin" "*" always;
+                add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
+                add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
+                add_header "Access-Control-Expose-Headers" "Content-Length,Content-Range" always;
+                
+                # Handle OPTIONS method
+                if ($request_method = "OPTIONS") {
+                  add_header "Access-Control-Allow-Origin" "*" always;
+                  add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
+                  add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
+                  add_header "Access-Control-Max-Age" 1728000;
+                  add_header "Content-Type" "text/plain; charset=utf-8";
+                  add_header "Content-Length" 0;
+                  return 204;
+                }
+              }
+              
+              # Health check endpoint
+              location /health {
+                proxy_pass http://localhost:8000/health;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+              }
+            }'
+            echo "$NGINX_CONF" | sudo tee /etc/nginx/conf.d/peerai.conf
+
+            echo "Checking Nginx configuration..."
+            sudo nginx -t || { echo "ERROR: Nginx configuration test failed!"; exit 1; }
+
+            echo "Reloading Nginx..."
+            sudo systemctl reload nginx || { echo "ERROR: Failed to reload Nginx!"; exit 1; }
+
+            echo "Nginx configured and reloaded."
+            
+            # Verify frontend files are accessible
+            echo "Verifying frontend files..."
+            ls -l /home/ubuntu/peer-ai/frontend/admin-dashboard/dist || { echo "ERROR: Frontend files not found!"; exit 1; }
+            
+            # Check if backend service is running
+            echo "Checking backend service status..."
+            sudo systemctl status peerai-backend.service || { echo "ERROR: Backend service not running!"; exit 1; }
+            
+            # Test the login endpoint
+            echo "Testing login endpoint..."
+            curl -v http://localhost/api/v1/auth/login || { echo "ERROR: Login endpoint not accessible!"; exit 1; }
+      
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
