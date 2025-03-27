@@ -1,12 +1,16 @@
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from datetime import timedelta
 
 from backend.config import settings
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, verify_password, create_access_token
 from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
+from backend.database import get_db
 
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
@@ -132,12 +136,44 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Import routers
 from backend.routes import inference, auth, admin, rbac, referral, admin_models
 
+# Debug: Print API prefix
+print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
+
 # Include all non-LLM routes in the main app first
-app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
+# @important: Temporarily commenting out auth router to test direct route
+# app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
+
+# @important: Admin router needs /admin prefix to match its internal prefix
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin")
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
+
+# Debug: Print all registered routes
+print("\nRegistered routes:")
+for route in app.routes:
+    print(f"Path: {route.path}, Name: {route.name}, Methods: {route.methods}")
+
+# @important: Direct login route for testing
+@app.post(f"{settings.API_V1_PREFIX}/auth/login", tags=["authentication"])
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """Login endpoint that returns a JWT token"""
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
