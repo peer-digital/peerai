@@ -18,7 +18,7 @@ from services.email import EmailService
 router = APIRouter(tags=["authentication"])
 
 # Security configuration
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
 
 # @important: JWT configuration from settings
 JWT_SECRET_KEY = settings.JWT_SECRET_KEY

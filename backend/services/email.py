@@ -170,7 +170,7 @@ class EmailService:
         {referrer_name} has invited you to join Peer AI, a powerful AI platform for developers and businesses.
         When you sign up using their referral link, you'll both receive 10,000 tokens as a welcome bonus!
 
-        Click here to get started: {cls.BASE_URL}/login/{referral_code}
+        Click here to get started: {cls.BASE_URL}/auth/login/{referral_code}
 
         Best regards,
         The Peer AI Team
@@ -182,7 +182,7 @@ class EmailService:
             <p>When you sign up using their referral link, you'll both receive <strong>10,000 tokens</strong> as a welcome bonus!</p>
             
             <div style="text-align: left; margin: 30px 0;">
-                <a href="{cls.BASE_URL}/login/{referral_code}" 
+                <a href="{cls.BASE_URL}/auth/login/{referral_code}" 
                    style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Get Started
                 </a>
