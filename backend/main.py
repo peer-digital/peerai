@@ -152,9 +152,9 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
 
 # @important: Admin router needs /admin prefix to match its internal prefix
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin")
-app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
-app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
-app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
+app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}")
+app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin")
+app.include_router(referral.router, prefix=f"{settings.API_V1_PREFIX}")
 
 # Debug: Print all registered routes
 print("\nRegistered routes:")
