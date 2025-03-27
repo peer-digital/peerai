@@ -148,8 +148,7 @@ from backend.routes import inference, auth, admin, rbac, referral, admin_models
 print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
 
 # Include all non-LLM routes in the main app first
-# @important: Temporarily commenting out auth router to test direct route
-# app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
+app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
 
 # @important: Admin router needs /admin prefix to match its internal prefix
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin")
@@ -161,27 +160,6 @@ app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
 print("\nRegistered routes:")
 for route in app.routes:
     print(f"Path: {route.path}, Name: {route.name}, Methods: {route.methods}")
-
-# @important: Direct login route for testing
-@app.post(f"{settings.API_V1_PREFIX}/auth/login", tags=["authentication"])
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    """Login endpoint that returns a JWT token"""
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
 
 # Import LLM routes and mount them on a specific prefix
 llm_app.include_router(inference.router)
