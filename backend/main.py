@@ -12,6 +12,14 @@ from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
 from backend.database import get_db
 
+# Debug: Print all settings
+print("\nSettings:")
+print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
+print(f"ENVIRONMENT: {settings.ENVIRONMENT}")
+print(f"DEBUG: {settings.DEBUG}")
+print(f"PROJECT_NAME: {settings.PROJECT_NAME}")
+print(f"VERSION: {settings.VERSION}")
+
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
     "https://peerai-fe.onrender.com",
