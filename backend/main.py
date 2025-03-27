@@ -134,7 +134,7 @@ from backend.routes import inference, auth, admin, rbac, referral, admin_models
 
 # Include all non-LLM routes in the main app first
 app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
-app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin")
 app.include_router(rbac.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_models.router, prefix=settings.API_V1_PREFIX + "/admin")
 app.include_router(referral.router, prefix=settings.API_V1_PREFIX)
