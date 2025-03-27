@@ -43,7 +43,7 @@ fi
 
 # Run both services concurrently using npx
 echo "Starting both frontend and backend services..."
-npx concurrently \
+PYTHONPATH=$PYTHONPATH:$(pwd) npx concurrently \
     --names "BACKEND,FRONTEND" \
     --prefix-colors "blue,green" \
     --kill-others \
