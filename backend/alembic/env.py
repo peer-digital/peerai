@@ -28,7 +28,7 @@ target_metadata = Base.metadata
 
 # Get environment-specific database URL
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://peerai:peerai_password@localhost:5432/peerai_db"
+    "DATABASE_URL", "postgresql://peerai_user:peerai_password@localhost:5432/peerai"
 )
 
 

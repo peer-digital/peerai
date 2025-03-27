@@ -61,3 +61,4 @@ pr_review_*.txt
 .*.swp 
 /node_modules
 *.gz
+/.specstory
