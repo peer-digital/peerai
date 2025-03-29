@@ -41,7 +41,7 @@ interface ApiKey {
   key: string;
   createdAt: string;
   lastUsed: string | null;
-  status: 'active' | 'revoked';
+  is_active: boolean;
 }
 
 const formatDate = (date: string | null): string => {
@@ -239,8 +239,8 @@ const ApiKeys: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={key.status ? key.status.toUpperCase() : 'UNKNOWN'}
-                        color={key.status === 'active' ? 'success' : 'error'}
+                        label={key.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        color={key.is_active ? 'success' : 'error'}
                         size="small"
                         sx={{ fontWeight: 500 }}
                       />
