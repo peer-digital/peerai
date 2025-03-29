@@ -12,19 +12,44 @@ import sys
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy import text
 
-# Add the parent directory to sys.path to allow importing modules
+# --- Load DATABASE_URL first ---
+# Load .env file if it exists, primarily for EXTERNAL_LLM_API_KEY
+dotenv_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path)
+
+# Explicitly get DATABASE_URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Fallback to the default from config if not set in env
+    try:
+        # Temporarily import just the setting
+        from backend.config import Settings
+        DATABASE_URL = Settings().DATABASE_URL
+        print("Warning: DATABASE_URL not found in environment, using default from config.")
+    except ImportError:
+        print("Error: Cannot determine DATABASE_URL. Set it in the environment or ensure backend.config is available.")
+        sys.exit(1)
+# --- End DATABASE_URL loading ---
+
+# Add the parent directory to sys.path AFTER potentially loading DATABASE_URL
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from database import SessionLocal
+# Now import other backend modules
 from models.models import ModelProvider, AIModel
+
+# --- Database Setup using explicit DATABASE_URL ---
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# --- End Database Setup ---
 
 
 def load_env_variables():
-    """Load environment variables from .env file"""
-    dotenv_path = Path(__file__).parent.parent / ".env"
-    load_dotenv(dotenv_path)
+    """Load environment variables (API Key only now)"""
+    # DATABASE_URL is loaded above
     return {
         "api_key": os.getenv("EXTERNAL_LLM_API_KEY"),
         "api_url": os.getenv("EXTERNAL_LLM_URL", "https://api.mistral.ai/v1/chat/completions")
@@ -145,39 +170,45 @@ def seed_mistral_models(db: Session, provider, models):
 
 def main():
     """Main function to run the script"""
-    # Load environment variables
+    # Load environment variables (API Key)
     env = load_env_variables()
     api_key = env["api_key"]
-    
+
     if not api_key:
-        print("Error: EXTERNAL_LLM_API_KEY not found in .env file")
+        print("Error: EXTERNAL_LLM_API_KEY not found in .env file or environment")
         return
-    
+
     # Fetch models from Mistral API
     print("Fetching models from Mistral API...")
     models = fetch_mistral_models(api_key)
-    
+
     if not models:
         print("No models received from Mistral API")
         return
-    
+
     print(f"Received {len(models)} models from Mistral API")
-    
-    # Connect to database
+
+    # Connect to database using the explicitly configured SessionLocal
     db = SessionLocal()
     try:
+        # Verify connection
+        db.execute(text("SELECT 1")) # Import text from sqlalchemy
+        print(f"Successfully connected to database using URL: {DATABASE_URL}")
+
         # Get or create Mistral provider
         provider = get_or_create_mistral_provider(db)
-        
+
         # Seed models
         seed_mistral_models(db, provider, models)
-        
+
         print("Model seeding completed successfully")
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error during database operation: {str(e)}")
     finally:
         db.close()
 
 
 if __name__ == "__main__":
+    # Import text here to avoid potential circular imports earlier
+    from sqlalchemy import text
     main() 
