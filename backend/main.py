@@ -148,14 +148,12 @@ from backend.routes import inference, auth, admin, rbac, referral, admin_models
 print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
 
 # Include all non-LLM routes in the main app first
-app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth")
-
-# @important: Admin router needs /admin prefix to match its internal prefix
-app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin")
-app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}")
-app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin")
-app.include_router(referral.router, prefix=f"{settings.API_V1_PREFIX}")
-
+# backend/main.py (lines 151-155 - Corrected)
+app.include_router(auth.router)          # NO prefix
+app.include_router(admin.router)         # NO prefix
+app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}") # ADD Prefix back
+app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin") # ADD Prefix back
+app.include_router(referral.router)      # NO prefix
 # Debug: Print all registered routes
 print("\nRegistered routes:")
 for route in app.routes:

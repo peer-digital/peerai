@@ -86,7 +86,7 @@ def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-@router.post("/register", response_model=Token)
+@router.post("/api/v1/auth/register", response_model=Token)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
     db_user = db.query(User).filter(User.email == user.email).first()
@@ -178,7 +178,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/login")
+@router.post("/api/v1/auth/login")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
@@ -199,7 +199,7 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/api-keys", response_model=dict)
+@router.post("/api/v1/auth/api-keys", response_model=dict)
 async def create_api_key(
     key_data: APIKeyCreate,
     current_user: User = Depends(get_current_user),
@@ -223,7 +223,7 @@ async def create_api_key(
     return {"key": api_key.key, "name": api_key.name, "expires_at": api_key.expires_at}
 
 
-@router.get("/api-keys")
+@router.get("/api/v1/auth/api-keys")
 async def list_api_keys(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -231,7 +231,7 @@ async def list_api_keys(
     return db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
 
 
-@router.delete("/api-keys/{key_id}")
+@router.delete("/api/v1/auth/api-keys/{key_id}")
 async def delete_api_key(
     key_id: int,
     current_user: User = Depends(get_current_user),
@@ -254,13 +254,13 @@ async def delete_api_key(
     return {"status": "success"}
 
 
-@router.post("/logout")
+@router.post("/api/v1/auth/logout")
 async def logout(current_user: User = Depends(get_current_user)):
     """Logout endpoint (client should discard token)"""
     return {"message": "Successfully logged out"}
 
 
-@router.get("/validate")
+@router.get("/api/v1/auth/validate")
 async def validate_token(current_user: User = Depends(get_current_user)):
     """Validate the current user's token"""
     return {
@@ -273,7 +273,7 @@ async def validate_token(current_user: User = Depends(get_current_user)):
     }
 
 
-@router.get("/verify-email/{token}")
+@router.get("/api/v1/auth/verify-email/{token}")
 async def verify_email(token: str, db: Session = Depends(get_db)):
     """Verify user's email address."""
     # First try to find user by token

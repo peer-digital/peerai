@@ -24,8 +24,7 @@ from backend.services.analytics import (
 from backend.models.referral import Referral
 from backend.services.referral import ReferralService
 
-router = APIRouter(prefix="/admin", tags=["admin"])
-
+router = APIRouter(tags=["admin"])
 
 # Response Models
 class DailyStats(BaseModel):
@@ -73,7 +72,7 @@ class SettingsUpdateResponse(BaseModel):
     betaFeatures: BetaFeatures
 
 
-@router.get("/stats", response_model=UsageStats)
+@router.get("/api/v1/admin/stats", response_model=UsageStats)
 async def get_admin_stats(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -193,7 +192,7 @@ async def get_admin_stats(
     }
 
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/api/v1/admin/users", response_model=List[UserResponse])
 async def get_users(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -234,7 +233,7 @@ async def get_users(
     return users
 
 
-@router.get("/api-keys", response_model=List[APIKeyResponse])
+@router.get("/api/v1/admin/api-keys", response_model=List[APIKeyResponse])
 async def get_api_keys(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -266,7 +265,7 @@ async def get_api_keys(
     ]
 
 
-@router.get("/analytics", response_model=AnalyticsResponse)
+@router.get("/api/v1/admin/analytics", response_model=AnalyticsResponse)
 async def get_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -322,7 +321,7 @@ async def get_analytics(
     }
 
 
-@router.get("/settings", response_model=SystemSettings)
+@router.get("/api/v1/admin/settings", response_model=SystemSettings)
 async def get_settings(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -347,7 +346,7 @@ async def get_settings(
     )
 
 
-@router.put("/settings", response_model=SystemSettings)
+@router.put("/api/v1/admin/settings", response_model=SystemSettings)
 async def update_settings(
     settings: SystemSettings,
     current_user: User = Depends(get_current_user),
@@ -377,7 +376,7 @@ async def update_settings(
     return settings
 
 
-@router.patch("/settings", response_model=SettingsUpdateResponse)
+@router.patch("/api/v1/admin/settings", response_model=SettingsUpdateResponse)
 async def partial_update_settings(
     settings: Dict,
     current_user: User = Depends(get_current_user),
@@ -459,7 +458,7 @@ async def partial_update_settings(
     }
 
 
-@router.get("/analytics/data")
+@router.get("/api/v1/admin/analytics/data")
 async def get_analytics_data(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -474,7 +473,7 @@ async def get_analytics_data(
     return get_analytics_data(db, timeframe, start_date, end_date)
 
 
-@router.get("/analytics/export")
+@router.get("/api/v1/admin/analytics/export")
 async def export_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -489,7 +488,7 @@ async def export_analytics(
     return export_analytics_data(db, start_date, end_date, format)
 
 
-@router.get("/users/stats")
+@router.get("/api/v1/admin/users/stats")
 async def get_users_stats(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -500,7 +499,7 @@ async def get_users_stats(
     return get_user_stats(db)
 
 
-@router.get("/usage/personal", response_model=UsageStats)
+@router.get("/api/v1/admin/usage/personal", response_model=UsageStats)
 async def get_personal_usage(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -621,7 +620,7 @@ async def get_personal_usage(
         "modelUsage": model_usage_data,
     }
 
-@router.get("/usage/team", response_model=UsageStats)
+@router.get("/api/v1/admin/usage/team", response_model=UsageStats)
 async def get_team_usage(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -754,7 +753,7 @@ async def get_team_usage(
         "modelUsage": model_usage_data,
     }
 
-@router.get("/analytics/personal")
+@router.get("/api/v1/admin/analytics/personal")
 async def get_personal_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -849,7 +848,7 @@ async def get_personal_analytics(
         "topEndpoints": top_endpoints_data,
     }
 
-@router.get("/analytics/team")
+@router.get("/api/v1/admin/analytics/team")
 async def get_team_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -952,7 +951,7 @@ async def get_team_analytics(
     }
 
 # Model Registry Admin Routes
-@router.get("/models", response_model=List[dict])
+@router.get("/api/v1/admin/models", response_model=List[dict])
 async def admin_list_models(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1008,7 +1007,7 @@ class ModelCreateRequest(BaseModel):
     config: Optional[Dict[str, Any]] = None
 
 
-@router.post("/models", response_model=dict)
+@router.post("/api/v1/admin/models", response_model=dict)
 async def admin_create_model(
     request: ModelCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -1086,7 +1085,7 @@ class ModelUpdateRequest(BaseModel):
     config: Optional[Dict[str, Any]] = None
 
 
-@router.put("/models/{model_id}", response_model=dict)
+@router.put("/api/v1/admin/models/{model_id}", response_model=dict)
 async def admin_update_model(
     model_id: int,
     request: ModelUpdateRequest,
@@ -1157,7 +1156,7 @@ async def admin_update_model(
     }
 
 
-@router.delete("/models/{model_id}", response_model=dict)
+@router.delete("/api/v1/admin/models/{model_id}", response_model=dict)
 async def admin_delete_model(
     model_id: int,
     current_user: User = Depends(get_current_user),
@@ -1187,7 +1186,7 @@ async def admin_delete_model(
 
 
 # Provider Management Routes
-@router.get("/providers", response_model=List[dict])
+@router.get("/api/v1/admin/providers", response_model=List[dict])
 async def admin_list_providers(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1221,7 +1220,7 @@ class ProviderCreateRequest(BaseModel):
     config: Optional[Dict[str, Any]] = None
 
 
-@router.post("/providers", response_model=dict)
+@router.post("/api/v1/admin/providers", response_model=dict)
 async def admin_create_provider(
     request: ProviderCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -1269,7 +1268,7 @@ class ProviderUpdateRequest(BaseModel):
     config: Optional[Dict[str, Any]] = None
 
 
-@router.put("/providers/{provider_id}", response_model=dict)
+@router.put("/api/v1/admin/providers/{provider_id}", response_model=dict)
 async def admin_update_provider(
     provider_id: int,
     request: ProviderUpdateRequest,
@@ -1317,7 +1316,7 @@ async def admin_update_provider(
 
 
 # Parameter Mapping Routes
-@router.get("/models/{model_id}/mappings", response_model=List[dict])
+@router.get("/api/v1/admin/models/{model_id}/mappings", response_model=List[dict])
 async def admin_list_parameter_mappings(
     model_id: int,
     current_user: User = Depends(get_current_user),
@@ -1352,7 +1351,7 @@ class ParameterMappingCreateRequest(BaseModel):
     transform_function: Optional[str] = None
 
 
-@router.post("/models/{model_id}/mappings", response_model=dict)
+@router.post("/api/v1/admin/models/{model_id}/mappings", response_model=dict)
 async def admin_create_parameter_mapping(
     model_id: int,
     request: ParameterMappingCreateRequest,
@@ -1400,7 +1399,7 @@ async def admin_create_parameter_mapping(
     }
 
 
-@router.delete("/mappings/{mapping_id}", response_model=dict)
+@router.delete("/api/v1/admin/mappings/{mapping_id}", response_model=dict)
 async def admin_delete_parameter_mapping(
     mapping_id: int,
     current_user: User = Depends(get_current_user),
@@ -1419,7 +1418,7 @@ async def admin_delete_parameter_mapping(
     return {"message": f"Parameter mapping for '{mapping.peer_param}' deleted successfully"}
 
 
-@router.patch("/users/{user_id}", response_model=UserResponse)
+@router.patch("/api/v1/admin/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
     user_update: UserUpdate,

@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+alembic.ini
 
 # Virtual Environment
 venv/

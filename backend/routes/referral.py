@@ -23,7 +23,7 @@ class ReferralInvitation(BaseModel):
     referrer_name: str
 
 
-@router.post("/referrals", response_model=ReferralSchema)
+@router.post("/api/v1/referrals", response_model=ReferralSchema)
 async def create_referral(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -44,7 +44,7 @@ async def create_referral(
     return ReferralService.create_referral(db, current_user)
 
 
-@router.get("/referrals", response_model=list[ReferralSchema])
+@router.get("/api/v1/referrals", response_model=list[ReferralSchema])
 async def get_user_referrals(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -53,7 +53,7 @@ async def get_user_referrals(
     return ReferralService.get_user_referrals(db, current_user)
 
 
-@router.get("/referrals/pending", response_model=ReferralSchema)
+@router.get("/api/v1/referrals/pending", response_model=ReferralSchema)
 async def get_pending_referral(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -68,7 +68,7 @@ async def get_pending_referral(
     return referral
 
 
-@router.get("/referrals/stats", response_model=ReferralStats)
+@router.get("/api/v1/referrals/stats", response_model=ReferralStats)
 async def get_referral_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -77,7 +77,7 @@ async def get_referral_stats(
     return ReferralService.get_referral_stats(db, current_user)
 
 
-@router.post("/referrals/use/{referral_code}", response_model=ReferralSchema)
+@router.post("/api/v1/referrals/use/{referral_code}", response_model=ReferralSchema)
 async def use_referral_code(
     referral_code: str,
     current_user: User = Depends(get_current_user),
@@ -107,7 +107,7 @@ async def use_referral_code(
     return ReferralService.use_referral(db, referrer, current_user)
 
 
-@router.get("/referrals/validate/{referral_code}")
+@router.get("/api/v1/referrals/validate/{referral_code}")
 async def validate_referral_code(
     referral_code: str,
     db: Session = Depends(get_db)
@@ -147,7 +147,7 @@ async def validate_referral_code(
         return {"valid": False, "message": "Invalid referral code"}
 
 
-@router.post("/referrals/send-invitation")
+@router.post("/api/v1/referrals/send-invitation")
 async def send_referral_invitation(
     invitation: ReferralInvitation,
     current_user: User = Depends(get_current_user),
