@@ -40,30 +40,7 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# Create a sub-application for LLM API endpoints with its own CORS settings
-llm_app = FastAPI(
-    title="PeerAI LLM API",
-    version=settings.VERSION,
-)
-
-# CORS for LLM API endpoints - allow all origins
-llm_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=[
-        "Content-Type",
-        "X-API-Key",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-    ],
-    expose_headers=["*"],
-    max_age=3600,
-)
-
-# CORS for main app - allow both admin origins and all origins for LLM endpoints
+# CORS for main app - allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins
@@ -84,16 +61,20 @@ app.add_middleware(
 # Add a middleware to handle CORS for admin routes specifically
 @app.middleware("http")
 async def admin_cors_middleware(request: Request, call_next):
-    if not request.url.path.startswith(f"{settings.API_V1_PREFIX}/llm"):
-        # For non-LLM routes, check if origin is in allowed admin origins
-        origin = request.headers.get("Origin")
-        if origin and origin in ADMIN_ALLOWED_ORIGINS:
-            response = await call_next(request)
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Origin"] = origin
-            return response
-    
-    return await call_next(request)
+    # Logic simplified as we don't need to check for /llm prefix separately anymore
+    origin = request.headers.get("Origin")
+    response = await call_next(request)
+    # Allow credentials ONLY if the origin is in the admin list
+    if origin and origin in ADMIN_ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Origin"] = origin
+    # If not an allowed admin origin, ensure allow_origin is set (to '*' from main middleware) 
+    # and credentials are not allowed (as per main middleware)
+    elif "access-control-allow-origin" not in response.headers: 
+         response.headers["Access-Control-Allow-Origin"] = "*"
+         
+    return response
+
 
 def custom_openapi():
     if app.openapi_schema:
@@ -139,6 +120,8 @@ async def health_check():
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
+    # Consider logging the exception details here
+    print(f"Global exception handler caught: {exc}") # Basic logging
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import routers
@@ -147,21 +130,20 @@ from backend.routes import inference, auth, admin, rbac, referral, admin_models
 # Debug: Print API prefix
 print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
 
-# Include all non-LLM routes in the main app first
-# backend/main.py (lines 151-155 - Corrected)
+# Include all routes in the main app with appropriate prefixes
 app.include_router(auth.router)          # NO prefix
 app.include_router(admin.router)         # NO prefix
-app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}") # ADD Prefix back
-app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin") # ADD Prefix back
+app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}")
+app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin")
 app.include_router(referral.router)      # NO prefix
-# Debug: Print all registered routes
-print("\nRegistered routes:")
-for route in app.routes:
-    print(f"Path: {route.path}, Name: {route.name}, Methods: {route.methods}")
+app.include_router(inference.router, prefix=f"{settings.API_V1_PREFIX}/llm") # ADDED LLM router here
 
-# Import LLM routes and mount them on a specific prefix
-llm_app.include_router(inference.router)
-app.mount(f"{settings.API_V1_PREFIX}/llm", llm_app)  # Mount under /api/v1/llm instead of taking over all /api/v1
+# Debug: Print all registered routes AFTER including all routers
+print("\nRegistered routes AFTER including all routers:")
+for route in app.routes:
+    # Filter out internal routes like static files or websocket if any
+    if hasattr(route, 'path'):
+        print(f"Path: {route.path}, Name: {route.name}, Methods: {getattr(route, 'methods', 'N/A')}")
 
 @app.get("/")
 async def root():
