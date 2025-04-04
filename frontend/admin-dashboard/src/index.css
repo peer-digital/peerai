@@ -28,6 +28,11 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  touch-action: manipulation; /* Improve touch behavior */
+  -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow-y: auto; /* Enable vertical scrolling */
+  position: relative; /* Ensure proper positioning */
 }
 
 h1 {

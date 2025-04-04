@@ -23,9 +23,28 @@ const DeveloperDocs: React.FC = () => {
   const theme = useTheme();
   const [selectedTab, setSelectedTab] = React.useState(0);
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard!');
+  const handleCopy = async (text: string) => {
+    try {
+      // Use the Clipboard API with fallback for better mobile support
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback method for browsers that don't support clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      toast.success('Copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy text', err);
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   const completionsExample = {
@@ -418,7 +437,8 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           customStyle={{
             fontSize: '0.875rem',
             maxWidth: '100%',
-            overflowX: 'auto'
+            overflowX: 'auto',
+            maxHeight: '300px' // Limit height to prevent scrolling issues
           }}
           wrapLongLines={true}
         >
@@ -445,7 +465,8 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           customStyle={{
             fontSize: '0.875rem',
             maxWidth: '100%',
-            overflowX: 'auto'
+            overflowX: 'auto',
+            maxHeight: '300px' // Limit height to prevent scrolling issues
           }}
           wrapLongLines={true}
         >
@@ -488,7 +509,8 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           customStyle={{
             fontSize: '0.875rem',
             maxWidth: '100%',
-            overflowX: 'auto'
+            overflowX: 'auto',
+            maxHeight: '300px' // Limit height to prevent scrolling issues
           }}
           wrapLongLines={true}
         >
@@ -514,12 +536,48 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
     </Box>
   );
 
+  // Add an effect to fix touch events on mobile
+  React.useEffect(() => {
+    // Force a reflow to fix touch events
+    const fixTouchEvents = () => {
+      document.body.style.touchAction = 'manipulation';
+      // @ts-ignore - webkit property
+      document.body.style.webkitOverflowScrolling = 'touch';
+
+      // Force a reflow
+      document.body.offsetHeight;
+
+      // Add a small delay to ensure everything is properly initialized
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+        window.scrollTo(0, 0);
+      }, 100);
+    };
+
+    fixTouchEvents();
+
+    // Clean up
+    return () => {
+      document.body.style.touchAction = '';
+      // @ts-ignore - webkit property
+      document.body.style.webkitOverflowScrolling = '';
+    };
+  }, []);
+
   return (
     <Box sx={{
       p: { xs: 2, sm: 3 },
       maxWidth: '100%',
       margin: '0 auto',
-      overflowX: 'hidden' // Prevent horizontal scrolling
+      overflowX: 'hidden', // Prevent horizontal scrolling
+      overflowY: 'auto', // Enable vertical scrolling
+      height: 'auto',
+      position: 'relative',
+      touchAction: 'manipulation', // Ensure touch scrolling works on mobile
+      WebkitOverflowScrolling: 'touch', // Enable momentum scrolling on iOS
+      '& *': {
+        touchAction: 'manipulation' // Apply to all children
+      }
     }}>
       <Typography variant="h4" gutterBottom>
         PeerAI API Documentation

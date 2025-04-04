@@ -367,6 +367,34 @@ function Playground() {
     }
   };
 
+  // Add an effect to fix touch events on mobile
+  React.useEffect(() => {
+    // Force a reflow to fix touch events
+    const fixTouchEvents = () => {
+      document.body.style.touchAction = 'manipulation';
+      // @ts-ignore - webkit property
+      document.body.style.webkitOverflowScrolling = 'touch';
+
+      // Force a reflow
+      document.body.offsetHeight;
+
+      // Add a small delay to ensure everything is properly initialized
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+        window.scrollTo(0, 0);
+      }, 100);
+    };
+
+    fixTouchEvents();
+
+    // Clean up
+    return () => {
+      document.body.style.touchAction = '';
+      // @ts-ignore - webkit property
+      document.body.style.webkitOverflowScrolling = '';
+    };
+  }, []);
+
   return (
     <Box sx={{
       p: { xs: 2, sm: 3 },
@@ -376,7 +404,12 @@ function Playground() {
       mb: { xs: 4, sm: 0 }, // Add bottom margin on mobile
       overflow: 'hidden', // Prevent overflow
       maxWidth: '100vw', // Limit width to viewport
-      boxSizing: 'border-box' // Include padding in width calculation
+      boxSizing: 'border-box', // Include padding in width calculation
+      touchAction: 'manipulation', // Ensure touch scrolling works on mobile
+      WebkitOverflowScrolling: 'touch', // Enable momentum scrolling on iOS
+      '& *': {
+        touchAction: 'manipulation' // Apply to all children
+      }
     }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
