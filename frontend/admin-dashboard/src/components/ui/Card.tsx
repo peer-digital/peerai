@@ -25,6 +25,11 @@ const StyledCard = styled(MuiCard)(({ theme }) => ({
   '&:hover': {
     boxShadow: theme.shadows[4],
   },
+  // Responsive styling
+  [theme.breakpoints.down('sm')]: {
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[1],
+  },
   [theme.breakpoints.up('md')]: {
     borderRadius: theme.shape.borderRadius * 1.5,
   },
@@ -77,10 +82,15 @@ const Card: React.FC<CardProps> = ({
       sx={{
         height: fullHeight ? '100%' : 'auto',
         boxShadow: theme.shadows[elevation],
+        // Adjust hover effect for mobile
         '&:hover': hoverable ? {
-          boxShadow: theme.shadows[elevation + 2],
-          transform: 'translateY(-2px)',
+          boxShadow: isMobile ? theme.shadows[elevation + 1] : theme.shadows[elevation + 2],
+          transform: isMobile ? 'translateY(-1px)' : 'translateY(-2px)',
         } : undefined,
+        // Adjust border radius for mobile
+        borderRadius: isMobile ? theme.shape.borderRadius : undefined,
+        // Adjust margin for mobile
+        margin: isMobile ? '0 0 16px 0' : undefined,
         ...props.sx,
       }}
       {...props}
@@ -89,10 +99,10 @@ const Card: React.FC<CardProps> = ({
         <>
           <CardHeader
             title={title && (
-              <Typography 
-                variant={compact ? "subtitle1" : "h6"} 
+              <Typography
+                variant={compact ? "subtitle1" : "h6"}
                 fontWeight={compact ? 500 : 600}
-                sx={{ 
+                sx={{
                   fontSize: compact ? '1rem' : undefined,
                   lineHeight: compact ? 1.4 : undefined,
                 }}
@@ -101,10 +111,10 @@ const Card: React.FC<CardProps> = ({
               </Typography>
             )}
             subheader={subtitle && (
-              <Typography 
-                variant="body2" 
+              <Typography
+                variant="body2"
                 color="text.secondary"
-                sx={{ 
+                sx={{
                   fontSize: compact ? '0.75rem' : '0.875rem',
                   mt: compact ? 0.5 : 1,
                 }}
@@ -113,7 +123,7 @@ const Card: React.FC<CardProps> = ({
               </Typography>
             )}
             action={headerAction}
-            sx={{ 
+            sx={{
               pb: subtitle ? 1 : 0,
               pt: compact ? 1.5 : 2,
               px: compact ? 2 : (isMobile ? 2 : 3),
@@ -126,8 +136,10 @@ const Card: React.FC<CardProps> = ({
       <CardContent
         sx={{
           flexGrow: 1,
-          padding: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '16px !important' : '24px !important')),
-          '&:last-child': { paddingBottom: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '16px !important' : '24px !important')) },
+          padding: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '12px !important' : '24px !important')),
+          '&:last-child': { paddingBottom: noPadding ? '0 !important' : (compact ? '12px !important' : (isMobile ? '12px !important' : '24px !important')) },
+          // Improve readability on mobile
+          fontSize: isMobile ? '0.9rem' : undefined,
           ...contentSx,
         }}
       >
@@ -137,7 +149,7 @@ const Card: React.FC<CardProps> = ({
       {hasFooter && (
         <>
           <Divider />
-          <CardActions sx={{ 
+          <CardActions sx={{
             padding: compact ? '8px 12px' : (isMobile ? '8px 16px' : '12px 24px'),
           }}>
             <Box sx={{ width: '100%' }}>{footer}</Box>
@@ -148,4 +160,4 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
-export default Card; 
+export default Card;

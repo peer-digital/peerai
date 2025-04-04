@@ -138,14 +138,14 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
 <head>
     <title>PeerAI Chat App</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
         }
-        .chat-container { 
-            max-width: 800px; 
+        .chat-container {
+            max-width: 800px;
             margin: 20px auto;
             background: white;
             border-radius: 8px;
@@ -165,18 +165,18 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
         .message-container {
             margin-bottom: 20px;
         }
-        .message { 
+        .message {
             padding: 15px;
             border-radius: 8px;
             margin: 10px 0;
             font-size: 14px;
             line-height: 1.5;
         }
-        .user { 
+        .user {
             background: #e3f2fd;
             border: 1px solid #bbdefb;
         }
-        .assistant { 
+        .assistant {
             background: #f5f5f5;
             border: 1px solid #eeeeee;
             white-space: pre-wrap;
@@ -349,7 +349,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             }
 
             const data = await response.json();
-            
+
             // Remove loading indicator
             loadingDiv.remove();
 
@@ -358,7 +358,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
                 const assistantMessage = data.choices[0].message.content;
                 addMessageToChat('assistant', assistantMessage);
                 showResponseDetails(data);
-                
+
                 // Show reset button, hide input section
                 hideElement('input-section');
                 showElement('reset-section');
@@ -374,7 +374,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             errorDiv.textContent = 'Sorry, there was an error processing your request.';
             document.getElementById('message-container').appendChild(errorDiv);
             setTimeout(() => errorDiv.remove(), 5000);
-            
+
             // Re-enable input and button on error
             input.disabled = false;
             sendButton.disabled = false;
@@ -412,11 +412,20 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <SyntaxHighlighter language="bash" style={atomDark}>
+        <SyntaxHighlighter
+          language="bash"
+          style={atomDark}
+          customStyle={{
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            maxWidth: '100%',
+            overflowX: 'auto'
+          }}
+          wrapLongLines={true}
+        >
           {curl}
         </SyntaxHighlighter>
       </Box>
-      
+
       <Box sx={{ position: 'relative' }}>
         <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
           Response:
@@ -430,7 +439,16 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <SyntaxHighlighter language="json" style={atomDark}>
+        <SyntaxHighlighter
+          language="json"
+          style={atomDark}
+          customStyle={{
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            maxWidth: '100%',
+            overflowX: 'auto'
+          }}
+          wrapLongLines={true}
+        >
           {response}
         </SyntaxHighlighter>
       </Box>
@@ -464,7 +482,16 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <SyntaxHighlighter language="html" style={atomDark}>
+        <SyntaxHighlighter
+          language="html"
+          style={atomDark}
+          customStyle={{
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            maxWidth: '100%',
+            overflowX: 'auto'
+          }}
+          wrapLongLines={true}
+        >
           {chatAppExample.html}
         </SyntaxHighlighter>
       </Box>
@@ -488,7 +515,12 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
   );
 
   return (
-    <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
+    <Box sx={{
+      p: { xs: 2, sm: 3 },
+      maxWidth: '100%',
+      margin: '0 auto',
+      overflowX: 'hidden' // Prevent horizontal scrolling
+    }}>
       <Typography variant="h4" gutterBottom>
         PeerAI API Documentation
       </Typography>
@@ -528,21 +560,21 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           <Typography variant="h5" gutterBottom>
             Quick Start Examples
           </Typography>
-          
-          <CodeBlock 
-            title="Text Generation" 
+
+          <CodeBlock
+            title="Text Generation"
             curl={completionsExample.curl}
             response={completionsExample.response}
           />
 
-          <CodeBlock 
-            title="Vision Analysis" 
+          <CodeBlock
+            title="Vision Analysis"
             curl={visionExample.curl}
             response={visionExample.response}
           />
 
-          <CodeBlock 
-            title="Audio Processing" 
+          <CodeBlock
+            title="Audio Processing"
             curl={audioExample.curl}
             response={audioExample.response}
           />
@@ -559,9 +591,9 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
       <Typography paragraph>
         Head over to our API Playground to test these endpoints interactively and generate cURL commands automatically.
       </Typography>
-      <Button 
-        variant="contained" 
-        color="primary" 
+      <Button
+        variant="contained"
+        color="primary"
         component={RouterLink}
         to="/playground"
         sx={{ mt: 2 }}
@@ -572,4 +604,4 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
   );
 };
 
-export default DeveloperDocs; 
+export default DeveloperDocs;

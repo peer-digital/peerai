@@ -35,4 +35,7 @@ export { default as Form } from './Form';
 export * from './Form';
 
 export { default as PageLoader } from './PageLoader';
-export * from './PageLoader'; 
+export * from './PageLoader';
+
+export { default as MobileLoadingIndicator } from './MobileLoadingIndicator';
+export * from './MobileLoadingIndicator';

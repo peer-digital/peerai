@@ -141,8 +141,8 @@ function Playground() {
     // For completion responses, format nicely
     const response = data as CompletionResponse;
     // Add null check for choices array
-    const content = response.choices && response.choices.length > 0 
-      ? response.choices[0]?.message?.content || '' 
+    const content = response.choices && response.choices.length > 0
+      ? response.choices[0]?.message?.content || ''
       : '';
     const usage = response.usage || { total_tokens: 0 };
     const confidence = response.additional_data?.confidence;
@@ -180,7 +180,7 @@ function Playground() {
             temperature: 0.7,
           };
         }
-        
+
         const newBody = {
           ...currentBody,
           model: model,
@@ -198,7 +198,7 @@ function Playground() {
     const newEndpoint = event.target.value;
     setSelectedEndpoint(newEndpoint);
     setRequestBody(ENDPOINTS[newEndpoint].defaultBody);
-    
+
     // Reset model selection when changing endpoints
     if (newEndpoint === 'completions') {
       setSelectedModel('hosted-llm');
@@ -223,17 +223,17 @@ function Playground() {
   const generateCurlCommand = () => {
     const endpoint = endpointConfigs[selectedEndpoint];
     let command = `curl -X ${endpoint.method} ${API_BASE_URL}${endpoint.path}`;
-    
+
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
       command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
     } else {
       command += ` \\\n  -H "X-API-Key: YOUR_API_KEY"`;
     }
-    
+
     if (endpoint.requiresBody) {
       command += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${requestBody.replace(/\n/g, '')}'`;
     }
-    
+
     return command;
   };
 
@@ -246,30 +246,30 @@ function Playground() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Validate API key
       if (!apiKey) {
         throw new Error('API key is required');
       }
-      
+
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
-      
+
       const response = await apiClient.get('/api/v1/llm/models', {
         headers: {
           'X-API-Key': apiKey,
         },
       });
-      
+
       const models = response.data;
-      
+
       if (!Array.isArray(models)) {
         throw new Error('Invalid response format: models data is not an array');
       }
-      
+
       setAvailableModels(models);
-      
+
       // Update the supportedModels for the completions endpoint
       const modelNames = models.map((model: any) => model.name);
       setEndpointConfigs({
@@ -331,21 +331,21 @@ function Playground() {
     setError(null);
     setResponse('');
     const endpoint = endpointConfigs[selectedEndpoint];
-    
+
     try {
       // Validate API key
       if (!apiKey) {
         throw new Error('API key is required');
       }
-      
+
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
-      
+
       const headers: Record<string, string> = {
         'X-API-Key': apiKey,
       };
-      
+
       if (endpoint.requiresBody) {
         headers['Content-Type'] = 'application/json';
       }
@@ -368,10 +368,19 @@ function Playground() {
   };
 
   return (
-    <Box sx={{ p: 3, height: 'calc(100vh - 88px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{
+      p: { xs: 2, sm: 3 },
+      height: { xs: 'auto', sm: 'calc(100vh - 88px)' },
+      display: 'flex',
+      flexDirection: 'column',
+      mb: { xs: 4, sm: 0 }, // Add bottom margin on mobile
+      overflow: 'hidden', // Prevent overflow
+      maxWidth: '100vw', // Limit width to viewport
+      boxSizing: 'border-box' // Include padding in width calculation
+    }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             API Playground
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
@@ -380,41 +389,46 @@ function Playground() {
         </Box>
       </Stack>
 
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'row', 
-        gap: 3,
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 2, sm: 3 },
         flexGrow: 1,
-        minHeight: 0,
-        '@media (max-width: 900px)': {
-          flexDirection: 'column'
-        }
+        minHeight: 0
       }}>
-        <Box sx={{ 
-          flex: '1 0 50%',
-          maxWidth: '50%',
-          '@media (max-width: 900px)': {
-            maxWidth: '100%'
-          }
+        <Box sx={{
+          flex: { xs: '1 0 100%', md: '1 0 50%' },
+          maxWidth: { xs: '100%', md: '50%' }
         }}>
-          <Card sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            height: '100%',
+          <Card sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: { xs: 'auto', md: '100%' },
+            mb: { xs: 2, md: 0 }
           }}>
-            <CardContent sx={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 3,
+            <CardContent sx={{
+              flex: 1,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: { xs: 2, sm: 3 },
               width: '100%',
               '&.MuiCardContent-root': {
-                padding: 3,
+                padding: { xs: 2, sm: 3 },
+                maxHeight: { xs: 'auto', md: '100%' }
               }
             }}>
               <Box>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}
+                >
                   <ApiIcon fontSize="small" />
                   Request
                 </Typography>
@@ -481,14 +495,22 @@ function Playground() {
                 type="password"
                 helperText="API keys should only contain letters, numbers, hyphens, and underscores"
                 error={apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey)}
+                sx={{
+                  '& .MuiInputBase-root': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' }
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                  }
+                }}
               />
 
               {endpointConfigs[selectedEndpoint].requiresBody && (
                 <TextField
                   fullWidth
                   multiline
-                  minRows={8}
-                  maxRows={12}
+                  minRows={{ xs: 6, sm: 8 }}
+                  maxRows={{ xs: 10, sm: 12 }}
                   label="Request Body"
                   value={requestBody}
                   onChange={(e) => setRequestBody(e.target.value)}
@@ -498,50 +520,71 @@ function Playground() {
                       fontFamily: 'monospace',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
                     },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
                   }}
                 />
               )}
 
               <Box>
-                <Stack direction="row" spacing={2} alignItems="center">
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={2}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                >
                   <Button
                     variant="contained"
                     onClick={handleSubmit}
                     disabled={loading}
                     startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
+                    fullWidth={false}
+                    sx={{ minWidth: '140px' }}
                   >
                     {loading ? 'Sending...' : 'Send Request'}
                   </Button>
 
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={showCurlCommand}
-                        onChange={(e) => setShowCurlCommand(e.target.checked)}
-                      />
-                    }
-                    label="Show cURL"
-                  />
-
-                  {endpointConfigs[selectedEndpoint].requiresBody && (
+                  <Stack
+                    direction="row"
+                    spacing={2}
+                    alignItems="center"
+                    sx={{ flexWrap: { xs: 'wrap', sm: 'nowrap' } }}
+                  >
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={mockMode}
-                          onChange={handleMockModeChange}
+                          checked={showCurlCommand}
+                          onChange={(e) => setShowCurlCommand(e.target.checked)}
+                          size="small"
                         />
                       }
-                      label="Mock Mode"
+                      label="Show cURL"
+                      sx={{ mr: 1, minWidth: '120px' }}
                     />
-                  )}
+
+                    {endpointConfigs[selectedEndpoint].requiresBody && (
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={mockMode}
+                            onChange={handleMockModeChange}
+                            size="small"
+                          />
+                        }
+                        label="Mock Mode"
+                        sx={{ minWidth: '120px' }}
+                      />
+                    )}
+                  </Stack>
                 </Stack>
               </Box>
 
               {showCurlCommand && (
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
+                <Paper
+                  variant="outlined"
+                  sx={{
                     p: 2,
                     bgcolor: theme.palette.grey[900],
                     position: 'relative',
@@ -574,10 +617,12 @@ function Playground() {
                       margin: 0,
                       padding: theme.spacing(1),
                       borderRadius: theme.shape.borderRadius,
-                      maxHeight: '200px',
+                      maxHeight: { xs: '150px', sm: '200px' },
                       overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      maxWidth: '100%'
                     }}
                     wrapLines={true}
                     wrapLongLines={true}
@@ -590,31 +635,39 @@ function Playground() {
           </Card>
         </Box>
 
-        <Box sx={{ 
-          flex: '1 0 50%',
-          maxWidth: '50%',
-          '@media (max-width: 900px)': {
-            maxWidth: '100%'
-          }
+        <Box sx={{
+          flex: { xs: '1 0 100%', md: '1 0 50%' },
+          maxWidth: { xs: '100%', md: '50%' }
         }}>
-          <Card sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            height: '100%',
+          <Card sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: { xs: 'auto', md: '100%' },
+            mb: { xs: 2, md: 0 }
           }}>
-            <CardContent sx={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 2,
+            <CardContent sx={{
+              flex: 1,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: { xs: 1.5, sm: 2 },
               width: '100%',
               '&.MuiCardContent-root': {
-                padding: 3,
+                padding: { xs: 2, sm: 3 },
+                maxHeight: { xs: '400px', md: '100%' } // Limit height on mobile
               }
             }}>
               <Box>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}
+                >
                   <ApiIcon fontSize="small" />
                   Response
                 </Typography>
@@ -637,9 +690,9 @@ function Playground() {
               )}
 
               {!loading && !error && response && (
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
+                <Paper
+                  variant="outlined"
+                  sx={{
                     bgcolor: theme.palette.grey[900],
                     position: 'relative',
                     flex: 1,
@@ -663,16 +716,18 @@ function Playground() {
                     style={atomOneDark}
                     customStyle={{
                       margin: 0,
-                      padding: theme.spacing(2),
+                      padding: theme.spacing(1.5),
                       borderRadius: theme.shape.borderRadius,
                       height: '100%',
-                      minHeight: '200px',
-                      maxHeight: 'calc(100vh - 300px)',
+                      minHeight: { xs: '150px', sm: '200px' },
+                      maxHeight: { xs: '300px', md: 'calc(100vh - 300px)' },
                       overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       width: '100%',
                       minWidth: 0,
+                      maxWidth: '100%',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
                     }}
                     wrapLines={true}
                     wrapLongLines={true}
@@ -697,4 +752,4 @@ function Playground() {
   );
 }
 
-export default Playground; 
+export default Playground;

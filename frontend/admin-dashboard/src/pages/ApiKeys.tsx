@@ -161,10 +161,16 @@ const ApiKeys: React.FC = () => {
   const keys = apiKeys || [];
 
   return (
-    <Box p={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box p={{ xs: 2, sm: 3 }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={{ xs: 2, sm: 0 }}
+        mb={3}
+      >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             API Keys
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
@@ -181,6 +187,8 @@ const ApiKeys: React.FC = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setOpen(true)}
+            size="medium"
+            sx={{ whiteSpace: 'nowrap' }}
           >
             Create New Key
           </Button>
@@ -189,15 +197,16 @@ const ApiKeys: React.FC = () => {
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {isLoading && <LinearProgress />}
-        
-        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
-          <Table stickyHeader>
+
+        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)', overflowX: 'auto' }}>
+          <Table stickyHeader size="small">
+            {/* Responsive table that works better on mobile */}
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
-                <TableCell>Key</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell>Last Used</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Key</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Created</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Last Used</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -209,10 +218,24 @@ const ApiKeys: React.FC = () => {
                     <TableCell>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <KeyIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                        <Typography>{key.name}</Typography>
+                        <Box>
+                          <Typography>{key.name}</Typography>
+                          {/* Show key info on mobile only */}
+                          <Typography
+                            variant="caption"
+                            fontFamily="monospace"
+                            sx={{
+                              display: { xs: 'block', sm: 'none' },
+                              opacity: 0.7,
+                              mt: 0.5
+                            }}
+                          >
+                            {key.key.slice(0, 8)}...{key.key.slice(-4)}
+                          </Typography>
+                        </Box>
                       </Stack>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography fontFamily="monospace" sx={{ opacity: 0.7 }}>
                           {key.key.slice(0, 12)}...{key.key.slice(-4)}
@@ -227,12 +250,12 @@ const ApiKeys: React.FC = () => {
                         </Tooltip>
                       </Stack>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <Tooltip title={formatDate(key.createdAt)} arrow>
                         <span>{formatDate(key.createdAt)}</span>
                       </Tooltip>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <Tooltip title={key.lastUsed ? formatDate(key.lastUsed) : 'Never used'} arrow>
                         <span>{key.lastUsed ? formatDate(key.lastUsed) : 'Never'}</span>
                       </Tooltip>
@@ -276,10 +299,10 @@ const ApiKeys: React.FC = () => {
         </TableContainer>
       </Paper>
 
-      <Dialog 
-        open={open} 
-        onClose={handleCloseDialog} 
-        maxWidth="sm" 
+      <Dialog
+        open={open}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 2 }
@@ -292,9 +315,9 @@ const ApiKeys: React.FC = () => {
         <DialogContent sx={{ mt: 2 }}>
           {newKey ? (
             <Box>
-              <Alert 
-                severity="warning" 
-                sx={{ 
+              <Alert
+                severity="warning"
+                sx={{
                   mb: 3,
                   '& .MuiAlert-message': {
                     width: '100%'
@@ -342,7 +365,7 @@ const ApiKeys: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
-          <Button 
+          <Button
             onClick={handleCloseDialog}
             color="inherit"
           >
@@ -364,4 +387,4 @@ const ApiKeys: React.FC = () => {
   );
 };
 
-export default ApiKeys; 
+export default ApiKeys;

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthContextType, LoginCredentials, RegisterCredentials, User } from '../types/auth';
 import { authService } from '../services/auth.service';
+import { MobileLoadingIndicator } from '../components/ui';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -80,8 +81,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <MobileLoadingIndicator />;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}; 
+};

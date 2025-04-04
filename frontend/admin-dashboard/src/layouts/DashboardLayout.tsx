@@ -16,7 +16,7 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  Badge,
+  // Badge removed,
   Tooltip,
   useMediaQuery,
   Collapse,
@@ -29,12 +29,12 @@ import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
   VpnKey as ApiKeyIcon,
-  Settings as SettingsIcon,
-  Assessment as AssessmentIcon,
+  // SettingsIcon removed,
+  // AssessmentIcon removed,
   Code as CodeIcon,
-  AccountCircle as AccountCircleIcon,
+  // AccountCircleIcon removed,
   MenuBook as MenuBookIcon,
-  Notifications as NotificationsIcon,
+  // NotificationsIcon removed
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Help as HelpIcon,
@@ -53,7 +53,9 @@ import { hasAnyPermission } from '../utils/rbac';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import ReferralModal from '../components/ReferralModal';
 
+// Responsive drawer width
 const drawerWidth = 260;
+const mobileDrawerWidth = '100%';
 
 interface MenuItem {
   text: string;
@@ -73,6 +75,9 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     duration: theme.transitions.duration.leavingScreen,
   }),
   marginLeft: 0,
+  overflowX: 'hidden', // Prevent horizontal scrolling
+  maxWidth: '100vw', // Limit width to viewport
+  boxSizing: 'border-box', // Include padding in width calculation
   ...(open && {
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.easeOut,
@@ -84,6 +89,9 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     marginLeft: 0,
     padding: theme.spacing(2),
     width: '100%',
+  },
+  [theme.breakpoints.down('xs')]: {
+    padding: theme.spacing(1.5),
   },
 }));
 
@@ -107,6 +115,9 @@ const AppBarStyled = styled(AppBar, {
   boxShadow: '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)',
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
+  [theme.breakpoints.down('sm')]: {
+    width: '100%',
+  },
 }));
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -155,23 +166,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
-  
+
   // Determine which logo to use based on theme mode
   // @important: Keep using SVG logos for the dashboard UI
   const logoSrc = theme.palette.mode === 'dark' ? '/assets/logo_neg.svg' : '/assets/logo.svg';
-  
+
   const [open, setOpen] = useState(!isMobile);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
-  const [notificationMenuAnchor, setNotificationMenuAnchor] = useState<null | HTMLElement>(null);
+  // Notification bell removed
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
-  
+
   // Check if user has any of the required permissions
   const hasRequiredPermissions = (requiredPermissions: Permission[]): boolean => {
     if (isGuestMode) return false;
     if (!user) return false;
     return hasAnyPermission(user, requiredPermissions);
   };
-  
+
   // Close drawer on mobile by default
   useEffect(() => {
     if (isMobile) {
@@ -196,21 +207,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
   };
-  
-  const handleNotificationMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationMenuAnchor(event.currentTarget);
-  };
 
-  const handleNotificationMenuClose = () => {
-    setNotificationMenuAnchor(null);
-  };
+  // Notification handlers removed
 
   const handleLogout = () => {
     handleUserMenuClose();
     logout();
     navigate('/login');
   };
-  
+
   const toggleHelpMenu = () => {
     setHelpMenuOpen(!helpMenuOpen);
   };
@@ -221,8 +226,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
     { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
     { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
-    { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+    // Analytics and Settings menu items removed
     // Only show these items for super admins
     ...(user?.role === Role.SUPER_ADMIN ? [
       { text: 'Users', icon: <PeopleIcon />, path: '/users' },
@@ -247,26 +251,26 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
           >
             <MenuIcon />
           </IconButton>
-          
+
           {/* Add logo to AppBar when drawer is closed */}
           {!open && (
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
               <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
             </Box>
           )}
-          
+
           {/* Page title based on current route */}
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
-          
+
           {/* Theme toggle for all users */}
           <ThemeToggle />
-          
+
           {/* Only show these controls for authenticated users */}
           {!isGuestMode && (
             <>
-              {/* Refer a Friend button */}
+              {/* Refer a Friend button - show text only on larger screens */}
               <Tooltip title="Refer a Friend">
                 <Button
                   variant="outlined"
@@ -276,33 +280,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                     setIsReferralModalOpen(true);
                     onOpenReferralModal?.();
                   }}
-                  sx={{ mr: 1 }}
+                  sx={{
+                    mr: 1,
+                    '& .MuiButton-startIcon': {
+                      mr: { xs: 0, sm: 1 }
+                    },
+                  }}
                 >
-                  Refer a Friend
+                  <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                    Refer a Friend
+                  </Box>
                 </Button>
               </Tooltip>
 
-              <Tooltip title="Notifications">
-                <IconButton 
-                  color="inherit" 
-                  onClick={handleNotificationMenuOpen}
-                  sx={{ mx: 1 }}
-                >
-                  <Badge badgeContent={3} color="error">
-                    <NotificationsIcon />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-              
+              {/* Notification bell removed */}
+
               <Tooltip title="Account">
                 <IconButton
                   onClick={handleUserMenuOpen}
                   color="inherit"
                   sx={{ ml: 1 }}
                 >
-                  <Avatar 
-                    sx={{ 
-                      width: 32, 
+                  <Avatar
+                    sx={{
+                      width: 32,
                       height: 32,
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',
@@ -312,7 +313,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                   </Avatar>
                 </IconButton>
               </Tooltip>
-              
+
               <Menu
                 anchorEl={userMenuAnchor}
                 open={Boolean(userMenuAnchor)}
@@ -320,12 +321,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               >
-                <MenuItem onClick={handleUserMenuClose}>
-                  <ListItemIcon>
-                    <AccountCircleIcon fontSize="small" />
-                  </ListItemIcon>
-                  Profile
-                </MenuItem>
+                {/* Profile menu item removed */}
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
@@ -333,38 +329,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                   Logout
                 </MenuItem>
               </Menu>
-              
-              <Menu
-                anchorEl={notificationMenuAnchor}
-                open={Boolean(notificationMenuAnchor)}
-                onClose={handleNotificationMenuClose}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-              >
-                <MenuItem onClick={handleNotificationMenuClose}>
-                  <Typography variant="inherit" noWrap>
-                    New user registered
-                  </Typography>
-                </MenuItem>
-                <MenuItem onClick={handleNotificationMenuClose}>
-                  <Typography variant="inherit" noWrap>
-                    Usage limit reached
-                  </Typography>
-                </MenuItem>
-                <MenuItem onClick={handleNotificationMenuClose}>
-                  <Typography variant="inherit" noWrap>
-                    System update completed
-                  </Typography>
-                </MenuItem>
-              </Menu>
+
+              {/* Notification menu removed */}
             </>
           )}
-          
+
           {/* Show login button for guest users */}
           {isGuestMode && (
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
+              color="primary"
               onClick={() => navigate('/login')}
             >
               Sign In
@@ -372,19 +346,29 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
           )}
         </Toolbar>
       </AppBarStyled>
-      
+
       <Drawer
         sx={{
-          width: drawerWidth,
+          width: { xs: '100%', sm: drawerWidth },
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: drawerWidth,
+            width: { xs: '85%', sm: drawerWidth },
             boxSizing: 'border-box',
           },
+          '& .MuiBackdrop-root': {
+            // Ensure backdrop is properly removed when drawer closes
+            zIndex: -1,
+          },
         }}
-        variant="persistent"
+        variant={isMobile ? 'temporary' : 'persistent'}
         anchor="left"
         open={open}
+        onClose={isMobile ? handleDrawerClose : undefined}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+          disableScrollLock: true, // Prevent scroll issues
+          disablePortal: false, // Use portal for proper stacking
+        }}
       >
         <DrawerHeader>
           <IconButton onClick={handleDrawerClose}>
@@ -405,12 +389,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
             if (isGuestMode && !item.guestAccessible) {
               return null;
             }
-            
+
             return (
               <ListItem key={item.text} disablePadding>
                 <ListItemButton
                   selected={location.pathname === item.path}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    // First close the drawer on mobile to prevent overlay issues
+                    if (isMobile) {
+                      setOpen(false); // Directly set state instead of using handler
+                    }
+                    // Use setTimeout to ensure drawer closes before navigation
+                    setTimeout(() => {
+                      navigate(item.path);
+                    }, isMobile ? 150 : 0);
+                  }}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.text} />
@@ -420,7 +413,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
           })}
         </List>
       </Drawer>
-      
+
       <Main open={open}>
         <DrawerHeader />
         {children}
@@ -438,4 +431,4 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
   );
 };
 
-export default DashboardLayout; 
+export default DashboardLayout;

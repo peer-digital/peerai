@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
   Button,
   Select,
@@ -18,6 +18,7 @@ import {
 import { User, Role } from '../types/rbac';
 import { rbacApi } from '../api/rbac';
 import { toast } from 'react-toastify';
+import { LoadingOverlay } from '../components/ui';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -53,7 +54,7 @@ const UserManagement: React.FC = () => {
   const handleRoleChange = async (userId: number, newRole: Role) => {
     try {
       const updatedUser = await rbacApi.updateUserRole(userId, newRole);
-      setUsers(users.map(user => 
+      setUsers(users.map(user =>
         user.id === userId ? updatedUser : user
       ));
       toast.success('User role updated successfully');
@@ -63,16 +64,14 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <Box p={4}>
+    <Box p={4} position="relative">
+      <LoadingOverlay loading={loading} />
+
       <Typography variant="h4" gutterBottom>
         User Management
       </Typography>
-      
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -107,9 +106,9 @@ const UserManagement: React.FC = () => {
                 <TableCell>{user.team_id || 'No team'}</TableCell>
                 <TableCell>{user.is_active ? 'Active' : 'Inactive'}</TableCell>
                 <TableCell>
-                  <Button 
-                    variant="outlined" 
-                    color="primary" 
+                  <Button
+                    variant="outlined"
+                    color="primary"
                     size="small"
                   >
                     Edit
@@ -124,4 +123,4 @@ const UserManagement: React.FC = () => {
   );
 };
 
-export default UserManagement; 
+export default UserManagement;

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { Permission, Role } from './types/rbac';
 import PermissionGuard from './components/PermissionGuard';
-import { ToastContainer, PageLoader } from './components/ui';
+import { ToastContainer, PageLoader, MobileLoadingIndicator } from './components/ui';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 
 // Import our custom ThemeProvider instead of MUI's
@@ -74,56 +74,56 @@ function App() {
                     }
                   >
                     <Route index element={<Navigate to="/dashboard" replace />} />
-                    
+
                     {/* Dashboard - different views based on role */}
                     <Route path="/dashboard" element={
                       <PermissionGuard requiredPermissions={[Permission.VIEW_OWN_USAGE, Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]}>
                         <Dashboard isReferralModalOpen={isReferralModalOpen} onReferralModalClose={() => setIsReferralModalOpen(false)} />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* Team management - for admins */}
                     <Route path="/teams" element={
                       <PermissionGuard requiredPermissions={[Permission.MANAGE_TEAM_MEMBERS, Permission.MANAGE_ALL_TEAMS]}>
                         <TeamManagement />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* User management - for super admins only */}
                     <Route path="/users" element={
                       <PermissionGuard requiredPermissions={[Permission.MANAGE_ALL_TEAMS]}>
                         <Users />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* API Keys - for users who can use the API */}
                     <Route path="/api-keys" element={
                       <PermissionGuard requiredPermissions={[Permission.USE_API]}>
                         <ApiKeys />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* Analytics - for admins and super admins */}
                     <Route path="/analytics" element={
                       <PermissionGuard requiredPermissions={[Permission.VIEW_TEAM_USAGE, Permission.VIEW_ALL_USAGE]}>
                         <Analytics />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* Settings - for super admins */}
                     <Route path="/settings" element={
                       <PermissionGuard requiredPermissions={[Permission.VIEW_SETTINGS, Permission.EDIT_SETTINGS, Permission.SYSTEM_CONFIGURATION]}>
                         <Settings />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* Model Management - for super admins only */}
                     <Route path="/models" element={
                       <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
                         <ModelManagement />
                       </PermissionGuard>
                     } />
-                    
+
                     {/* Playground - for users who can use the API */}
                     <Route path="/playground" element={
                       <PermissionGuard requiredPermissions={[Permission.USE_API]}>
@@ -154,7 +154,7 @@ function App() {
 // Route guard for authenticated users
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -171,7 +171,7 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
@@ -184,9 +184,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 // Layout for guest users that applies DashboardLayout
 function GuestLayout({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
@@ -203,9 +203,9 @@ function GuestLayout({ children }: { children: JSX.Element }) {
 // Root redirect component that sends authenticated users to dashboard and guests to get-started
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
@@ -218,7 +218,7 @@ function RootRedirect() {
 // Get Started route component that works for both authenticated and non-authenticated users
 function GetStartedRoute() {
   const { isAuthenticated } = useAuth();
-  
+
   return isAuthenticated ? (
     <DashboardLayout>
       <GetStarted />
