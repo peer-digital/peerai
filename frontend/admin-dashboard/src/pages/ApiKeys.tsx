@@ -131,9 +131,28 @@ const ApiKeys: React.FC = () => {
     await createKeyMutation.mutateAsync(newKeyName);
   };
 
-  const handleCopyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast.success('API key copied to clipboard');
+  const handleCopyKey = async (key: string) => {
+    try {
+      // Use the Clipboard API with fallback for better mobile support
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(key);
+      } else {
+        // Fallback method for browsers that don't support clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = key;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      toast.success('API key copied to clipboard');
+    } catch (err) {
+      console.error('Failed to copy API key', err);
+      toast.error('Failed to copy API key to clipboard');
+    }
   };
 
   const handleCloseDialog = () => {
@@ -221,17 +240,34 @@ const ApiKeys: React.FC = () => {
                         <Box>
                           <Typography>{key.name}</Typography>
                           {/* Show key info on mobile only */}
-                          <Typography
-                            variant="caption"
-                            fontFamily="monospace"
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1}
                             sx={{
-                              display: { xs: 'block', sm: 'none' },
-                              opacity: 0.7,
+                              display: { xs: 'flex', sm: 'none' },
                               mt: 0.5
                             }}
                           >
-                            {key.key.slice(0, 8)}...{key.key.slice(-4)}
-                          </Typography>
+                            <Typography
+                              variant="caption"
+                              fontFamily="monospace"
+                              sx={{ opacity: 0.7 }}
+                            >
+                              {key.key.slice(0, 8)}...{key.key.slice(-4)}
+                            </Typography>
+                            <Tooltip title="Copy API key" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyKey(key.key);
+                                }}
+                              >
+                                <CopyIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
                         </Box>
                       </Stack>
                     </TableCell>
@@ -340,7 +376,14 @@ const ApiKeys: React.FC = () => {
                   sx: { fontFamily: 'monospace' },
                   endAdornment: (
                     <Tooltip title="Copy API key" arrow>
-                      <IconButton onClick={() => handleCopyKey(newKey)}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (newKey) {
+                            handleCopyKey(newKey);
+                          }
+                        }}
+                      >
                         <CopyIcon />
                       </IconButton>
                     </Tooltip>
