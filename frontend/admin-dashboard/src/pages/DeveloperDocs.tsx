@@ -416,7 +416,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           language="bash"
           style={atomDark}
           customStyle={{
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: '0.875rem',
             maxWidth: '100%',
             overflowX: 'auto'
           }}
@@ -443,7 +443,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           language="json"
           style={atomDark}
           customStyle={{
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: '0.875rem',
             maxWidth: '100%',
             overflowX: 'auto'
           }}
@@ -486,7 +486,7 @@ curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
           language="html"
           style={atomDark}
           customStyle={{
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: '0.875rem',
             maxWidth: '100%',
             overflowX: 'auto'
           }}

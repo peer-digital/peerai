@@ -509,8 +509,8 @@ function Playground() {
                 <TextField
                   fullWidth
                   multiline
-                  minRows={{ xs: 6, sm: 8 }}
-                  maxRows={{ xs: 10, sm: 12 }}
+                  minRows={6}
+                  maxRows={10}
                   label="Request Body"
                   value={requestBody}
                   onChange={(e) => setRequestBody(e.target.value)}
@@ -617,11 +617,11 @@ function Playground() {
                       margin: 0,
                       padding: theme.spacing(1),
                       borderRadius: theme.shape.borderRadius,
-                      maxHeight: { xs: '150px', sm: '200px' },
+                      maxHeight: '150px',
                       overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      fontSize: '0.75rem',
                       maxWidth: '100%'
                     }}
                     wrapLines={true}
@@ -719,15 +719,15 @@ function Playground() {
                       padding: theme.spacing(1.5),
                       borderRadius: theme.shape.borderRadius,
                       height: '100%',
-                      minHeight: { xs: '150px', sm: '200px' },
-                      maxHeight: { xs: '300px', md: 'calc(100vh - 300px)' },
+                      minHeight: '150px',
+                      maxHeight: '300px',
                       overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       width: '100%',
                       minWidth: 0,
                       maxWidth: '100%',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                      fontSize: '0.75rem'
                     }}
                     wrapLines={true}
                     wrapLongLines={true}
