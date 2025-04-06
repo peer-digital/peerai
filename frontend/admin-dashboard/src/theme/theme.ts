@@ -415,6 +415,43 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    // Fix for menu and popover components
+    MuiPopover: {
+      defaultProps: {
+        disableScrollLock: true,
+        keepMounted: false,
+      },
+      styleOverrides: {
+        root: {
+          '&[aria-hidden="true"]': {
+            display: 'none',
+            zIndex: -1,
+          },
+        },
+        paper: {
+          boxShadow: mode === 'light'
+            ? '0 4px 20px rgba(0, 0, 0, 0.15)'
+            : '0 4px 20px rgba(0, 0, 0, 0.5)',
+          borderRadius: '8px',
+        },
+      },
+    },
+    MuiMenu: {
+      defaultProps: {
+        disableScrollLock: true,
+        keepMounted: false,
+      },
+      styleOverrides: {
+        root: {
+          '& .MuiBackdrop-root': {
+            cursor: 'pointer',
+          },
+        },
+        paper: {
+          marginTop: '8px',
+        },
+      },
+    },
   },
 });
 

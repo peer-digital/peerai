@@ -88,3 +88,14 @@ body.MuiModal-open:not(:has(.MuiDrawer-root[aria-hidden="false"])) {
   overflow: auto !important;
   padding-right: 0 !important;
 }
+
+/* Fix for MuiMenu overlay issue */
+.MuiPopover-root.MuiMenu-root.MuiModal-root.css-10nakn3-MuiModal-root-MuiPopover-root-MuiMenu-root[aria-hidden="true"] {
+  display: none !important;
+  z-index: -1 !important;
+}
+
+/* Fix for menu backdrop click issue */
+.MuiPopover-root.MuiMenu-root .MuiBackdrop-root {
+  cursor: pointer;
+}

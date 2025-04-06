@@ -218,24 +218,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     setOpen(true);
   };
 
+  // Helper function to clean up modal elements
+  const cleanupModalElements = () => {
+    setTimeout(() => {
+      // Clean up any lingering backdrop
+      const backdrops = document.querySelectorAll('.MuiBackdrop-root');
+      backdrops.forEach(backdrop => {
+        if (backdrop.getAttribute('aria-hidden') === 'true') {
+          (backdrop as HTMLElement).style.display = 'none';
+        }
+      });
+
+      // Clean up any lingering drawer modal
+      const drawerModal = document.querySelector('.css-1so0oxj-MuiModal-root-MuiDrawer-root');
+      if (drawerModal && drawerModal.getAttribute('aria-hidden') === 'true') {
+        (drawerModal as HTMLElement).style.display = 'none';
+      }
+
+      // Clean up any lingering menu modal
+      const menuModal = document.querySelector('.css-10nakn3-MuiModal-root-MuiPopover-root-MuiMenu-root');
+      if (menuModal && menuModal.getAttribute('aria-hidden') === 'true') {
+        (menuModal as HTMLElement).style.display = 'none';
+      }
+    }, 300); // Wait for transition to complete
+  };
+
   const handleDrawerClose = () => {
     // Close the drawer
     setOpen(false);
 
     // Force cleanup of any lingering backdrop or overlay
-    setTimeout(() => {
-      const backdrop = document.querySelector('.MuiBackdrop-root');
-      if (backdrop) {
-        backdrop.setAttribute('aria-hidden', 'true');
-        (backdrop as HTMLElement).style.display = 'none';
-      }
-
-      const modal = document.querySelector('.css-1so0oxj-MuiModal-root-MuiDrawer-root');
-      if (modal) {
-        modal.setAttribute('aria-hidden', 'true');
-        (modal as HTMLElement).style.display = 'none';
-      }
-    }, 300); // Wait for transition to complete
+    cleanupModalElements();
   };
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -244,6 +257,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
 
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
+    cleanupModalElements();
   };
 
   // Notification handlers removed
@@ -356,8 +370,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                 anchorEl={userMenuAnchor}
                 open={Boolean(userMenuAnchor)}
                 onClose={handleUserMenuClose}
+                onClick={handleUserMenuClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                slotProps={{
+                  backdrop: {
+                    onClick: handleUserMenuClose,
+                    onContextMenu: (e) => {
+                      e.preventDefault();
+                      handleUserMenuClose();
+                    },
+                  },
+                }}
+                MenuListProps={{
+                  'aria-labelledby': 'user-menu-button',
+                  dense: true,
+                }}
+                disableScrollLock
+                disablePortal={false}
+                keepMounted={false}
               >
                 {/* Profile menu item removed */}
                 <MenuItem onClick={handleLogout}>
