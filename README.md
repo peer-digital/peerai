@@ -159,6 +159,10 @@ cp .env.example .env
 
 4. **Initialize the database**
 ```bash
+# Using the sync_db.sh script (recommended for new developers)
+./backend/scripts/sync_db.sh
+
+# Or using alembic directly
 alembic upgrade head
 ```
 
@@ -191,6 +195,38 @@ pytest
 
 The test suite uses a separate PostgreSQL database to ensure isolation from your development environment. Each test runs in a transaction that is rolled back after the test completes.
 
+## Database Management
+
+### Synchronizing the Database Schema
+
+When setting up a new development environment or after pulling changes that include database migrations, you need to synchronize your database schema. We provide a convenient script for this purpose:
+
+```bash
+# Using the shell script (recommended)
+./backend/scripts/sync_db.sh
+
+# Or using the Python script directly
+python -m backend.scripts.sync_database
+```
+
+This script will:
+1. Check your database connection
+2. Identify the current migration version
+3. Run all necessary migrations to bring your schema up to date
+4. Provide clear feedback on the process
+
+### Creating Migrations
+
+If you've made changes to the database models, you need to create a new migration:
+
+```bash
+# Generate a new migration
+alembic revision --autogenerate -m "description_of_changes"
+
+# Apply the migration
+alembic upgrade head
+```
+
 ## Documentation
 
 - [API Documentation](docs/api.md)
@@ -212,4 +248,4 @@ Proprietary - All rights reserved by Peer Digital Sweden AB
 
 ## Support
 
-For support, email support@peerdigital.se or visit our [support portal](https://support.peerdigital.se). 
+For support, email support@peerdigital.se or visit our [support portal](https://support.peerdigital.se).
