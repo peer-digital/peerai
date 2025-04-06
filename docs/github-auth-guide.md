@@ -128,8 +128,8 @@ If you need to set up GitHub authentication manually:
 2. **Verify the authentication**
    ```bash
    # SSH into the VM
-   ssh ubuntu@158.174.210.91
-   
+   ssh ubuntu@app.peerdigital.se
+
    # Test the authentication
    GITHUB_USER=your_username GITHUB_REPO=peer-ai ./scripts/test_github_auth.sh
    ```
@@ -174,4 +174,4 @@ This script will attempt to clone the repository to a temporary directory. If su
 - Store the token securely and only share it through secure channels
 - Set an expiration date for your token to limit the security risk
 - Use the minimum required permissions for your token
-- Regularly rotate your tokens, especially if you suspect they may have been compromised 
+- Regularly rotate your tokens, especially if you suspect they may have been compromised

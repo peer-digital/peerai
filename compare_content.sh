@@ -8,7 +8,7 @@ NC='\033[0m' # No Color
 
 # Test URLs
 LOCAL_URL="http://localhost:3000"
-PROD_URL="http://158.174.210.91"
+PROD_URL="http://app.peerdigital.se"
 
 # Test endpoint
 ENDPOINT="/login"
@@ -29,4 +29,4 @@ echo -e "${YELLOW}Differences found:${NC}"
 diff "$local_file" "$prod_file" | grep -v "^[0-9]" | grep -v "^---" | grep -v "^a" | grep -v "^d"
 
 # Clean up
-rm "$local_file" "$prod_file" 
+rm "$local_file" "$prod_file"

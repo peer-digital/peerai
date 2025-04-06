@@ -27,7 +27,7 @@ ADMIN_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.peerdigital.se",
-    "http://158.174.210.91",  # @important: VM IP address for development
+    "http://app.peerdigital.se",  # @important: Server domain for production
 ]
 
 app = FastAPI(
@@ -68,11 +68,11 @@ async def admin_cors_middleware(request: Request, call_next):
     if origin and origin in ADMIN_ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Origin"] = origin
-    # If not an allowed admin origin, ensure allow_origin is set (to '*' from main middleware) 
+    # If not an allowed admin origin, ensure allow_origin is set (to '*' from main middleware)
     # and credentials are not allowed (as per main middleware)
-    elif "access-control-allow-origin" not in response.headers: 
+    elif "access-control-allow-origin" not in response.headers:
          response.headers["Access-Control-Allow-Origin"] = "*"
-         
+
     return response
 
 

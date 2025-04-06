@@ -18,50 +18,50 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'production' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3  # @note: GitHub's official checkout action - do not change URL
-      
+
       # --- Frontend Build Steps ---
       - name: Setup Node.js
         uses: actions/setup-node@v4  # @note: Latest Node.js setup action
         with:
           node-version: '20'  # @note: Node.js version for frontend build
           cache: 'npm'  # @note: Cache npm dependencies for faster builds
-      
+
       - name: Install Frontend Dependencies
         run: |
           cd frontend/admin-dashboard
           npm ci  # @note: Clean install for reproducible builds
-      
+
       - name: Build Frontend
         run: |
           cd frontend/admin-dashboard
           npm run build  # @note: Build frontend application
         env:
-          VITE_API_BASE_URL: http://158.174.210.91  # @url: Production VM IP
+          VITE_API_BASE_URL: http://app.peerdigital.se  # @url: Production server domain
           VITE_APP_ENV: production
           VITE_AUTH_ENABLED: true
-      
+
       - name: Create Frontend Tarball
         run: |
           cd frontend/admin-dashboard
           tar -czvf ../../frontend-build.tar.gz dist/  # @note: Create tarball of build output
-      
+
       # --- SSH Setup ---
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0  # @note: Secure SSH key handling
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      
+
       - name: Add remote host to known_hosts
-        run: ssh-keyscan -H 158.174.210.91 >> ~/.ssh/known_hosts  # @url: Production VM IP
-      
+        run: ssh-keyscan -H app.peerdigital.se >> ~/.ssh/known_hosts  # @url: Production server domain
+
       - name: Make deploy script executable
         run: |
           chmod +x ./scripts/deploy.sh
-      
+
       # --- Deployment Steps ---
       - name: Deploy Files via Rsync
         run: |
@@ -72,12 +72,12 @@ jobs:
             --exclude='frontend-build.tar.gz' \
             --exclude='frontend/admin-dashboard/node_modules/' \
             --exclude='frontend/admin-dashboard/dist/' \
-            ./ ubuntu@158.174.210.91:/home/ubuntu/peer-ai/
-          
+            ./ ubuntu@app.peerdigital.se:/home/ubuntu/peer-ai/
+
           # Copy tarball and deploy script separately
-          scp ./frontend-build.tar.gz ubuntu@158.174.210.91:/home/ubuntu/peer-ai/
-          scp ./scripts/deploy.sh ubuntu@158.174.210.91:/home/ubuntu/peer-ai/scripts/
-      
+          scp ./frontend-build.tar.gz ubuntu@app.peerdigital.se:/home/ubuntu/peer-ai/
+          scp ./scripts/deploy.sh ubuntu@app.peerdigital.se:/home/ubuntu/peer-ai/scripts/
+
       - name: Debug Environment
         run: |
           echo "Checking if environment variables are set (values hidden):"
@@ -86,7 +86,7 @@ jobs:
           if [ ! -z "${{ secrets.HOSTED_LLM_API_KEY }}" ]; then echo "HOSTED_LLM_API_KEY is set"; else echo "Warning: HOSTED_LLM_API_KEY is NOT set"; fi
           if [ ! -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "JWT_SECRET_KEY is set"; else echo "Warning: JWT_SECRET_KEY is NOT set"; fi
           if [ ! -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDS }}" ]; then echo "GOOGLE_SERVICE_ACCOUNT_CREDS is set"; else echo "Warning: GOOGLE_SERVICE_ACCOUNT_CREDS is NOT set"; fi
-      
+
       - name: Extract Frontend & Run Deploy Script
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         env:
@@ -101,7 +101,7 @@ jobs:
           ACCESS_TOKEN_EXPIRE_MINUTES: 30
           RATE_LIMIT_MINUTE: 60
           ENVIRONMENT: production
-          ALLOWED_ORIGIN: http://158.174.210.91
+          ALLOWED_ORIGIN: http://app.peerdigital.se
           EXTERNAL_MODEL: mistral-tiny
           EXTERNAL_LLM_URL: https://api.mistral.ai/v1/chat/completions
           DEBUG: false
@@ -112,11 +112,11 @@ jobs:
           VITE_TEST_EMAIL: admin@peerai.se
           VITE_TEST_PASSWORD: admin123
           JWT_ALGORITHM: HS256
-          VITE_API_BASE_URL: http://158.174.210.91
+          VITE_API_BASE_URL: http://app.peerdigital.se
           VITE_APP_ENV: production
           VITE_AUTH_ENABLED: true
         with:
-          host: 158.174.210.91  # @url: Production VM IP
+          host: app.peerdigital.se  # @url: Production server domain
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
@@ -183,7 +183,7 @@ jobs:
       - name: Configure and Reload Nginx
         uses: appleboy/ssh-action@v1.0.3  # @note: Latest version for better reliability
         with:
-          host: 158.174.210.91  # @url: Production VM IP
+          host: app.peerdigital.se  # @url: Production server domain
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
@@ -191,12 +191,12 @@ jobs:
             echo "Configuring Nginx..."
             # First, remove any existing configuration
             sudo rm -f /etc/nginx/conf.d/peerai.conf
-            
+
             # Create new configuration
             NGINX_CONF='server {
               listen 80;
-              server_name 158.174.210.91;
-              
+              server_name app.peerdigital.se;
+
               # Frontend static files
               location / {
                 root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
@@ -205,7 +205,7 @@ jobs:
                 add_header Pragma "no-cache";
                 add_header Expires "0";
               }
-              
+
               # Backend API
               location /api/v1/ {
                 proxy_pass http://localhost:8000/api/v1/;
@@ -217,13 +217,13 @@ jobs:
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
-                
+
                 # Add CORS headers
                 add_header "Access-Control-Allow-Origin" "*" always;
                 add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
                 add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
                 add_header "Access-Control-Expose-Headers" "Content-Length,Content-Range" always;
-                
+
                 # Handle OPTIONS method
                 if ($request_method = "OPTIONS") {
                   add_header "Access-Control-Allow-Origin" "*" always;
@@ -235,7 +235,7 @@ jobs:
                   return 204;
                 }
               }
-              
+
               # Health check endpoint
               location /health {
                 proxy_pass http://localhost:8000/health;
@@ -255,23 +255,23 @@ jobs:
             sudo systemctl reload nginx || { echo "ERROR: Failed to reload Nginx!"; exit 1; }
 
             echo "Nginx configured and reloaded."
-            
+
             # Verify frontend files are accessible
             echo "Verifying frontend files..."
             ls -l /home/ubuntu/peer-ai/frontend/admin-dashboard/dist || { echo "ERROR: Frontend files not found!"; exit 1; }
-            
+
             # Check if backend service is running
             echo "Checking backend service status..."
             sudo systemctl status peerai-backend.service || { echo "ERROR: Backend service not running!"; exit 1; }
-            
+
             # Test the login endpoint
             echo "Testing login endpoint..."
             curl -v http://localhost/api/v1/auth/login || { echo "ERROR: Login endpoint not accessible!"; exit 1; }
-      
+
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
         with:
-          host: 158.174.210.91  # @url: Production VM IP
+          host: app.peerdigital.se  # @url: Production server domain
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           use_insecure_cipher: true
@@ -279,4 +279,4 @@ jobs:
             cd /home/ubuntu/peer-ai && ./scripts/check_deployment.sh || {
               echo "Deployment check failed"
               exit 1
-            } 
+            }

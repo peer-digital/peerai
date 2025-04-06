@@ -9,7 +9,7 @@ This guide explains how to deploy the PeerAI application to a single VM running 
 - **CPU**: 1
 - **RAM**: 1024 MB
 - **Volume**: 10 GB
-- **IP**: 158.174.210.91
+- **IP**: app.peerdigital.se
 - **Fixed IP**: 10.0.0.16
 - **MAC address**: fa:16:3e:20:b7:c5
 - **User**: ubuntu
@@ -89,7 +89,7 @@ The GitHub Actions workflow will automatically:
 
 1. **SSH into the VM**:
    ```
-   ssh ubuntu@158.174.210.91
+   ssh ubuntu@app.peerdigital.se
    ```
 
 2. **Set up GitHub authentication**:
@@ -268,6 +268,6 @@ cd /home/ubuntu/peer-ai
 
 ## Accessing the Application
 
-- Frontend: http://158.174.210.91
-- Backend API: http://158.174.210.91/api
-- Health check: http://158.174.210.91/health 
+- Frontend: http://app.peerdigital.se
+- Backend API: http://app.peerdigital.se/api
+- Health check: http://app.peerdigital.se/health
