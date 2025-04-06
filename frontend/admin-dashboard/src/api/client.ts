@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // @important: Base URL for API requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Force HTTPS in production, use HTTP only in development
+const API_BASE_URL = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL?.replace('http:', 'https:') || 'https://app.peerdigital.se')
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000');
 
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -52,4 +55,4 @@ apiClient.interceptors.response.use(
         }
         return Promise.reject(error);
     }
-); 
+);

@@ -3,6 +3,10 @@ import axios from 'axios';
 // Create axios instance with default config
 export const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/v1`,
+  // Force HTTPS in production
+  ...(import.meta.env.PROD && {
+    baseURL: `${import.meta.env.VITE_API_BASE_URL?.replace('http:', 'https:') || 'https://app.peerdigital.se'}/api/v1`,
+  }),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,4 +32,4 @@ api.interceptors.response.use(
     }
     return Promise.reject(error);
   }
-); 
+);

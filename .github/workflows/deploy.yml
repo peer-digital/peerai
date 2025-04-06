@@ -40,7 +40,7 @@ jobs:
           cd frontend/admin-dashboard
           npm run build  # @note: Build frontend application
         env:
-          VITE_API_BASE_URL: http://app.peerdigital.se  # @url: Production server domain
+          VITE_API_BASE_URL: https://app.peerdigital.se  # @url: Production server domain
           VITE_APP_ENV: production
           VITE_AUTH_ENABLED: true
 
@@ -101,7 +101,7 @@ jobs:
           ACCESS_TOKEN_EXPIRE_MINUTES: 30
           RATE_LIMIT_MINUTE: 60
           ENVIRONMENT: production
-          ALLOWED_ORIGIN: http://app.peerdigital.se
+          ALLOWED_ORIGIN: https://app.peerdigital.se
           EXTERNAL_MODEL: mistral-tiny
           EXTERNAL_LLM_URL: https://api.mistral.ai/v1/chat/completions
           DEBUG: false
@@ -112,7 +112,7 @@ jobs:
           VITE_TEST_EMAIL: admin@peerai.se
           VITE_TEST_PASSWORD: admin123
           JWT_ALGORITHM: HS256
-          VITE_API_BASE_URL: http://app.peerdigital.se
+          VITE_API_BASE_URL: https://app.peerdigital.se
           VITE_APP_ENV: production
           VITE_AUTH_ENABLED: true
         with:
