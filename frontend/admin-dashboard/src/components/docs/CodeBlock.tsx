@@ -11,18 +11,30 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 // Lazy load the syntax highlighter
-const SyntaxHighlighter = lazy(() => 
-  import('react-syntax-highlighter').then(module => ({ 
-    default: module.Prism 
+const SyntaxHighlighter = lazy(() =>
+  import('react-syntax-highlighter').then(module => ({
+    default: module.Prism
   }))
 );
 
-// Lazy load the style
-const atomDarkStyle = lazy(() => 
-  import('react-syntax-highlighter/dist/esm/styles/prism/atom-dark').then(module => ({ 
-    default: module.default 
-  }))
-);
+// Lazy load the styles based on theme mode
+const getHighlighterStyle = (isDarkMode: boolean) => {
+  if (isDarkMode) {
+    // Use vsc-dark-plus for dark mode - better visibility
+    return lazy(() =>
+      import('react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus').then(module => ({
+        default: module.default
+      }))
+    );
+  } else {
+    // Use prism for light mode
+    return lazy(() =>
+      import('react-syntax-highlighter/dist/esm/styles/prism/prism').then(module => ({
+        default: module.default
+      }))
+    );
+  }
+};
 
 interface CodeBlockProps {
   title: string;
@@ -33,7 +45,11 @@ interface CodeBlockProps {
 
 const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) => {
   const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   const [isHighlighterLoaded, setIsHighlighterLoaded] = useState(false);
+
+  // Get the appropriate style based on theme mode
+  const HighlighterStyle = getHighlighterStyle(isDarkMode);
 
   // Handle when the syntax highlighter is loaded
   React.useEffect(() => {
@@ -56,10 +72,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
 
   // Loading placeholder
   const LoadingPlaceholder = () => (
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
+    <Box sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       height: 100,
       bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
       borderRadius: 1
@@ -73,7 +89,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
       <Typography variant="h6" gutterBottom>
         {title}
       </Typography>
-      
+
       <Box sx={{ position: 'relative' }}>
         <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
           Request:
@@ -87,18 +103,20 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        
+
         <Suspense fallback={<LoadingPlaceholder />}>
           {isHighlighterLoaded && (
             <SyntaxHighlighter
               language="bash"
-              style={atomDarkStyle}
+              style={HighlighterStyle}
               customStyle={{
                 fontSize: '0.875rem',
                 maxWidth: '100%',
                 overflowX: 'auto',
                 maxHeight: '300px',
                 borderRadius: '4px',
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#f5f5f5',
+                color: isDarkMode ? '#d4d4d4' : '#333333',
               }}
               wrapLongLines={true}
             >
@@ -121,18 +139,20 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        
+
         <Suspense fallback={<LoadingPlaceholder />}>
           {isHighlighterLoaded && (
             <SyntaxHighlighter
               language="json"
-              style={atomDarkStyle}
+              style={HighlighterStyle}
               customStyle={{
                 fontSize: '0.875rem',
                 maxWidth: '100%',
                 overflowX: 'auto',
                 maxHeight: '300px',
                 borderRadius: '4px',
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#f5f5f5',
+                color: isDarkMode ? '#d4d4d4' : '#333333',
               }}
               wrapLongLines={true}
             >
