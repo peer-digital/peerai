@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -17,25 +17,6 @@ const SyntaxHighlighter = lazy(() =>
   }))
 );
 
-// Lazy load the styles based on theme mode
-const getHighlighterStyle = (isDarkMode: boolean) => {
-  if (isDarkMode) {
-    // Use vsc-dark-plus for dark mode - better visibility
-    return lazy(() =>
-      import('react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus').then(module => ({
-        default: module.default
-      }))
-    );
-  } else {
-    // Use prism for light mode
-    return lazy(() =>
-      import('react-syntax-highlighter/dist/esm/styles/prism/prism').then(module => ({
-        default: module.default
-      }))
-    );
-  }
-};
-
 interface CodeBlockProps {
   title: string;
   curl: string;
@@ -47,19 +28,38 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isHighlighterLoaded, setIsHighlighterLoaded] = useState(false);
+  const [highlighterStyle, setHighlighterStyle] = useState<any>(null);
 
-  // Get the appropriate style based on theme mode
-  const HighlighterStyle = getHighlighterStyle(isDarkMode);
+  // Load the appropriate style based on theme mode
+  useEffect(() => {
+    const loadStyle = async () => {
+      try {
+        if (isDarkMode) {
+          // Use vsc-dark-plus for dark mode - better visibility
+          const style = await import('react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus');
+          setHighlighterStyle(style.default);
+        } else {
+          // Use prism for light mode
+          const style = await import('react-syntax-highlighter/dist/esm/styles/prism/prism');
+          setHighlighterStyle(style.default);
+        }
+      } catch (error) {
+        console.error('Failed to load syntax highlighter style:', error);
+      }
+    };
 
-  // Handle when the syntax highlighter is loaded
-  React.useEffect(() => {
+    loadStyle();
+  }, [isDarkMode]);
+
+  // Handle when the syntax highlighter and style are loaded
+  useEffect(() => {
     // Set a flag to track if the component is still mounted
     let isMounted = true;
 
     // Use a timeout to simulate the loading of the syntax highlighter
     // This ensures we show the loading state for at least a short time
     const timer = setTimeout(() => {
-      if (isMounted) {
+      if (isMounted && highlighterStyle) {
         setIsHighlighterLoaded(true);
       }
     }, 100);
@@ -68,7 +68,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
       isMounted = false;
       clearTimeout(timer);
     };
-  }, []);
+  }, [highlighterStyle]);
 
   // Loading placeholder
   const LoadingPlaceholder = () => (
@@ -105,10 +105,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
         </Tooltip>
 
         <Suspense fallback={<LoadingPlaceholder />}>
-          {isHighlighterLoaded && (
+          {isHighlighterLoaded && highlighterStyle && (
             <SyntaxHighlighter
               language="bash"
-              style={HighlighterStyle}
+              style={highlighterStyle}
               customStyle={{
                 fontSize: '0.875rem',
                 maxWidth: '100%',
@@ -141,10 +141,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ title, curl, response, onCopy }) 
         </Tooltip>
 
         <Suspense fallback={<LoadingPlaceholder />}>
-          {isHighlighterLoaded && (
+          {isHighlighterLoaded && highlighterStyle && (
             <SyntaxHighlighter
               language="json"
-              style={HighlighterStyle}
+              style={highlighterStyle}
               customStyle={{
                 fontSize: '0.875rem',
                 maxWidth: '100%',
