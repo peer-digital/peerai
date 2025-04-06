@@ -73,4 +73,30 @@ if ! curl --fail --silent --max-time 5 "http://localhost:$PORT/health" > /dev/nu
 fi
 echo "✓ Service is accessible"
 
-echo "Deployment verification completed successfully!" 
+# --- Check SSL certificates ---
+echo "Checking SSL certificates..."
+SSL_CERT_PATH="/etc/letsencrypt/live/app.peerdigital.se"
+if [ ! -d "$SSL_CERT_PATH" ]; then
+    echo "WARNING: SSL certificates not found at $SSL_CERT_PATH."
+    echo "Run the ssl_check.sh script to install SSL certificates."
+else
+    # Check certificate expiration
+    EXPIRY=$(sudo openssl x509 -enddate -noout -in "$SSL_CERT_PATH/fullchain.pem" | cut -d= -f2)
+    echo "Certificate expires on: $EXPIRY"
+
+    # Check if certificate is valid for at least 30 days
+    if ! sudo openssl x509 -enddate -noout -in "$SSL_CERT_PATH/fullchain.pem" -checkend 2592000; then
+        echo "WARNING: Certificate will expire within 30 days. Consider renewing."
+    else
+        echo "✓ SSL certificates are valid and not expiring soon"
+    fi
+
+    # Check if Nginx is configured to use SSL
+    if ! grep -q "ssl_certificate" /etc/nginx/conf.d/peerai.conf; then
+        echo "WARNING: Nginx is not configured to use SSL. Run the ssl_check.sh script to fix this."
+    else
+        echo "✓ Nginx is configured to use SSL"
+    fi
+fi
+
+echo "Deployment verification completed successfully!"

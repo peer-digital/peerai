@@ -189,63 +189,147 @@ jobs:
           use_insecure_cipher: true
           script: |
             echo "Configuring Nginx..."
-            # First, remove any existing configuration
-            sudo rm -f /etc/nginx/conf.d/peerai.conf
+            # First, backup any existing configuration
+            if [ -f /etc/nginx/conf.d/peerai.conf ]; then
+              sudo cp /etc/nginx/conf.d/peerai.conf /etc/nginx/conf.d/peerai.conf.bak
+              echo "Backed up existing Nginx configuration."
+            fi
 
-            # Create new configuration
-            NGINX_CONF='server {
-              listen 80;
-              server_name app.peerdigital.se;
+            # Check if SSL certificates exist
+            SSL_CERT_PATH="/etc/letsencrypt/live/app.peerdigital.se"
+            if [ -d "$SSL_CERT_PATH" ]; then
+              echo "SSL certificates found. Configuring Nginx with HTTPS support."
 
-              # Frontend static files
-              location / {
-                root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
-                try_files $uri $uri/ /index.html;
-                add_header Cache-Control "no-cache, no-store, must-revalidate";
-                add_header Pragma "no-cache";
-                add_header Expires "0";
-              }
+              # Create new configuration with SSL
+              NGINX_CONF='server {
+                listen 80;
+                server_name app.peerdigital.se;
 
-              # Backend API
-              location /api/v1/ {
-                proxy_pass http://localhost:8000/api/v1/;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-
-                # Add CORS headers
-                add_header "Access-Control-Allow-Origin" "*" always;
-                add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
-                add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
-                add_header "Access-Control-Expose-Headers" "Content-Length,Content-Range" always;
-
-                # Handle OPTIONS method
-                if ($request_method = "OPTIONS") {
-                  add_header "Access-Control-Allow-Origin" "*" always;
-                  add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
-                  add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
-                  add_header "Access-Control-Max-Age" 1728000;
-                  add_header "Content-Type" "text/plain; charset=utf-8";
-                  add_header "Content-Length" 0;
-                  return 204;
+                # Redirect HTTP to HTTPS
+                location / {
+                  return 301 https://$host$request_uri;
                 }
               }
 
-              # Health check endpoint
-              location /health {
-                proxy_pass http://localhost:8000/health;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-              }
-            }'
+              server {
+                listen 443 ssl;
+                server_name app.peerdigital.se;
+
+                # SSL configuration
+                ssl_certificate /etc/letsencrypt/live/app.peerdigital.se/fullchain.pem;
+                ssl_certificate_key /etc/letsencrypt/live/app.peerdigital.se/privkey.pem;
+                ssl_protocols TLSv1.2 TLSv1.3;
+                ssl_ciphers HIGH:!aNULL:!MD5;
+
+                # Security headers
+                add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+                add_header X-Frame-Options "DENY" always;
+                add_header X-Content-Type-Options "nosniff" always;
+                add_header X-XSS-Protection "1; mode=block" always;
+
+                # Frontend static files
+                root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+                index index.html;
+
+                # Backend API
+                location /api/v1/ {
+                  proxy_pass http://localhost:8000/api/v1/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+
+                  # Add CORS headers
+                  add_header "Access-Control-Allow-Origin" "*" always;
+                  add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
+                  add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
+                  add_header "Access-Control-Expose-Headers" "Content-Length,Content-Range" always;
+
+                  # Handle OPTIONS method
+                  if ($request_method = "OPTIONS") {
+                    add_header "Access-Control-Allow-Origin" "*";
+                    add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS";
+                    add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization";
+                    add_header "Access-Control-Max-Age" 1728000;
+                    add_header "Content-Type" "text/plain; charset=utf-8";
+                    add_header "Content-Length" 0;
+                    return 204;
+                  }
+                }
+
+                # Health check endpoint
+                location /health {
+                  proxy_pass http://localhost:8000/health;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+                }
+              }'
+            else
+              echo "SSL certificates not found. Configuring Nginx with HTTP only (temporary)."
+
+              # Create new configuration without SSL (temporary)
+              NGINX_CONF='server {
+                listen 80;
+                server_name app.peerdigital.se;
+
+                # Frontend static files
+                location / {
+                  root /home/ubuntu/peer-ai/frontend/admin-dashboard/dist;
+                  try_files $uri $uri/ /index.html;
+                  add_header Cache-Control "no-cache, no-store, must-revalidate";
+                  add_header Pragma "no-cache";
+                  add_header Expires "0";
+                }
+
+                # Backend API
+                location /api/v1/ {
+                  proxy_pass http://localhost:8000/api/v1/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+
+                  # Add CORS headers
+                  add_header "Access-Control-Allow-Origin" "*" always;
+                  add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS" always;
+                  add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization" always;
+                  add_header "Access-Control-Expose-Headers" "Content-Length,Content-Range" always;
+
+                  # Handle OPTIONS method
+                  if ($request_method = "OPTIONS") {
+                    add_header "Access-Control-Allow-Origin" "*";
+                    add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS";
+                    add_header "Access-Control-Allow-Headers" "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization";
+                    add_header "Access-Control-Max-Age" 1728000;
+                    add_header "Content-Type" "text/plain; charset=utf-8";
+                    add_header "Content-Length" 0;
+                    return 204;
+                  }
+                }
+
+                # Health check endpoint
+                location /health {
+                  proxy_pass http://localhost:8000/health;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+                }
+              }'
+            fi
+
             echo "$NGINX_CONF" | sudo tee /etc/nginx/conf.d/peerai.conf
 
             echo "Checking Nginx configuration..."
@@ -267,6 +351,24 @@ jobs:
             # Test the login endpoint
             echo "Testing login endpoint..."
             curl -v http://localhost/api/v1/auth/login || { echo "ERROR: Login endpoint not accessible!"; exit 1; }
+
+      - name: Check SSL certificates and fix if needed
+        uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
+        with:
+          host: app.peerdigital.se  # @url: Production server domain
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            cd /home/ubuntu/peer-ai
+            # Make the SSL check script executable
+            chmod +x ./scripts/ssl_check.sh
+            # Run the SSL check script
+            sudo ./scripts/ssl_check.sh || {
+              echo "SSL certificate check/fix failed"
+              exit 1
+            }
+            echo "SSL certificate check/fix completed successfully."
 
       - name: Check deployment status
         uses: appleboy/ssh-action@v1.0.0  # @note: Reliable SSH action for GitHub Actions
