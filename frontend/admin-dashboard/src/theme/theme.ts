@@ -214,7 +214,7 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
           padding: '0.5rem 1rem',
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: mode === 'light' 
+            boxShadow: mode === 'light'
               ? '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)'
               : '0 1px 3px 0 rgba(255,255,255,0.05), 0 1px 2px 0 rgba(255,255,255,0.03)',
           },
@@ -380,6 +380,41 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    // Fix for the drawer overlay issue
+    MuiDrawer: {
+      styleOverrides: {
+        root: {
+          // Fix for the css-1so0oxj class
+          '&.MuiDrawer-root.MuiDrawer-modal.MuiModal-root.css-1so0oxj-MuiModal-root-MuiDrawer-root': {
+            position: 'fixed',
+            zIndex: 1200, // Use a fixed value instead of theme.zIndex.drawer (which is 1200)
+            '&[aria-hidden="true"]': {
+              display: 'none',
+              zIndex: -1,
+            },
+          },
+        },
+        paper: {
+          boxShadow: mode === 'light'
+            ? '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
+            : '0 4px 6px -1px rgba(255,255,255,0.05), 0 2px 4px -1px rgba(255,255,255,0.03)',
+        },
+      },
+    },
+    // Fix for the modal backdrop
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.7)',
+          '&.MuiBackdrop-invisible': {
+            backgroundColor: 'transparent',
+          },
+          '&[aria-hidden="true"]': {
+            display: 'none',
+          },
+        },
+      },
+    },
   },
 });
 
@@ -398,4 +433,4 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
 // Default theme (light mode)
 const theme = createAppTheme('light');
 
-export default theme; 
+export default theme;

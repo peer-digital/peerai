@@ -9,12 +9,12 @@ interface ThemeToggleProps {
    * Optional tooltip position
    */
   tooltipPlacement?: 'top' | 'right' | 'bottom' | 'left';
-  
+
   /**
    * Optional size for the icon button
    */
   size?: 'small' | 'medium' | 'large';
-  
+
   /**
    * Optional color for the icon
    */
@@ -32,14 +32,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
 }) => {
   const { toggleColorMode, isDarkMode } = useThemeContext();
   const theme = useTheme();
-  
+
   return (
-    <Tooltip 
+    <Tooltip
       title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
       placement={tooltipPlacement}
       arrow
     >
-      <IconButton 
+      <IconButton
         onClick={toggleColorMode}
         color={color}
         size={size}
@@ -49,19 +49,29 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
           '&:hover': {
             transform: 'rotate(12deg)',
           },
+          // Add a subtle background in dark mode for better visibility
+          ...(isDarkMode && {
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              transform: 'rotate(12deg)',
+            },
+          }),
         }}
       >
         {isDarkMode ? (
-          <Brightness7Icon 
-            sx={{ 
-              color: theme.palette.grey[100],
-            }} 
+          <Brightness7Icon
+            sx={{
+              // Use a light color in dark mode for better contrast
+              color: '#FFFFFF',
+            }}
           />
         ) : (
-          <Brightness4Icon 
-            sx={{ 
+          <Brightness4Icon
+            sx={{
+              // Use a dark color in light mode for better contrast
               color: theme.palette.grey[700],
-            }} 
+            }}
           />
         )}
       </IconButton>
@@ -69,4 +79,4 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
   );
 };
 
-export default ThemeToggle; 
+export default ThemeToggle;

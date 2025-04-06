@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import {
   Box,
@@ -192,12 +192,50 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
     }
   }, [isMobile]);
 
+  // Track previous pathname to detect actual navigation changes
+  const prevPathnameRef = useRef(location.pathname);
+
+  // Close drawer when location changes (route navigation) on mobile
+  useEffect(() => {
+    // Only close if the pathname actually changed and drawer is open on mobile
+    if (isMobile && open && prevPathnameRef.current !== location.pathname) {
+      // Use a small delay to ensure the drawer closes after navigation
+      const timer = setTimeout(() => {
+        setOpen(false);
+      }, 50);
+
+      // Update the ref with current pathname
+      prevPathnameRef.current = location.pathname;
+
+      return () => clearTimeout(timer);
+    } else {
+      // Just update the ref without closing the drawer
+      prevPathnameRef.current = location.pathname;
+    }
+  }, [location.pathname, isMobile, open]);
+
   const handleDrawerOpen = () => {
     setOpen(true);
   };
 
   const handleDrawerClose = () => {
+    // Close the drawer
     setOpen(false);
+
+    // Force cleanup of any lingering backdrop or overlay
+    setTimeout(() => {
+      const backdrop = document.querySelector('.MuiBackdrop-root');
+      if (backdrop) {
+        backdrop.setAttribute('aria-hidden', 'true');
+        (backdrop as HTMLElement).style.display = 'none';
+      }
+
+      const modal = document.querySelector('.css-1so0oxj-MuiModal-root-MuiDrawer-root');
+      if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+        (modal as HTMLElement).style.display = 'none';
+      }
+    }, 300); // Wait for transition to complete
   };
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -355,19 +393,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
             width: { xs: '85%', sm: drawerWidth },
             boxSizing: 'border-box',
           },
+          // Fix for the persistent overlay issue
+          '& .MuiModal-root': {
+            position: open ? 'fixed' : 'absolute',
+            zIndex: open ? 1200 : -1, // Use fixed value 1200 instead of theme.zIndex.drawer
+          },
           '& .MuiBackdrop-root': {
-            // Ensure backdrop is properly removed when drawer closes
-            zIndex: -1,
+            display: open ? 'block' : 'none',
           },
         }}
         variant={isMobile ? 'temporary' : 'persistent'}
         anchor="left"
         open={open}
-        onClose={isMobile ? handleDrawerClose : undefined}
+        onClose={handleDrawerClose}
         ModalProps={{
-          keepMounted: true, // Better mobile performance
+          keepMounted: false, // Don't keep the drawer mounted when closed
           disableScrollLock: true, // Prevent scroll issues
           disablePortal: false, // Use portal for proper stacking
+          closeAfterTransition: true, // Ensure proper cleanup after transition
         }}
       >
         <DrawerHeader>
@@ -395,14 +438,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                 <ListItemButton
                   selected={location.pathname === item.path}
                   onClick={() => {
-                    // First close the drawer on mobile to prevent overlay issues
-                    if (isMobile) {
-                      setOpen(false); // Directly set state instead of using handler
-                    }
-                    // Use setTimeout to ensure drawer closes before navigation
-                    setTimeout(() => {
+                    // Only navigate if we're not already on this path
+                    if (location.pathname !== item.path) {
+                      // Update the ref before navigation to prevent the useEffect from closing the drawer
+                      prevPathnameRef.current = item.path;
+
+                      // Navigate to the new path
                       navigate(item.path);
-                    }, isMobile ? 150 : 0);
+
+                      // Close the drawer on mobile after a short delay
+                      if (isMobile) {
+                        setTimeout(() => {
+                          handleDrawerClose();
+                        }, 150);
+                      }
+                    } else if (isMobile) {
+                      // If we're already on this path, just close the drawer
+                      handleDrawerClose();
+                    }
                   }}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>

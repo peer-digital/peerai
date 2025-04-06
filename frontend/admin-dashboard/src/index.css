@@ -71,3 +71,20 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Fix for MuiDrawer overlay issue */
+.MuiDrawer-root.MuiDrawer-modal.MuiModal-root.css-1so0oxj-MuiModal-root-MuiDrawer-root[aria-hidden="true"] {
+  display: none !important;
+  z-index: -1 !important;
+}
+
+/* Fix for backdrop */
+.MuiBackdrop-root[aria-hidden="true"] {
+  display: none !important;
+}
+
+/* Ensure body is not blocked by hidden modals */
+body.MuiModal-open:not(:has(.MuiDrawer-root[aria-hidden="false"])) {
+  overflow: auto !important;
+  padding-right: 0 !important;
+}
