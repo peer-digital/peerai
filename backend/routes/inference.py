@@ -3,7 +3,7 @@ Inference routes for PeerAI API
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from fastapi import (
     APIRouter,
     Depends,
@@ -20,7 +20,7 @@ import httpx
 import logging
 from sqlalchemy import func
 
-from backend.models.auth import APIKey, User
+from backend.models.auth import APIKey, User, DBSystemSettings
 from backend.models.usage import UsageRecord
 from backend.database import get_db
 from backend.config import settings
@@ -37,10 +37,14 @@ class TextCompletionRequest(BaseModel):
 
     prompt: Optional[str] = None
     messages: Optional[List[Dict[str, str]]] = None
-    max_tokens: Optional[int] = Field(default=100, ge=1, le=2048)
+    max_tokens: Optional[int] = None  # Will be properly implemented based on model context length
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=1.0)
-    mock_mode: Optional[bool] = False
+    top_p: Optional[float] = Field(default=1.0, ge=0.0, le=1.0)
+    stop: Optional[Union[str, List[str]]] = None
+    random_seed: Optional[int] = None
     model: Optional[str] = None  # Model name to use, or None for default
+    # mock_mode is only available in development environment
+    mock_mode: Optional[bool] = Field(default=False, exclude=settings.ENVIRONMENT != "development")
 
     @validator("prompt", "messages")
     def validate_input(cls, v, values):
@@ -60,8 +64,9 @@ class VisionRequest(BaseModel):
 
     image_url: str
     prompt: str
-    max_tokens: Optional[int] = Field(default=100, ge=1, le=2048)
-    mock_mode: Optional[bool] = False
+    max_tokens: Optional[int] = None  # Will be properly implemented based on model context length
+    # mock_mode is only available in development environment
+    mock_mode: Optional[bool] = Field(default=False, exclude=settings.ENVIRONMENT != "development")
 
 
 class AudioRequest(BaseModel):
@@ -70,7 +75,8 @@ class AudioRequest(BaseModel):
     audio_url: str
     task: str = "transcribe"  # "transcribe" or "analyze"
     language: Optional[str] = "en"
-    mock_mode: Optional[bool] = False
+    # mock_mode is only available in development environment
+    mock_mode: Optional[bool] = Field(default=False, exclude=settings.ENVIRONMENT != "development")
 
 
 class CompletionResponse(BaseModel):
@@ -315,18 +321,32 @@ def record_usage(
 
 
 async def call_hosted_llm(
-    client: httpx.AsyncClient, request: TextCompletionRequest
+    client: httpx.AsyncClient, request: TextCompletionRequest, db: Session
 ) -> CompletionResponse:
     """Call the hosted LLM service"""
     try:
+        # Prepare request payload
+        payload = {
+            "prompt": request.prompt,
+            "temperature": request.temperature,
+        }
+
+        # Get system settings for max_tokens if not provided
+        system_settings = db.query(DBSystemSettings).first()
+        if request.max_tokens is not None:
+            payload["max_tokens"] = request.max_tokens
+        elif system_settings and system_settings.models and "maxTokens" in system_settings.models:
+            # Use system settings for max_tokens
+            payload["max_tokens"] = system_settings.models["maxTokens"]
+        if request.top_p is not None:
+            payload["top_p"] = request.top_p
+        if request.stop is not None:
+            payload["stop"] = request.stop
+
         response = await client.post(
             settings.HOSTED_LLM_URL,
             headers={"Authorization": f"Bearer {settings.HOSTED_LLM_API_KEY}"},
-            json={
-                "prompt": request.prompt,
-                "max_tokens": request.max_tokens,
-                "temperature": request.temperature,
-            },
+            json=payload,
             timeout=30.0,
         )
         response.raise_for_status()
@@ -359,7 +379,7 @@ async def call_hosted_llm(
 
 
 async def call_mistral(
-    client: httpx.AsyncClient, request: TextCompletionRequest
+    client: httpx.AsyncClient, request: TextCompletionRequest, db: Session
 ) -> CompletionResponse:
     """Call Mistral's API as fallback"""
     try:
@@ -383,8 +403,21 @@ async def call_mistral(
             "model": settings.EXTERNAL_MODEL,
             "messages": request.messages,
             "temperature": request.temperature,
-            "max_tokens": request.max_tokens,
         }
+
+        # Get system settings for max_tokens if not provided
+        system_settings = db.query(DBSystemSettings).first()
+        if request.max_tokens is not None:
+            payload["max_tokens"] = request.max_tokens
+        elif system_settings and system_settings.models and "maxTokens" in system_settings.models:
+            # Use system settings for max_tokens
+            payload["max_tokens"] = system_settings.models["maxTokens"]
+        if request.top_p is not None:
+            payload["top_p"] = request.top_p
+        if request.stop is not None:
+            payload["stop"] = request.stop
+        if request.random_seed is not None:
+            payload["random_seed"] = request.random_seed
 
         logger.debug("Making request to Mistral API with payload: %s", payload)
 
@@ -457,8 +490,21 @@ async def create_completion(
             request_data["messages"] = request.messages
 
         # Add other parameters
-        request_data["max_tokens"] = request.max_tokens
         request_data["temperature"] = request.temperature
+
+        # Get system settings for max_tokens if not provided
+        system_settings = db.query(DBSystemSettings).first()
+        if request.max_tokens is not None:
+            request_data["max_tokens"] = request.max_tokens
+        elif system_settings and system_settings.models and "maxTokens" in system_settings.models:
+            # Use system settings for max_tokens
+            request_data["max_tokens"] = system_settings.models["maxTokens"]
+        if request.top_p is not None:
+            request_data["top_p"] = request.top_p
+        if request.stop is not None:
+            request_data["stop"] = request.stop
+        if request.random_seed is not None:
+            request_data["random_seed"] = request.random_seed
 
         # Call the model through the orchestrator
         response_data = await orchestrator.call_model(
@@ -495,7 +541,6 @@ async def create_completion(
 @router.get("/models", response_model=List[Dict[str, Any]])
 async def get_available_models(
     model_type: Optional[str] = None,
-    db: Session = Depends(get_db),
     orchestrator: ModelOrchestrator = Depends(get_orchestrator),
 ):
     """Get a list of available models."""

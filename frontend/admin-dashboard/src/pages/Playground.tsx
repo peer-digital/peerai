@@ -28,6 +28,7 @@ import {
   Code as CodeIcon,
   Api as ApiIcon,
 } from '@mui/icons-material';
+import AdvancedParameters from '../components/playground/AdvancedParameters';
 import { toast } from 'react-toastify';
 import { useTheme } from '@mui/material/styles';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -51,6 +52,15 @@ interface CompletionResponse {
     message: {
       role: string;
       content: string;
+      tool_calls?: Array<{
+        id: string;
+        type: string;
+        function: {
+          name: string;
+          arguments: any;
+        };
+        index: number;
+      }>;
     };
     finish_reason: string;
   }>;
@@ -86,8 +96,8 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
       prompt: "Explain quantum computing",
       max_tokens: 100,
       temperature: 0.7,
-      mock_mode: false,
-      model: "hosted-llm"  // @important: Default to hosted LLM
+      top_p: 1.0,
+      model: "mistral-tiny"  // Default to Mistral's model
     }, null, 2),
   },
   vision: {
@@ -121,7 +131,7 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
 function Playground() {
   const theme = useTheme();
   const [selectedEndpoint, setSelectedEndpoint] = useState('completions');
-  const [selectedModel, setSelectedModel] = useState('hosted-llm');
+  const [selectedModel, setSelectedModel] = useState('mistral-tiny');
   const [apiKey, setApiKey] = useState('');
   const [requestBody, setRequestBody] = useState(ENDPOINTS.completions.defaultBody);
   const [response, setResponse] = useState('');
@@ -178,14 +188,20 @@ function Playground() {
             prompt: "Explain quantum computing",
             max_tokens: 100,
             temperature: 0.7,
+            top_p: 1.0,
           };
         }
 
         const newBody = {
           ...currentBody,
           model: model,
-          mock_mode: mock
         };
+
+        // Only include mock_mode in development environment
+        if (import.meta.env.DEV) {
+          newBody.mock_mode = mock;
+        }
+
         setRequestBody(JSON.stringify(newBody, null, 2));
       } catch (e) {
         console.error('Failed to update request body:', e);
@@ -201,7 +217,7 @@ function Playground() {
 
     // Reset model selection when changing endpoints
     if (newEndpoint === 'completions') {
-      setSelectedModel('hosted-llm');
+      setSelectedModel('mistral-tiny');
       setMockMode(false);
     } else {
       setMockMode(true);
@@ -538,6 +554,13 @@ function Playground() {
                 }}
               />
 
+              {endpointConfigs[selectedEndpoint].requiresBody && selectedEndpoint === 'completions' && (
+                <AdvancedParameters
+                  requestBody={requestBody}
+                  setRequestBody={setRequestBody}
+                />
+              )}
+
               {endpointConfigs[selectedEndpoint].requiresBody && (
                 <TextField
                   fullWidth
@@ -597,7 +620,7 @@ function Playground() {
                       sx={{ mr: 1, minWidth: '120px' }}
                     />
 
-                    {endpointConfigs[selectedEndpoint].requiresBody && (
+                    {endpointConfigs[selectedEndpoint].requiresBody && import.meta.env.DEV && (
                       <FormControlLabel
                         control={
                           <Switch
@@ -606,8 +629,8 @@ function Playground() {
                             size="small"
                           />
                         }
-                        label="Mock Mode"
-                        sx={{ minWidth: '120px' }}
+                        label="Mock Mode (Dev Only)"
+                        sx={{ minWidth: '150px' }}
                       />
                     )}
                   </Stack>

@@ -78,7 +78,7 @@ class ModelOrchestrator:
         )
         if not model:
             raise ValueError(f"No default model found for type '{model_type}'")
-        
+
         return model
 
     def _get_parameter_mappings(self, model_id: int) -> Dict[str, ModelRequestMapping]:
@@ -143,6 +143,17 @@ class ModelOrchestrator:
                 logger.info(
                     f"Using messages directly: {transformed_request['messages']}"
                 )
+
+            # Add standard parameters
+            if "temperature" in request_data:
+                transformed_request["temperature"] = request_data["temperature"]
+                request_data = {k: v for k, v in request_data.items() if k != "temperature"}
+
+            # Add optional parameters if provided
+            for param in ["max_tokens", "top_p", "stop", "random_seed"]:
+                if param in request_data and request_data[param] is not None:
+                    transformed_request[param] = request_data[param]
+                    request_data = {k: v for k, v in request_data.items() if k != param}
 
             # Add other parameters from model config, excluding description and api_model_id
             if model.config:
@@ -408,15 +419,15 @@ class ModelOrchestrator:
     def get_available_models(self, model_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get a list of available models."""
         query = self.db.query(AIModel).join(ModelProvider)
-        
+
         if model_type:
             query = query.filter(AIModel.model_type == model_type)
-        
+
         models = query.filter(
             AIModel.status == "active",
             ModelProvider.is_active.is_(True)
         ).all()
-        
+
         return [
             {
                 "id": model.id,

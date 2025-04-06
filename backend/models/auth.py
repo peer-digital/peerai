@@ -64,7 +64,7 @@ class User(Base):
     def is_superuser(self):
         """
         READ-ONLY property that returns True if role == Role.SUPER_ADMIN.
-        
+
         IMPORTANT: This is a computed property and cannot be set directly.
         To create a superuser, set role=Role.SUPER_ADMIN during creation.
         """
@@ -116,8 +116,9 @@ class DBSystemSettings(Base):
     models = Column(
         JSON,
         default={
-            "defaultModel": "claude-3-sonnet-20240229",
-            "maxContextLength": 100000,
+            "defaultModel": "mistral-small-latest",
+            "maxContextLength": 32768,  # Mistral's context length
+            "maxTokens": 1024,  # Default max tokens for generation
             "temperature": 0.7,
         },
     )

@@ -32,8 +32,9 @@ class SecuritySettings(BaseModel):
 class ModelSettings(BaseModel):
     """Model settings."""
 
-    defaultModel: str = "claude-3-sonnet-20240229"  # @note: Model name - do not change
-    maxContextLength: int = Field(100000, ge=1)
+    defaultModel: str = "mistral-small-latest"  # @note: Model name - do not change
+    maxContextLength: int = Field(32768, ge=1)  # Mistral's context length
+    maxTokens: int = Field(1024, ge=1)  # Default max tokens for generation
     temperature: float = Field(0.7, ge=0.0, le=1.0)
 
 

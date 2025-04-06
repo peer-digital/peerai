@@ -12,12 +12,12 @@ class SystemSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     rate_limit = Column(
-        JSON, 
-        nullable=False, 
+        JSON,
+        nullable=False,
         default={"enabled": True, "requestsPerMinute": 60, "tokensPerDay": 100000}
     )
     security = Column(
-        JSON, 
+        JSON,
         nullable=False,
         default={
             "requireSSL": True,
@@ -30,17 +30,18 @@ class SystemSettings(Base):
         },
     )
     models = Column(
-        JSON, 
+        JSON,
         nullable=False,
         default={
-            "defaultModel": "claude-3-sonnet-20240229",
-            "maxContextLength": 100000,
+            "defaultModel": "mistral-small-latest",
+            "maxContextLength": 32768,  # Mistral's context length
+            "maxTokens": 1024,  # Default max tokens for generation
             "temperature": 0.7,
         },
     )
     monitoring = Column(
-        JSON, 
-        nullable=False, 
+        JSON,
+        nullable=False,
         default={"logLevel": "info", "retentionDays": 30, "alertThreshold": 5}
     )
     beta_features = Column(
