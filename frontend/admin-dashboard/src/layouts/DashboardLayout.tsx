@@ -373,13 +373,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
                 onClick={handleUserMenuClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                slotProps={{
-                  backdrop: {
-                    onClick: handleUserMenuClose,
-                    onContextMenu: (e) => {
-                      e.preventDefault();
-                      handleUserMenuClose();
-                    },
+                // Use closeAfterTransition and BackdropProps instead of slotProps
+                closeAfterTransition
+                BackdropProps={{
+                  onClick: handleUserMenuClose,
+                  onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => {
+                    e.preventDefault();
+                    handleUserMenuClose();
                   },
                 }}
                 MenuListProps={{
