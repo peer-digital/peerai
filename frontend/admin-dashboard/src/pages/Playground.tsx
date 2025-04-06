@@ -192,7 +192,7 @@ function Playground() {
           };
         }
 
-        const newBody = {
+        const newBody: Record<string, any> = {
           ...currentBody,
           model: model,
         };

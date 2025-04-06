@@ -62,8 +62,8 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
   };
 
   return (
-    <Accordion 
-      expanded={expanded} 
+    <Accordion
+      expanded={expanded}
       onChange={() => setExpanded(!expanded)}
       sx={{ mb: 2 }}
     >
@@ -103,7 +103,7 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
               sx={{ width: '100%', mt: 1 }}
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2" sx={{ mr: 1 }}>Top P</Typography>
@@ -135,7 +135,7 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
               sx={{ width: '100%', mt: 1 }}
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -161,7 +161,7 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
               }}
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -170,9 +170,14 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
               type="number"
               value={getParameterValue('random_seed', '')}
               onChange={(e) => {
-                const value = e.target.value === '' ? undefined : parseInt(e.target.value);
-                if (e.target.value === '' || (!isNaN(value) && value >= 0)) {
-                  updateParameter('random_seed', value);
+                if (e.target.value === '') {
+                  // If empty, set to undefined
+                  updateParameter('random_seed', undefined);
+                } else {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value >= 0) {
+                    updateParameter('random_seed', value);
+                  }
                 }
               }}
               InputProps={{
@@ -187,7 +192,7 @@ const AdvancedParameters: React.FC<AdvancedParametersProps> = ({ requestBody, se
               }}
             />
           </Grid>
-          
+
           <Grid item xs={12}>
             <TextField
               fullWidth
