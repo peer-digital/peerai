@@ -334,6 +334,17 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    MuiFormControlLabel: {
+      styleOverrides: {
+        root: {
+          marginLeft: 8,
+          marginRight: 8,
+          '& .MuiSwitch-root': {
+            marginRight: 8
+          }
+        }
+      }
+    },
     MuiSwitch: {
       styleOverrides: {
         root: {

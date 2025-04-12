@@ -19,6 +19,11 @@ interface ThemeToggleProps {
    * Optional color for the icon
    */
   color?: 'inherit' | 'primary' | 'secondary' | 'default' | 'error' | 'info' | 'success' | 'warning';
+
+  /**
+   * Optional margin right for spacing
+   */
+  marginRight?: number | string;
 }
 
 /**
@@ -28,7 +33,8 @@ interface ThemeToggleProps {
 const ThemeToggle: React.FC<ThemeToggleProps> = ({
   tooltipPlacement = 'bottom',
   size = 'medium',
-  color = 'inherit'
+  color = 'inherit',
+  marginRight = 2
 }) => {
   const { toggleColorMode, isDarkMode } = useThemeContext();
   const theme = useTheme();
@@ -46,6 +52,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
         aria-label="toggle theme"
         sx={{
           transition: 'transform 0.3s ease-in-out',
+          marginRight: marginRight,
           '&:hover': {
             transform: 'rotate(12deg)',
           },

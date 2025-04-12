@@ -606,7 +606,11 @@ function Playground() {
                     direction="row"
                     spacing={2}
                     alignItems="center"
-                    sx={{ flexWrap: { xs: 'wrap', sm: 'nowrap' } }}
+                    sx={{
+                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                      mt: 2,
+                      mb: 1
+                    }}
                   >
                     <FormControlLabel
                       control={
@@ -617,7 +621,14 @@ function Playground() {
                         />
                       }
                       label="Show cURL"
-                      sx={{ mr: 1, minWidth: '120px' }}
+                      sx={{
+                        mr: 1,
+                        minWidth: '120px',
+                        ml: 1,
+                        '& .MuiSwitch-root': {
+                          mr: 1
+                        }
+                      }}
                     />
 
                     {endpointConfigs[selectedEndpoint].requiresBody && import.meta.env.DEV && (
@@ -630,7 +641,13 @@ function Playground() {
                           />
                         }
                         label="Mock Mode (Dev Only)"
-                        sx={{ minWidth: '150px' }}
+                        sx={{
+                          minWidth: '150px',
+                          ml: 1,
+                          '& .MuiSwitch-root': {
+                            mr: 1
+                          }
+                        }}
                       />
                     )}
                   </Stack>

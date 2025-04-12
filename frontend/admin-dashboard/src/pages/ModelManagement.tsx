@@ -27,10 +27,10 @@ import {
   TableRow,
   TablePagination,
 } from '@mui/material';
-import { 
-  Add as AddIcon, 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { Permission } from '../types/rbac';
@@ -121,7 +121,7 @@ const ModelManagement: React.FC = () => {
         { id: 3, name: 'openai', display_name: 'OpenAI' },
         { id: 4, name: 'hosted', display_name: 'Self-hosted' },
       ]);
-      
+
       // Only show toast for provider fetch error if it's not a 401/403
       // (to avoid duplicate errors with the models fetch)
       const error = err as { response?: { status?: number } };
@@ -252,9 +252,9 @@ const ModelManagement: React.FC = () => {
               <Typography variant="body1">{error}</Typography>
             </Box>
             {error.includes('Authentication') && (
-              <Button 
-                variant="contained" 
-                color="primary" 
+              <Button
+                variant="contained"
+                color="primary"
                 sx={{ mt: 1 }}
                 onClick={() => {
                   // Redirect to login page
@@ -299,14 +299,14 @@ const ModelManagement: React.FC = () => {
                       <TableCell>{row.provider ? row.provider.display_name : getProviderName(row.provider_id)}</TableCell>
                       <TableCell>{row.model_type}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={row.status} 
+                        <Chip
+                          label={row.status}
                           color={
-                            row.status === 'active' ? 'success' : 
-                            row.status === 'beta' ? 'info' : 
+                            row.status === 'active' ? 'success' :
+                            row.status === 'beta' ? 'info' :
                             row.status === 'deprecated' ? 'warning' : 'default'
-                          } 
-                          size="small" 
+                          }
+                          size="small"
                         />
                       </TableCell>
                       <TableCell>{row.is_default ? 'Yes' : 'No'}</TableCell>
@@ -435,6 +435,12 @@ const ModelManagement: React.FC = () => {
                   />
                 }
                 label="Set as default model for its type"
+                sx={{
+                  mx: 1,
+                  '& .MuiSwitch-root': {
+                    mx: 1
+                  }
+                }}
               />
               <TextField
                 label="Capabilities (comma-separated)"
@@ -480,4 +486,4 @@ const ModelManagement: React.FC = () => {
   );
 };
 
-export default ModelManagement; 
+export default ModelManagement;
