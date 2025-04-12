@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -19,20 +19,21 @@ import {
   Switch,
   FormControlLabel,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
+  Grid,
+  InputAdornment,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
+  Search as SearchIcon,
+  FilterList as FilterListIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
+import { DataGrid, Column, Action } from '../components/DataGrid';
 import { Permission } from '../types/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 import { apiClient } from '../api/client';
@@ -69,12 +70,29 @@ const ModelManagement: React.FC = () => {
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Filter states
+  const [nameFilter, setNameFilter] = useState('');
+  const [providerFilter, setProviderFilter] = useState<number | ''>('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   // State for create/edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<ModelRecord | null>(null);
+
+  // State for bulk editing
+  const [selectedModels, setSelectedModels] = useState<number[]>([]);
+  const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+  const [bulkEditFormData, setBulkEditFormData] = useState<{
+    status?: string;
+    provider_id?: number;
+    model_type?: string;
+    is_default?: boolean;
+    cost_per_1k_input_tokens?: number;
+    cost_per_1k_output_tokens?: number;
+    context_window?: number;
+  }>({});
 
   // Form states
   const [formData, setFormData] = useState<Partial<ModelRecord>>({
@@ -88,6 +106,19 @@ const ModelManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.get('/api/v1/admin/models');
+
+      // Debug logging to see the structure of the API response
+      console.log('API response for models:', response.data);
+
+      // Check if any models are missing provider_id but have provider object
+      const modelsWithMissingProviderId = response.data.filter(
+        (model: ModelRecord) => !model.provider_id && model.provider
+      );
+
+      if (modelsWithMissingProviderId.length > 0) {
+        console.log('Models missing provider_id but with provider object:', modelsWithMissingProviderId);
+      }
+
       setModels(response.data);
       setError(null);
     } catch (err: unknown) {
@@ -139,7 +170,18 @@ const ModelManagement: React.FC = () => {
   const handleOpenDialog = (record?: ModelRecord) => {
     if (record) {
       setEditRecord(record);
-      setFormData(record);
+      // Extract provider_id from the nested provider object if it exists
+      const formDataWithProviderId = {
+        ...record,
+        // If provider_id is missing but provider object exists, use provider.id
+        provider_id: record.provider_id || (record.provider ? record.provider.id : undefined)
+      };
+
+      // Debug logging to help troubleshoot provider_id issues
+      console.log('Original record:', record);
+      console.log('Modified formData with provider_id:', formDataWithProviderId);
+
+      setFormData(formDataWithProviderId);
     } else {
       setEditRecord(null);
       setFormData({
@@ -169,6 +211,9 @@ const ModelManagement: React.FC = () => {
         toast.error('Please fill in all required fields');
         return;
       }
+
+      // Debug logging to help troubleshoot API requests
+      console.log('Saving model with data:', formData);
 
       if (editRecord) {
         // Update
@@ -201,23 +246,64 @@ const ModelManagement: React.FC = () => {
     }
   };
 
+  // Handle selection changes from the DataGrid
+  const handleSelectionChange = (selectedIds: number[]) => {
+    setSelectedModels(selectedIds);
+  };
+
+  // Open the bulk edit dialog
+  const handleOpenBulkEditDialog = () => {
+    if (selectedModels.length === 0) {
+      toast.warning('Please select at least one model to edit');
+      return;
+    }
+    setBulkEditFormData({});
+    setBulkEditDialogOpen(true);
+  };
+
+  // Close the bulk edit dialog
+  const handleCloseBulkEditDialog = () => {
+    setBulkEditDialogOpen(false);
+    setBulkEditFormData({});
+  };
+
+  // Apply bulk updates to selected models
+  const handleBulkUpdate = async () => {
+    try {
+      // Check if any fields are selected for update
+      if (Object.keys(bulkEditFormData).length === 0) {
+        toast.warning('Please select at least one field to update');
+        return;
+      }
+
+      setLoading(true);
+
+      // Create an array of promises for each update
+      const updatePromises = selectedModels.map(modelId => {
+        return apiClient.put(`/api/v1/admin/models/${modelId}`, bulkEditFormData);
+      });
+
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+
+      toast.success(`Successfully updated ${selectedModels.length} models`);
+      handleCloseBulkEditDialog();
+      fetchModels();
+      setSelectedModels([]);
+    } catch (err: unknown) {
+      console.error('Bulk update error:', err);
+      const error = err as { response?: { data?: { detail?: string } } };
+      toast.error(error.response?.data?.detail || 'Failed to update models');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Helper to get provider name
   const getProviderName = (providerId: number) => {
     const provider = providers.find(p => p.id === providerId);
     return provider ? provider.display_name : `Provider ${providerId}`;
   };
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  // Calculate displayed rows based on pagination
-  const displayedRows = models.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
@@ -232,6 +318,16 @@ const ModelManagement: React.FC = () => {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+            {selectedModels.length > 0 && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleOpenBulkEditDialog}
+                sx={{ ml: 1 }}
+              >
+                Bulk Edit ({selectedModels.length})
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -267,78 +363,231 @@ const ModelManagement: React.FC = () => {
           </Paper>
         )}
 
-        <TableContainer component={Paper}>
-          {loading ? (
-            <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell width="5%">ID</TableCell>
-                    <TableCell width="12%">Name</TableCell>
-                    <TableCell width="12%">Display Name</TableCell>
-                    <TableCell width="12%">Provider</TableCell>
-                    <TableCell width="8%">Type</TableCell>
-                    <TableCell width="8%">Status</TableCell>
-                    <TableCell width="8%">Default</TableCell>
-                    <TableCell width="8%">Cost Input</TableCell>
-                    <TableCell width="8%">Cost Output</TableCell>
-                    <TableCell width="10%">Context</TableCell>
-                    <TableCell width="9%" align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {displayedRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{row.id}</TableCell>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.display_name}</TableCell>
-                      <TableCell>{row.provider ? row.provider.display_name : getProviderName(row.provider_id)}</TableCell>
-                      <TableCell>{row.model_type}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={row.status}
-                          color={
-                            row.status === 'active' ? 'success' :
-                            row.status === 'beta' ? 'info' :
-                            row.status === 'deprecated' ? 'warning' : 'default'
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{row.is_default ? 'Yes' : 'No'}</TableCell>
-                      <TableCell>{row.cost_per_1k_input_tokens}</TableCell>
-                      <TableCell>{row.cost_per_1k_output_tokens}</TableCell>
-                      <TableCell>{row.context_window ? `${row.context_window.toLocaleString()}` : 'N/A'}</TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <IconButton size="small" onClick={() => handleOpenDialog(row)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDelete(row)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={models.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
+        {/* Filter Bar */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  label="Search by Name"
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: nameFilter ? (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setNameFilter('')}>
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Provider</InputLabel>
+                  <Select
+                    value={providerFilter}
+                    onChange={(e) => {
+                      const newValue = e.target.value as number | '';
+                      console.log('Setting provider filter to:', newValue);
+                      setProviderFilter(newValue);
+                    }}
+                    label="Provider"
+                  >
+                    <MenuItem value="">All Providers</MenuItem>
+                    {providers.map((provider) => (
+                      <MenuItem key={provider.id} value={provider.id}>
+                        {provider.display_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Type</InputLabel>
+                  <Select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    label="Type"
+                  >
+                    <MenuItem value="">All Types</MenuItem>
+                    {Array.from(new Set(models.map(model => model.model_type))).map(type => (
+                      <MenuItem key={type} value={type}>
+                        {type}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    label="Status"
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                    <MenuItem value="deprecated">Deprecated</MenuItem>
+                    <MenuItem value="beta">Beta</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={12} md={2} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ClearIcon />}
+                  onClick={() => {
+                    setNameFilter('');
+                    setProviderFilter('');
+                    setTypeFilter('');
+                    setStatusFilter('');
+                  }}
+                  size="small"
+                >
+                  Clear Filters
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <Paper>
+          {/* Define columns for the DataGrid */}
+          {(() => {
+            // Filter models based on filter criteria
+            const filteredModels = useMemo(() => {
+              // Log filter values for debugging
+              console.log('Filtering with criteria:', {
+                nameFilter,
+                providerFilter,
+                typeFilter,
+                statusFilter
+              });
+
+              return models.filter(model => {
+                const nameMatch = !nameFilter ||
+                  model.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
+                  model.display_name.toLowerCase().includes(nameFilter.toLowerCase());
+
+                // Check provider_id directly or from the nested provider object
+                // Convert both to strings for comparison to handle potential type mismatches
+                const modelProviderId = model.provider_id || (model.provider ? model.provider.id : null);
+                const providerMatch = !providerFilter ||
+                  (modelProviderId !== null && String(modelProviderId) === String(providerFilter));
+
+                // Debug provider matching
+                if (providerFilter && !providerMatch) {
+                  console.log(
+                    `Provider mismatch for model ${model.name}:`,
+                    `Expected: ${providerFilter} (${typeof providerFilter}), ` +
+                    `Actual: ${modelProviderId} (${typeof modelProviderId}), ` +
+                    `String comparison: ${String(providerFilter)} === ${String(modelProviderId)}, ` +
+                    `Has provider_id: ${!!model.provider_id}, ` +
+                    `Has provider: ${!!model.provider}`
+                  );
+                }
+
+                const typeMatch = !typeFilter || model.model_type === typeFilter;
+                const statusMatch = !statusFilter || model.status === statusFilter;
+
+                return nameMatch && providerMatch && typeMatch && statusMatch;
+              });
+            }, [models, nameFilter, providerFilter, typeFilter, statusFilter]);
+
+            const columns: Column[] = [
+              { field: 'id', headerName: 'ID', width: 70 },
+              { field: 'name', headerName: 'Name', width: 150 },
+              { field: 'display_name', headerName: 'Display Name', width: 150 },
+              {
+                field: 'provider_id',
+                headerName: 'Provider',
+                width: 150,
+                renderCell: (params) => (
+                  params.provider ? params.provider.display_name : getProviderName(params.provider_id)
+                )
+              },
+              { field: 'model_type', headerName: 'Type', width: 100 },
+              {
+                field: 'status',
+                headerName: 'Status',
+                width: 120,
+                renderCell: (params) => (
+                  <Chip
+                    label={params.status}
+                    color={
+                      params.status === 'active' ? 'success' :
+                      params.status === 'beta' ? 'info' :
+                      params.status === 'deprecated' ? 'warning' : 'default'
+                    }
+                    size="small"
+                  />
+                )
+              },
+              {
+                field: 'is_default',
+                headerName: 'Default',
+                width: 100,
+                renderCell: (params) => (params.is_default ? 'Yes' : 'No')
+              },
+              {
+                field: 'cost_per_1k_input_tokens',
+                headerName: 'Cost Input',
+                width: 120
+              },
+              {
+                field: 'cost_per_1k_output_tokens',
+                headerName: 'Cost Output',
+                width: 120
+              },
+              {
+                field: 'context_window',
+                headerName: 'Context',
+                width: 120,
+                renderCell: (params) => (
+                  params.context_window ? `${params.context_window.toLocaleString()}` : 'N/A'
+                )
+              },
+            ];
+
+            const actions: Action[] = [
+              {
+                label: 'Edit',
+                onClick: (row) => handleOpenDialog(row)
+              },
+              {
+                label: 'Delete',
+                onClick: (row) => handleDelete(row)
+              }
+            ];
+
+            return (
+              <DataGrid
+                data={filteredModels}
+                columns={columns}
+                loading={loading}
+                sortable={true}
+                selectable={true}
+                filterable={false} // We're using our custom filter bar instead
+                pagination={true}
+                pageSize={10}
+                actions={actions}
+                onSelectionChange={handleSelectionChange}
               />
-            </>
-          )}
-        </TableContainer>
+            );
+          })()}
+        </Paper>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -478,6 +727,138 @@ const ModelManagement: React.FC = () => {
             </Button>
             <Button onClick={handleSave} variant="contained" disabled={loading}>
               {editRecord ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Bulk Edit Dialog */}
+        <Dialog open={bulkEditDialogOpen} onClose={handleCloseBulkEditDialog} maxWidth="md" fullWidth>
+          <DialogTitle>Bulk Edit {selectedModels.length} Models</DialogTitle>
+          <DialogContent dividers>
+            {loading && <CircularProgress />}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Select the fields you want to update for all selected models. Only the fields you modify will be updated.
+              </Typography>
+            </Box>
+            <Box display="flex" flexDirection="column" gap={2} mt={1}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={bulkEditFormData.status || ''}
+                  onChange={(e) => setBulkEditFormData({ ...bulkEditFormData, status: e.target.value || undefined })}
+                  label="Status"
+                >
+                  <MenuItem value=""><em>No change</em></MenuItem>
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
+                  <MenuItem value="deprecated">Deprecated</MenuItem>
+                  <MenuItem value="beta">Beta</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth size="small">
+                <InputLabel>Provider</InputLabel>
+                <Select
+                  value={bulkEditFormData.provider_id || ''}
+                  onChange={(e) => setBulkEditFormData({
+                    ...bulkEditFormData,
+                    provider_id: e.target.value ? Number(e.target.value) : undefined
+                  })}
+                  label="Provider"
+                >
+                  <MenuItem value=""><em>No change</em></MenuItem>
+                  {providers.map((provider) => (
+                    <MenuItem key={provider.id} value={provider.id}>
+                      {provider.display_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                label="Model Type"
+                value={bulkEditFormData.model_type || ''}
+                onChange={(e) => setBulkEditFormData({
+                  ...bulkEditFormData,
+                  model_type: e.target.value || undefined
+                })}
+                size="small"
+                fullWidth
+                helperText="Leave empty to keep current values"
+              />
+
+              <TextField
+                label="Context Window"
+                type="number"
+                value={bulkEditFormData.context_window || ''}
+                onChange={(e) => setBulkEditFormData({
+                  ...bulkEditFormData,
+                  context_window: e.target.value ? Number(e.target.value) : undefined
+                })}
+                size="small"
+                fullWidth
+                helperText="Leave empty to keep current values"
+              />
+
+              <TextField
+                label="Cost per 1k Input Tokens"
+                type="number"
+                value={bulkEditFormData.cost_per_1k_input_tokens || ''}
+                onChange={(e) => setBulkEditFormData({
+                  ...bulkEditFormData,
+                  cost_per_1k_input_tokens: e.target.value ? Number(e.target.value) : undefined
+                })}
+                size="small"
+                fullWidth
+                inputProps={{ step: 0.001 }}
+                helperText="Leave empty to keep current values"
+              />
+
+              <TextField
+                label="Cost per 1k Output Tokens"
+                type="number"
+                value={bulkEditFormData.cost_per_1k_output_tokens || ''}
+                onChange={(e) => setBulkEditFormData({
+                  ...bulkEditFormData,
+                  cost_per_1k_output_tokens: e.target.value ? Number(e.target.value) : undefined
+                })}
+                size="small"
+                fullWidth
+                inputProps={{ step: 0.001 }}
+                helperText="Leave empty to keep current values"
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={bulkEditFormData.is_default === true}
+                    onChange={(e) => setBulkEditFormData({
+                      ...bulkEditFormData,
+                      is_default: e.target.checked ? true : undefined
+                    })}
+                  />
+                }
+                label="Set as default model for its type"
+                sx={{
+                  mx: 1,
+                  '& .MuiSwitch-root': {
+                    mx: 1
+                  }
+                }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseBulkEditDialog} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkUpdate}
+              variant="contained"
+              disabled={loading || Object.keys(bulkEditFormData).length === 0}
+            >
+              Update {selectedModels.length} Models
             </Button>
           </DialogActions>
         </Dialog>

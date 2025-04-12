@@ -70,25 +70,27 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
 }>(({ theme, open }) => ({
   flexGrow: 1,
   padding: theme.spacing(3),
-  transition: theme.transitions.create('margin', {
+  transition: theme.transitions.create(['margin', 'width'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
   marginLeft: 0,
   overflowX: 'hidden', // Prevent horizontal scrolling
+  width: '100%', // Take full width when drawer is closed
   maxWidth: '100vw', // Limit width to viewport
   boxSizing: 'border-box', // Include padding in width calculation
   ...(open && {
-    transition: theme.transitions.create('margin', {
+    transition: theme.transitions.create(['margin', 'width'], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
     marginLeft: `${drawerWidth}px`,
+    width: `calc(100% - ${drawerWidth}px)`, // Adjust width when drawer is open
   }),
   [theme.breakpoints.down('sm')]: {
     marginLeft: 0,
+    width: '100%', // Always full width on mobile
     padding: theme.spacing(2),
-    width: '100%',
   },
   [theme.breakpoints.down('xs')]: {
     padding: theme.spacing(1.5),
@@ -239,6 +241,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
       const menuModal = document.querySelector('.css-10nakn3-MuiModal-root-MuiPopover-root-MuiMenu-root');
       if (menuModal && menuModal.getAttribute('aria-hidden') === 'true') {
         (menuModal as HTMLElement).style.display = 'none';
+      }
+
+      // Fix for the problematic MuiDrawer-docked class
+      const dockedDrawer = document.querySelector('.MuiDrawer-docked.css-qt446r-MuiDrawer-docked');
+      if (dockedDrawer && !open) {
+        (dockedDrawer as HTMLElement).style.position = 'absolute';
+        (dockedDrawer as HTMLElement).style.width = '0';
+        (dockedDrawer as HTMLElement).style.overflow = 'hidden';
       }
     }, 300); // Wait for transition to complete
   };
@@ -432,6 +442,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
           '& .MuiBackdrop-root': {
             display: open ? 'block' : 'none',
           },
+          // Fix for the MuiDrawer-docked issue
+          '& .MuiDrawer-docked': {
+            position: open ? 'relative' : 'absolute',
+            // When closed, make sure it doesn't affect layout
+            '& .MuiPaper-root': {
+              position: open ? 'relative' : 'absolute',
+            },
+          },
+          // Hide the drawer completely when closed
+          ...(isMobile === false && open === false && {
+            display: 'none',
+          }),
         }}
         variant={isMobile ? 'temporary' : 'persistent'}
         anchor="left"

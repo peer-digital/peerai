@@ -64,6 +64,7 @@ class ModelOrchestrator:
 
         model = self.db.query(AIModel).filter(AIModel.name == model_name).first()
         if not model:
+            logger.warning(f"Attempted to use non-existent model: {model_name}")
             raise ValueError(f"Model '{model_name}' not found")
 
         self._model_cache[model_name] = model
@@ -223,6 +224,9 @@ class ModelOrchestrator:
 
         return api_key
 
+    # We don't need a hardcoded list of allowed models anymore
+    # The admin can control which models are active through the Model Management page
+
     async def call_model(
         self,
         request_data: Dict[str, Any],
@@ -248,6 +252,14 @@ class ModelOrchestrator:
                 self._get_model(model_name) if model_name else self._get_default_model()
             )
             provider = self._get_provider(model.provider_id)
+
+            # Check if the model is active
+            if model.status != "active":
+                # Log detailed information for debugging, but return a generic error to the user
+                logger.warning(f"Attempted to use inactive model: {model.name}")
+
+                # Use a generic error message that doesn't reveal whether the model exists or not
+                raise ValueError(f"Model '{model.name}' not found")
 
             logger.debug(f"Selected model: {model.name}, provider: {provider.name}")
             logger.debug(f"Model config: {model.config}")

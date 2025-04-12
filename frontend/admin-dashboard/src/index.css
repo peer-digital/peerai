@@ -99,3 +99,16 @@ body.MuiModal-open:not(:has(.MuiDrawer-root[aria-hidden="false"])) {
 .MuiPopover-root.MuiMenu-root .MuiBackdrop-root {
   cursor: pointer;
 }
+
+/* Fix for MuiDrawer-docked issue causing overflow */
+.MuiDrawer-docked.css-qt446r-MuiDrawer-docked {
+  position: absolute !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Ensure drawer doesn't affect layout when closed */
+.MuiDrawer-root:not([aria-hidden="false"]) {
+  width: 0 !important;
+  overflow: hidden !important;
+}
