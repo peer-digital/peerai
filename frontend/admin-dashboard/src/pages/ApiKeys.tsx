@@ -133,11 +133,6 @@ const ApiKeys: React.FC = () => {
 
   const handleCopyKey = async (key: string) => {
     try {
-      // Show visual feedback immediately for better UX
-      toast.isActive('copy-toast')
-        ? toast.update('copy-toast', { render: 'Copying...', autoClose: false })
-        : toast.info('Copying...', { toastId: 'copy-toast', autoClose: false });
-
       // Use the Clipboard API with fallback for better mobile support
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(key);
@@ -179,11 +174,14 @@ const ApiKeys: React.FC = () => {
         document.body.removeChild(textArea);
       }
 
-      // Update toast with success message
-      toast.update('copy-toast', {
-        render: 'API key copied to clipboard',
-        type: 'success',
-        autoClose: 2000
+      // Show success toast notification
+      toast.success('API key copied to clipboard', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
       });
     } catch (err) {
       console.error('Failed to copy API key', err);

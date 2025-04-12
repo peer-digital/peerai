@@ -143,6 +143,7 @@ function App() {
                   <Route path="*" element={<Navigate to="/404" replace />} />
                 </Routes>
               </React.Suspense>
+              <ToastContainer />
             </Router>
           </AuthProvider>
         </SnackbarProvider>
