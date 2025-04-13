@@ -71,6 +71,107 @@ button:focus-visible {
   }
 }
 
+/* Custom scrollbar styling */
+/* For WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 128, 128, 0.5);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+}
+
+/* Hide scrollbars until hover for elements with overflow */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.hide-scrollbar:hover {
+  scrollbar-width: thin; /* Firefox */
+}
+
+.hide-scrollbar:hover::-webkit-scrollbar {
+  display: block; /* Chrome, Safari, Edge */
+}
+
+/* Auto-hide scrollbars for elements with overflow */
+div, section, article, aside, nav, main {
+  scrollbar-width: thin;
+  transition: scrollbar-width 0.3s ease;
+}
+
+div:not(:hover):not(:focus-within):not(.always-show-scrollbar),
+section:not(:hover):not(:focus-within):not(.always-show-scrollbar),
+article:not(:hover):not(:focus-within):not(.always-show-scrollbar),
+aside:not(:hover):not(:focus-within):not(.always-show-scrollbar),
+nav:not(:hover):not(:focus-within):not(.always-show-scrollbar),
+main:not(:hover):not(:focus-within):not(.always-show-scrollbar) {
+  scrollbar-width: none;
+}
+
+div:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar,
+section:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar,
+article:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar,
+aside:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar,
+nav:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar,
+main:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Mode-specific scrollbar styling */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  * {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  * {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+}
+
 /* Fix for MuiDrawer overlay issue */
 .MuiDrawer-root.MuiDrawer-modal.MuiModal-root.css-1so0oxj-MuiModal-root-MuiDrawer-root[aria-hidden="true"] {
   display: none !important;

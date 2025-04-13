@@ -76,6 +76,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   }),
   marginLeft: 0,
   overflowX: 'hidden', // Prevent horizontal scrolling
+  overflowY: 'auto', // Enable vertical scrolling when needed
   width: '100%', // Take full width when drawer is closed
   minWidth: '100%', // Ensure minimum width is also 100%
   maxWidth: '100vw', // Limit width to viewport
@@ -557,7 +558,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
         </List>
       </Drawer>
 
-      <Main open={open}>
+      <Main open={open} className="always-show-scrollbar">
         <DrawerHeader />
         {children}
       </Main>

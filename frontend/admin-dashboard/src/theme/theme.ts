@@ -463,12 +463,52 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    // Global scrollbar styling based on theme mode
+    MuiCssBaseline: {
+      styleOverrides: {
+        '*::-webkit-scrollbar': {
+          width: '8px',
+          height: '8px',
+          backgroundColor: 'transparent',
+        },
+        '*::-webkit-scrollbar-track': {
+          backgroundColor: 'transparent',
+          borderRadius: '10px',
+        },
+        '*::-webkit-scrollbar-thumb': {
+          backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '10px',
+          transition: 'background-color 0.3s ease',
+          '&:hover': {
+            backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+          },
+        },
+        '*': {
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${mode === 'light' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'} transparent`,
+        },
+        // Auto-hide scrollbars for elements with overflow
+        'div, section, article, aside, nav, main': {
+          scrollbarWidth: 'thin',
+          transition: 'scrollbar-width 0.3s ease',
+        },
+        'div:not(:hover):not(:focus-within):not(.always-show-scrollbar), section:not(:hover):not(:focus-within):not(.always-show-scrollbar), article:not(:hover):not(:focus-within):not(.always-show-scrollbar), aside:not(:hover):not(:focus-within):not(.always-show-scrollbar), nav:not(:hover):not(:focus-within):not(.always-show-scrollbar), main:not(:hover):not(:focus-within):not(.always-show-scrollbar)': {
+          scrollbarWidth: 'none',
+        },
+        'div:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar, section:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar, article:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar, aside:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar, nav:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar, main:not(:hover):not(:focus-within):not(.always-show-scrollbar)::-webkit-scrollbar': {
+          width: '0',
+          height: '0',
+          background: 'transparent',
+        },
+      },
+    },
   },
 });
 
 // Create theme function that accepts a mode parameter
 export const createAppTheme = (mode: PaletteMode): Theme => {
-  return createTheme({
+  // Create the base theme
+  const baseTheme = createTheme({
     ...getPalette(mode),
     ...getTypography(),
     shape: {
@@ -476,6 +516,9 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
     },
     ...getComponents(mode),
   });
+
+  // Apply global styles
+  return baseTheme;
 };
 
 // Default theme (light mode)
