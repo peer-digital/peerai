@@ -21,12 +21,16 @@ import {
   CircularProgress,
   Divider,
   Alert,
+  Link,
 } from '@mui/material';
 import {
   ContentCopy as ContentCopyIcon,
   Send as SendIcon,
   Code as CodeIcon,
   Api as ApiIcon,
+  Key as KeyIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 import AdvancedParameters from '../components/playground/AdvancedParameters';
 import { toast } from 'react-toastify';
@@ -34,6 +38,9 @@ import { useTheme } from '@mui/material/styles';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { apiClient } from '../api/client';
+import { useQuery } from '@tanstack/react-query';
+import { Link as RouterLink } from 'react-router-dom';
+import api from '../api/config';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -44,6 +51,15 @@ interface EndpointConfig {
   requiresBody: boolean;
   defaultBody: string;
   supportedModels?: string[];
+}
+
+interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+  lastUsed: string | null;
+  is_active: boolean;
 }
 
 interface CompletionResponse {
@@ -141,6 +157,22 @@ function Playground() {
   const [error, setError] = useState<string | null>(null);
   const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
+  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
+
+  // Fetch user's API keys
+  const { data: userApiKeys, isLoading: isLoadingKeys } = useQuery<ApiKey[]>({
+    queryKey: ['api-keys'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/auth/api-keys');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching API keys:', error);
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -312,6 +344,19 @@ function Playground() {
     }
   };
 
+  // Validate if the current API key exists in the user's API keys
+  const validateApiKey = (key: string) => {
+    if (!key || !userApiKeys || userApiKeys.length === 0) {
+      setIsApiKeyValid(null);
+      return false;
+    }
+
+    // Check if the key exists in the user's API keys
+    const isValid = userApiKeys.some(userKey => userKey.key === key && userKey.is_active);
+    setIsApiKeyValid(isValid);
+    return isValid;
+  };
+
   // Load API key from localStorage on component mount
   useEffect(() => {
     const storedApiKey = localStorage.getItem('apiKey');
@@ -327,13 +372,16 @@ function Playground() {
     }
   }, []);
 
-  // Fetch available models when API key changes
+  // Validate API key when it changes or when user's API keys are loaded
   useEffect(() => {
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
       localStorage.setItem('apiKey', apiKey); // Save API key to localStorage
+      validateApiKey(apiKey);
       fetchAvailableModels();
+    } else {
+      setIsApiKeyValid(null);
     }
-  }, [apiKey]);
+  }, [apiKey, userApiKeys]);
 
   // Initialize with empty model if no models are available
   useEffect(() => {
@@ -356,6 +404,11 @@ function Playground() {
 
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
+      }
+
+      // Check if API key is valid
+      if (!isApiKeyValid) {
+        throw new Error('Invalid API key. Please use a valid API key from your account.');
       }
 
       const headers: Record<string, string> = {
@@ -544,8 +597,46 @@ function Playground() {
                   }
                 }}
                 type="password"
-                helperText="API keys should only contain letters, numbers, hyphens, and underscores"
-                error={apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey)}
+                placeholder="Enter your API key"
+                InputProps={{
+                  endAdornment: apiKey ? (
+                    isApiKeyValid === true ? (
+                      <Tooltip title="Valid API key" arrow>
+                        <CheckCircleIcon color="success" fontSize="small" />
+                      </Tooltip>
+                    ) : isApiKeyValid === false ? (
+                      <Tooltip title="Invalid API key" arrow>
+                        <ErrorIcon color="error" fontSize="small" />
+                      </Tooltip>
+                    ) : null
+                  ) : (
+                    <Tooltip title="API key is required" arrow>
+                      <KeyIcon color="action" fontSize="small" sx={{ opacity: 0.5 }} />
+                    </Tooltip>
+                  )
+                }}
+                helperText={
+                  <>
+                    {apiKey && isApiKeyValid === false ? (
+                      <Typography variant="caption" color="error">
+                        Invalid API key. <Link component={RouterLink} to="/api-keys">Manage your API keys</Link>
+                      </Typography>
+                    ) : apiKey && isApiKeyValid === true ? (
+                      <Typography variant="caption" color="success.main">
+                        Valid API key
+                      </Typography>
+                    ) : apiKey ? (
+                      <Typography variant="caption">
+                        API keys should only contain letters, numbers, hyphens, and underscores
+                      </Typography>
+                    ) : (
+                      <Typography variant="caption">
+                        Please enter an API key from your <Link component={RouterLink} to="/api-keys">API Keys</Link> page
+                      </Typography>
+                    )}
+                  </>
+                }
+                error={apiKey !== '' && (!/^[a-zA-Z0-9_-]+$/.test(apiKey) || isApiKeyValid === false)}
                 sx={{
                   '& .MuiInputBase-root': {
                     fontSize: { xs: '0.875rem', sm: '1rem' }
@@ -593,16 +684,25 @@ function Playground() {
                   spacing={2}
                   alignItems={{ xs: 'flex-start', sm: 'center' }}
                 >
-                  <Button
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
-                    fullWidth={false}
-                    sx={{ minWidth: '140px' }}
+                  <Tooltip
+                    title={!apiKey ? "Please enter an API key" : isApiKeyValid === false ? "Please enter a valid API key" : ""}
+                    arrow
+                    placement="top"
+                    disableHoverListener={!(!apiKey || isApiKeyValid === false)}
                   >
-                    {loading ? 'Sending...' : 'Send Request'}
-                  </Button>
+                    <span> {/* Wrapper needed for disabled buttons */}
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading || !apiKey || isApiKeyValid === false}
+                        startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
+                        fullWidth={false}
+                        sx={{ minWidth: '140px' }}
+                      >
+                        {loading ? 'Sending...' : 'Send Request'}
+                      </Button>
+                    </span>
+                  </Tooltip>
 
                   <Stack
                     direction="row"
