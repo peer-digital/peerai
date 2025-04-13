@@ -94,14 +94,14 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   }),
   // Add width constraint for larger screens
   [theme.breakpoints.up('lg')]: {
-    width: '85%',
-    minWidth: '85%',
+    width: '80%',
+    minWidth: '80%',
     maxWidth: '1400px',
     ...(open ? {
       // When sidebar is open, we need to adjust the left margin to account for the drawer
       // and adjust the right margin to maintain visual balance
-      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 85%) / 2)`,
-      marginRight: `calc((100% - ${drawerWidth}px - 85%) / 2)`,
+      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 80%) / 2)`,
+      marginRight: `calc((100% - ${drawerWidth}px - 80%) / 2)`,
     } : {
       // When sidebar is closed, we can use auto margins to center
       marginLeft: 'auto',
@@ -109,14 +109,14 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     }),
   },
   [theme.breakpoints.up('xl')]: {
-    width: '75%',
-    minWidth: '75%',
+    width: '70%',
+    minWidth: '70%',
     maxWidth: '1600px',
     ...(open ? {
       // When sidebar is open, we need to adjust the left margin to account for the drawer
       // and adjust the right margin to maintain visual balance
-      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 75%) / 2)`,
-      marginRight: `calc((100% - ${drawerWidth}px - 75%) / 2)`,
+      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 70%) / 2)`,
+      marginRight: `calc((100% - ${drawerWidth}px - 70%) / 2)`,
     } : {
       // When sidebar is closed, we can use auto margins to center
       marginLeft: 'auto',
