@@ -26,9 +26,9 @@ interface AnnouncementBannerProps {
 }
 
 const BannerContainer = styled(Paper)(({ theme }) => ({
-  position: 'relative', // Changed from sticky to relative since it's inside the Main component
+  position: 'relative', // Keep as relative to maintain normal document flow
   width: '100%',
-  zIndex: 1, // Lower z-index since it's inside the Main component
+  zIndex: 2, // Slightly higher z-index to ensure it's above content
   borderRadius: theme.shape.borderRadius,
   padding: theme.spacing(1.5, 2),
   display: 'flex',
@@ -76,11 +76,14 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   };
 
   return (
-    <Collapse in={isVisible}>
+    <Collapse in={isVisible} sx={{ width: '100%' }}>
       <BannerContainer
         sx={{
           bgcolor: bannerColor || defaultBannerColor,
           color: textColor || defaultTextColor,
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'row',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>

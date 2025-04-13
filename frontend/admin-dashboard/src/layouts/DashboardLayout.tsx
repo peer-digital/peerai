@@ -576,27 +576,31 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <Main open={open} className="always-show-scrollbar">
         <DrawerHeader />
         {/* Show announcement banner if enabled or if announcementProps is provided */}
-        {(announcementProps?.enabled !== false && announcementProps?.message) ? (
-          <AnnouncementBanner
-            message={announcementProps.message}
-            ctaText={announcementProps.ctaText}
-            ctaLink={announcementProps.ctaLink}
-            bannerColor={announcementProps.bannerColor}
-            textColor={announcementProps.textColor}
-            bannerId={announcementProps.bannerId}
-          />
-        ) : (
-          // Default announcement banner
-          <AnnouncementBanner
-            message="Välkommen till vår Beta! Vissa funktioner kan fortfarande innehålla buggar. Kontakta oss gärna för att lämna feedback eller ställa frågor."
-            ctaText="Kontakta oss"
-            ctaLink="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
-            bannerId="welcome-beta-2023"
-            bannerColor="#3949ab" // Slightly different blue to stand out
-            textColor="#ffffff"
-          />
-        )}
-        {children}
+        <Box sx={{ width: '100%', mb: 2 }}>
+          {(announcementProps?.enabled !== false && announcementProps?.message) ? (
+            <AnnouncementBanner
+              message={announcementProps.message}
+              ctaText={announcementProps.ctaText}
+              ctaLink={announcementProps.ctaLink}
+              bannerColor={announcementProps.bannerColor}
+              textColor={announcementProps.textColor}
+              bannerId={announcementProps.bannerId}
+            />
+          ) : (
+            // Default announcement banner
+            <AnnouncementBanner
+              message="Välkommen till vår Beta, plattformen är fortfarande under utveckling! Kontakta oss gärna för att lämna feedback eller ställa frågor."
+              ctaText="Kontakta oss"
+              ctaLink="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+              bannerId="welcome-beta-2023"
+              bannerColor="#3949ab" // Slightly different blue to stand out
+              textColor="#ffffff"
+            />
+          )}
+        </Box>
+        <Box sx={{ width: '100%' }}>
+          {children}
+        </Box>
       </Main>
 
       {/* Referral Modal */}
