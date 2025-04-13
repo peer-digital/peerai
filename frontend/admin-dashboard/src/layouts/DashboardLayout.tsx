@@ -77,8 +77,12 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   marginLeft: 0,
   overflowX: 'hidden', // Prevent horizontal scrolling
   width: '100%', // Take full width when drawer is closed
+  minWidth: '100%', // Ensure minimum width is also 100%
   maxWidth: '100vw', // Limit width to viewport
   boxSizing: 'border-box', // Include padding in width calculation
+  display: 'flex', // Use flexbox for centering
+  flexDirection: 'column', // Stack children vertically
+  alignItems: 'center', // Center horizontally
   ...(open && {
     transition: theme.transitions.create(['margin', 'width'], {
       easing: theme.transitions.easing.easeOut,
@@ -86,10 +90,12 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     }),
     marginLeft: `${drawerWidth}px`,
     width: `calc(100% - ${drawerWidth}px)`, // Adjust width when drawer is open
+    minWidth: `calc(100% - ${drawerWidth}px)`, // Adjust min-width when drawer is open
   }),
   [theme.breakpoints.down('sm')]: {
     marginLeft: 0,
     width: '100%', // Always full width on mobile
+    minWidth: '100%', // Always full min-width on mobile
     padding: theme.spacing(2),
   },
   [theme.breakpoints.down('xs')]: {

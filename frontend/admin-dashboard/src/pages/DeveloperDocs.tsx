@@ -28,10 +28,10 @@ const DeveloperDocs: React.FC = () => {
 
   // Loading placeholder component
   const LoadingPlaceholder = () => (
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
+    <Box sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       height: 200,
       width: '100%',
       bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.03)',
@@ -73,6 +73,8 @@ const DeveloperDocs: React.FC = () => {
   return (
     <Box sx={{
       p: { xs: 2, sm: 3 },
+      width: '100%',
+      minWidth: '100%',
       maxWidth: '100%',
       margin: '0 auto',
       overflowX: 'hidden', // Prevent horizontal scrolling

@@ -65,7 +65,7 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Box p={4} position="relative">
+    <Box p={4} position="relative" sx={{ width: '100%', minWidth: '100%' }}>
       <LoadingOverlay loading={loading} />
 
       <Typography variant="h4" gutterBottom>

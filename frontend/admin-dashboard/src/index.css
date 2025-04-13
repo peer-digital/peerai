@@ -24,8 +24,7 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* Removed display: flex and place-items: center that were causing centering issues */
   min-width: 320px;
   min-height: 100vh;
   touch-action: manipulation; /* Improve touch behavior */

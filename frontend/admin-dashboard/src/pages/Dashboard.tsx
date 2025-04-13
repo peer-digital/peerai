@@ -77,10 +77,11 @@ function TabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`dashboard-tabpanel-${index}`}
       aria-labelledby={`dashboard-tab-${index}`}
+      style={{ width: '100%', minWidth: '100%' }}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, width: '100%', minWidth: '100%' }}>
           {children}
         </Box>
       )}
@@ -88,7 +89,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const MetricCard = ({ title, value, change, suffix = '' }: { 
+const MetricCard = ({ title, value, change, suffix = '' }: {
   title: string;
   value: number;
   change: number;
@@ -139,7 +140,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   // Determine the view type based on user role
   useEffect(() => {
     if (!user) return;
-    
+
     if (hasAnyPermission(user, [Permission.VIEW_ALL_USAGE])) {
       setViewType('all');
     } else if (hasAnyPermission(user, [Permission.VIEW_TEAM_USAGE])) {
@@ -154,13 +155,13 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
     queryKey: ['usage-stats', viewType],
     queryFn: async () => {
       let endpoint = '/admin/usage/personal';
-      
+
       if (viewType === 'team') {
         endpoint = '/admin/usage/team';
       } else if (viewType === 'all') {
         endpoint = '/admin/stats';
       }
-      
+
       const response = await api.get(endpoint);
       console.log('Usage stats:', response.data);
       return response.data;
@@ -223,15 +224,15 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   };
 
   return (
-    <Box p={3}>
+    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 600 }}>
         {getDashboardTitle()}
       </Typography>
 
       {/* Token Status Alert */}
       {stats && user && tokenUsagePercentage >= 100 && (
-        <Alert 
-          severity="warning" 
+        <Alert
+          severity="warning"
           sx={{ mb: 3 }}
           action={
             <Button
@@ -262,7 +263,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
 
       <TabPanel value={tabValue} index={0}>
         {/* Key Metrics */}
-        <Grid container spacing={3} mb={4}>
+        <Grid container spacing={3} mb={4} sx={{ width: '100%', minWidth: '100%' }}>
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title="Total Requests"
@@ -308,16 +309,16 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                 ({tokenUsagePercentage.toFixed(1)}%)
               </Typography>
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.min(tokenUsagePercentage, 100)} 
-              sx={{ 
+            <LinearProgress
+              variant="determinate"
+              value={Math.min(tokenUsagePercentage, 100)}
+              sx={{
                 height: 8,
                 borderRadius: 1,
                 bgcolor: 'rgba(0,0,0,0.05)',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 1,
-                  bgcolor: tokenUsagePercentage >= 90 ? 'error.main' : 
+                  bgcolor: tokenUsagePercentage >= 90 ? 'error.main' :
                            tokenUsagePercentage >= 75 ? 'warning.main' : 'primary.main',
                 }
               }}
@@ -330,7 +331,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
           </Paper>
         )}
 
-        <Grid container spacing={3}>
+        <Grid container spacing={3} sx={{ width: '100%', minWidth: '100%' }}>
           {/* Usage Trends */}
           <Grid item xs={12} lg={8}>
             <Paper sx={{ p: 3, height: '100%' }}>
@@ -350,7 +351,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                       }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
+                      <XAxis
                         dataKey="date"
                         angle={-45}
                         textAnchor="end"
@@ -405,10 +406,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                           {model.requests.toLocaleString()} requests
                         </Typography>
                       </Stack>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={model.percentage} 
-                        sx={{ 
+                      <LinearProgress
+                        variant="determinate"
+                        value={model.percentage}
+                        sx={{
                           height: 8,
                           borderRadius: 1,
                           bgcolor: 'rgba(0,0,0,0.05)',
@@ -459,4 +460,4 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

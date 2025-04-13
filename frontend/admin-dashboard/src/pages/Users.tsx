@@ -103,7 +103,7 @@ const Users: React.FC = () => {
   });
 
   // Filter users based on search query
-  const filteredUsers = users?.filter(user => 
+  const filteredUsers = users?.filter(user =>
     !searchQuery || (
       (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -182,7 +182,7 @@ const Users: React.FC = () => {
 
   if (error) {
     return (
-      <Box p={3}>
+      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
         <Alert severity="error">
           Error loading users. Please try again later.
         </Alert>
@@ -191,7 +191,7 @@ const Users: React.FC = () => {
   }
 
   return (
-    <Box p={3}>
+    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 600 }}>
@@ -217,7 +217,7 @@ const Users: React.FC = () => {
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {isLoading && <LinearProgress />}
-        
+
         <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
           <Table stickyHeader>
             <TableHead>
@@ -279,14 +279,14 @@ const Users: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Tooltip 
+                        <Tooltip
                           title={
                             <Box>
                               <Typography variant="body2">Total: {user.referral_stats?.total_referrals || 0}</Typography>
                               <Typography variant="body2">Successful: {user.referral_stats?.successful_referrals || 0}</Typography>
                               <Typography variant="body2">Tokens Earned: {(user.referral_stats?.total_tokens_earned || 0).toLocaleString()}</Typography>
                             </Box>
-                          } 
+                          }
                           arrow
                         >
                           <Box>
@@ -362,10 +362,10 @@ const Users: React.FC = () => {
         )}
       </Paper>
 
-      <Dialog 
-        open={editDialogOpen} 
-        onClose={handleCloseEditDialog} 
-        maxWidth="sm" 
+      <Dialog
+        open={editDialogOpen}
+        onClose={handleCloseEditDialog}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 2 }
@@ -416,8 +416,8 @@ const Users: React.FC = () => {
           <Button onClick={handleCloseEditDialog} color="inherit">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSaveEdit} 
+          <Button
+            onClick={handleSaveEdit}
             variant="contained"
             sx={{ px: 3 }}
           >
@@ -429,4 +429,4 @@ const Users: React.FC = () => {
   );
 };
 
-export default Users; 
+export default Users;

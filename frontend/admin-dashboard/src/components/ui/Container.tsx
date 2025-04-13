@@ -18,9 +18,13 @@ const extendedBreakpoints = {
 // Styled container component with responsive padding
 const StyledContainer = styled(Box)(({ theme }) => ({
   width: '100%',
+  minWidth: '100%',
   marginLeft: 'auto',
   marginRight: 'auto',
   padding: theme.spacing(2),
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center', // Center content horizontally
   [theme.breakpoints.up('sm')]: {
     padding: theme.spacing(3),
   },
@@ -55,14 +59,14 @@ const Container: React.FC<ContainerProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   // Calculate the max width based on the provided prop
   const getMaxWidth = () => {
     if (maxWidth === false) return '100%';
-    
+
     // Use extended breakpoints for xxl
     if (maxWidth === 'xxl') return `${extendedBreakpoints.xxl}px`;
-    
+
     return theme.breakpoints.values[maxWidth as keyof typeof theme.breakpoints.values];
   };
 
@@ -71,12 +75,13 @@ const Container: React.FC<ContainerProps> = ({
       maxWidth={getMaxWidth()}
       sx={{
         maxWidth: getMaxWidth(),
+        width: '100%', // Ensure it takes full width
         padding: disableGutters ? 0 : undefined,
         height: fullHeight ? '100%' : 'auto',
         ...(fixed && {
           [theme.breakpoints.up('sm')]: {
-            maxWidth: maxWidth === 'xxl' 
-              ? `${extendedBreakpoints.xxl}px` 
+            maxWidth: maxWidth === 'xxl'
+              ? `${extendedBreakpoints.xxl}px`
               : `${theme.breakpoints.values[maxWidth as Exclude<CustomMaxWidth, 'xxl' | false>]}px`,
           },
         }),
@@ -95,4 +100,4 @@ const Container: React.FC<ContainerProps> = ({
 };
 
 export default Container;
-export type { ContainerProps, CustomMaxWidth }; 
+export type { ContainerProps, CustomMaxWidth };

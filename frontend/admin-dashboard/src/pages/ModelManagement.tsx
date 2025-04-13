@@ -307,7 +307,7 @@ const ModelManagement: React.FC = () => {
 
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
-      <Box p={3}>
+      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h4" sx={{ fontWeight: 600 }}>
             Model Management

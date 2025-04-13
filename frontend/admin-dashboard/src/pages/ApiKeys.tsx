@@ -203,7 +203,7 @@ const ApiKeys: React.FC = () => {
 
   if (error) {
     return (
-      <Box p={3}>
+      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
         <Alert severity="error">
           Error loading API keys. Please try again later.
         </Alert>
@@ -214,7 +214,7 @@ const ApiKeys: React.FC = () => {
   const keys = apiKeys || [];
 
   return (
-    <Box p={{ xs: 2, sm: 3 }}>
+    <Box p={{ xs: 2, sm: 3 }} sx={{ width: '100%', minWidth: '100%' }}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"

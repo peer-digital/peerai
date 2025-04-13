@@ -419,6 +419,8 @@ function Playground() {
       flexDirection: 'column',
       mb: { xs: 4, sm: 0 }, // Add bottom margin on mobile
       overflow: 'hidden', // Prevent overflow
+      width: '100%', // Take full width
+      minWidth: '100%', // Ensure minimum width is also 100%
       maxWidth: '100vw', // Limit width to viewport
       boxSizing: 'border-box', // Include padding in width calculation
       touchAction: 'manipulation', // Ensure touch scrolling works on mobile

@@ -26,7 +26,7 @@ import { Link as RouterLink } from 'react-router-dom';
 
 const GetStarted: React.FC = () => {
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, width: '100%', minWidth: '100%' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom>
           Welcome to PeerAI
@@ -65,17 +65,17 @@ const GetStarted: React.FC = () => {
               </List>
             </CardContent>
             <CardActions>
-              <Button 
-                component={RouterLink} 
-                to="/docs" 
+              <Button
+                component={RouterLink}
+                to="/docs"
                 color="primary"
                 variant="contained"
               >
                 View Documentation
               </Button>
-              <Button 
-                component={RouterLink} 
-                to="/login" 
+              <Button
+                component={RouterLink}
+                to="/login"
                 color="primary"
               >
                 Sign In
@@ -111,9 +111,9 @@ const GetStarted: React.FC = () => {
               </List>
             </CardContent>
             <CardActions>
-              <Button 
-                component="a" 
-                href="https://github.com/peerai/api-examples" 
+              <Button
+                component="a"
+                href="https://github.com/peerai/api-examples"
                 target="_blank"
                 color="primary"
                 variant="outlined"
@@ -139,7 +139,7 @@ const GetStarted: React.FC = () => {
                     Content Generation
                   </Typography>
                   <Typography variant="body2">
-                    Create high-quality content for marketing, product descriptions, 
+                    Create high-quality content for marketing, product descriptions,
                     and more using our advanced language models.
                   </Typography>
                 </Box>
@@ -174,4 +174,4 @@ const GetStarted: React.FC = () => {
   );
 };
 
-export default GetStarted; 
+export default GetStarted;
