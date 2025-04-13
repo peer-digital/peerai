@@ -86,15 +86,13 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
           flexDirection: 'row',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, flexWrap: 'wrap' }}>
           <Typography
             variant="body1"
             sx={{
-              mr: 2,
               fontWeight: 500,
-              flexGrow: 1,
-              mb: { xs: ctaText ? 1 : 0, sm: 0 },
-              width: { xs: '100%', sm: 'auto' }
+              mr: 2,
+              mb: { xs: ctaText ? 1 : 0, sm: 0 }
             }}
           >
             {message}
@@ -109,8 +107,8 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
               target="_blank"
               rel="noopener"
               sx={{
-                ml: { xs: 0, sm: 2 },
-                mt: { xs: 1, sm: 0 },
+                mt: { xs: 0.5, sm: 0 },
+                mb: { xs: 1, sm: 0 },
                 color: textColor || defaultTextColor,
                 borderColor: textColor || defaultTextColor,
                 bgcolor: 'rgba(255,255,255,0.15)',

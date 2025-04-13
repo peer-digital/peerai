@@ -593,8 +593,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               ctaText="Kontakta oss"
               ctaLink="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
               bannerId="welcome-beta-2023"
-              bannerColor="#3949ab" // Slightly different blue to stand out
-              textColor="#ffffff"
+              // Using theme colors instead of hardcoded values
             />
           )}
         </Box>
