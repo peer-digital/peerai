@@ -1,13 +1,18 @@
 import React from 'react';
+import { Box, Typography, Paper } from '@mui/material';
 
 const TeamManagement: React.FC = () => {
   return (
-    <div className="p-4" style={{ width: '100%', minWidth: '100%' }}>
-      <h1 className="text-2xl font-bold mb-4">Team Management</h1>
-      <div className="bg-white rounded-lg shadow p-6">
-        <p>Team management functionality will be implemented here.</p>
-      </div>
-    </div>
+    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+      <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' }, mb: 3 }}>
+        Team Management
+      </Typography>
+      <Paper sx={{ p: 3, borderRadius: 2 }}>
+        <Typography variant="body1">
+          Team management functionality will be implemented here.
+        </Typography>
+      </Paper>
+    </Box>
   );
 };
 

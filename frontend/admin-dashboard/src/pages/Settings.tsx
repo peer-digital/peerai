@@ -191,7 +191,7 @@ const Settings: React.FC = () => {
     <Box p={3}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             System Settings
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
@@ -465,4 +465,4 @@ const Settings: React.FC = () => {
   );
 };
 
-export default Settings; 
+export default Settings;

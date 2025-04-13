@@ -18,7 +18,7 @@ const NotFound: React.FC = () => {
       <Typography variant="h1" component="h1" gutterBottom>
         404
       </Typography>
-      <Typography variant="h4" component="h2" gutterBottom>
+      <Typography variant="h4" component="h2" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }} gutterBottom>
         Page Not Found
       </Typography>
       <Typography variant="body1" color="textSecondary" paragraph>
@@ -36,4 +36,4 @@ const NotFound: React.FC = () => {
   );
 };
 
-export default NotFound; 
+export default NotFound;

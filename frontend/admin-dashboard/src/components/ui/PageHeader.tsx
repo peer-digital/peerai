@@ -1,9 +1,9 @@
 import React, { ReactNode } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Breadcrumbs, 
-  Link, 
+import {
+  Box,
+  Typography,
+  Breadcrumbs,
+  Link,
   Divider,
   Skeleton,
   styled
@@ -65,8 +65,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <HeaderContainer>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumbs 
-          separator={<NavigateNextIcon fontSize="small" />} 
+        <Breadcrumbs
+          separator={<NavigateNextIcon fontSize="small" />}
           aria-label="breadcrumb"
           sx={{ mb: 1 }}
         >
@@ -79,10 +79,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           ) : (
             breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
-              
+
               return isLast || !item.href ? (
-                <Typography 
-                  key={item.label} 
+                <Typography
+                  key={item.label}
                   color={isLast ? 'text.primary' : 'text.secondary'}
                   variant="body2"
                   fontWeight={isLast ? 500 : 400}
@@ -105,7 +105,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           )}
         </Breadcrumbs>
       )}
-      
+
       <TitleRow>
         <Box>
           {loading ? (
@@ -115,7 +115,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             </>
           ) : (
             <>
-              <Typography variant="h4" component="h1" fontWeight={600}>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                 {title}
               </Typography>
               {subtitle && (
@@ -126,7 +126,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             </>
           )}
         </Box>
-        
+
         {actions && (
           <ActionContainer>
             {loading ? (
@@ -137,10 +137,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           </ActionContainer>
         )}
       </TitleRow>
-      
+
       {divider && <Divider sx={{ mt: 2 }} />}
     </HeaderContainer>
   );
 };
 
-export default PageHeader; 
+export default PageHeader;

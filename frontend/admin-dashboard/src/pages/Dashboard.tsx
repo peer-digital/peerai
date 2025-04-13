@@ -225,7 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
 
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 600 }}>
+      <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' }, mb: 4 }}>
         {getDashboardTitle()}
       </Typography>
 

@@ -43,7 +43,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   compact = false,
 }) => {
   const Icon = icon as SvgIconComponent;
-  
+
   return (
     <EmptyStateContainer sx={{ py: compact ? 3 : 6 }}>
       {icon && (
@@ -55,31 +55,30 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           ) : null}
         </IconWrapper>
       )}
-      
-      <Typography 
-        variant={compact ? "h6" : "h5"} 
-        component="h3" 
+
+      <Typography
+        variant={compact ? "h6" : "h5"}
+        component="h3"
         color="textPrimary"
-        fontWeight={500}
         gutterBottom
       >
         {title}
       </Typography>
-      
+
       {description && (
-        <Typography 
-          variant="body2" 
+        <Typography
+          variant="body2"
           color="textSecondary"
           sx={{ maxWidth: 400, mb: actionText ? 3 : 0 }}
         >
           {description}
         </Typography>
       )}
-      
+
       {actionText && onAction && (
-        <Button 
-          variant="contained" 
-          color="primary" 
+        <Button
+          variant="contained"
+          color="primary"
           onClick={onAction}
           size={compact ? "small" : "medium"}
         >
@@ -90,4 +89,4 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
-export default EmptyState; 
+export default EmptyState;

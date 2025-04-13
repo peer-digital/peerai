@@ -87,7 +87,7 @@ const DeveloperDocs: React.FC = () => {
         touchAction: 'manipulation' // Apply to all children
       }
     }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }} gutterBottom>
         PeerAI API Documentation
       </Typography>
       <Typography variant="body1" color="textSecondary" paragraph>

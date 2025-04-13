@@ -91,7 +91,7 @@ const Login: React.FC = () => {
   const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string }) => {
     try {
       setError(null);
-      
+
       // Check for invalid referral code in register mode
       if (mode === 'register' && credentials.referral_code && isValidCode === false) {
         setShowInvalidCodeDialog(true);
@@ -105,7 +105,7 @@ const Login: React.FC = () => {
       } else {
         await register(credentials);
       }
-      
+
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || `An error occurred during ${mode}`);
@@ -156,18 +156,15 @@ const Login: React.FC = () => {
               borderRadius: 2,
             }}
           >
-            <Typography 
-              component="h1" 
-              variant="h5" 
-              sx={{ 
-                mb: 3,
-                fontWeight: 600,
-                color: 'primary.main',
-              }}
+            <Typography
+              component="h1"
+              variant="h5"
+              color="primary"
+              sx={{ mb: 3 }}
             >
               PeerAI Admin {mode === 'login' ? 'Login' : 'Register'}
             </Typography>
-            
+
             {error && (
               <Alert severity="error" sx={{ mb: 2, width: '100%' }}>
                 {error}
@@ -179,9 +176,9 @@ const Login: React.FC = () => {
                 <Alert severity="info" sx={{ mb: 3, width: '100%' }}>
                   Development mode is active. Click on a test user to prefill credentials:
                 </Alert>
-                <Stack 
-                  direction="column" 
-                  spacing={1} 
+                <Stack
+                  direction="column"
+                  spacing={1}
                   sx={{ width: '100%', mb: 3 }}
                 >
                   {TEST_USERS.map((user) => (
@@ -310,11 +307,10 @@ const Login: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ 
+                sx={{
                   mt: 3,
                   mb: 2,
-                  py: 1.5,
-                  fontWeight: 600,
+                  py: 1.5
                 }}
                 disabled={isLoading}
               >
@@ -363,4 +359,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default Login;

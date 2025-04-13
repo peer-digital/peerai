@@ -7,7 +7,7 @@ import { Box, CircularProgress, Typography, Fade, useTheme } from '@mui/material
  */
 const PageLoader: React.FC = () => {
   const theme = useTheme();
-  
+
   return (
     <Fade in={true} timeout={300}>
       <Box
@@ -33,37 +33,33 @@ const PageLoader: React.FC = () => {
             justifyContent: 'center',
           }}
         >
-          <img 
-            src={theme.palette.mode === 'dark' ? '/assets/logo_neg.svg' : '/assets/logo.svg'} 
-            alt="PeerAI Logo" 
-            style={{ 
-              height: 60, 
+          <img
+            src={theme.palette.mode === 'dark' ? '/assets/logo_neg.svg' : '/assets/logo.svg'}
+            alt="PeerAI Logo"
+            style={{
+              height: 60,
               marginBottom: theme.spacing(3),
               animation: 'pulse 2s infinite ease-in-out',
-            }} 
+            }}
           />
-          
-          <CircularProgress 
-            size={40} 
-            thickness={4} 
-            sx={{ 
+
+          <CircularProgress
+            size={40}
+            thickness={4}
+            sx={{
               color: theme.palette.primary.main,
               mb: 2,
-            }} 
-          />
-          
-          <Typography 
-            variant="body1" 
-            color="textSecondary"
-            sx={{ 
-              fontWeight: 500,
-              letterSpacing: '0.5px',
             }}
+          />
+
+          <Typography
+            variant="body1"
+            color="textSecondary"
           >
             Loading...
           </Typography>
         </Box>
-        
+
         <Box
           component="style"
           dangerouslySetInnerHTML={{
@@ -81,4 +77,4 @@ const PageLoader: React.FC = () => {
   );
 };
 
-export default PageLoader; 
+export default PageLoader;

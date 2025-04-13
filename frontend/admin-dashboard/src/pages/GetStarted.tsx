@@ -28,7 +28,7 @@ const GetStarted: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1, width: '100%', minWidth: '100%' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }} gutterBottom>
           Welcome to PeerAI
         </Typography>
         <Typography variant="body1" color="textSecondary">

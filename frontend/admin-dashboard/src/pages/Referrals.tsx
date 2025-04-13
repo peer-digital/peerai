@@ -14,7 +14,7 @@ const Referrals: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
+        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Referrals
         </Typography>
         <Button
@@ -38,4 +38,4 @@ const Referrals: React.FC = () => {
   );
 };
 
-export default Referrals; 
+export default Referrals;

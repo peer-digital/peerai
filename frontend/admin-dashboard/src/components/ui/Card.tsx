@@ -101,21 +101,15 @@ const Card: React.FC<CardProps> = ({
             title={title && (
               <Typography
                 variant={compact ? "subtitle1" : "h6"}
-                fontWeight={compact ? 500 : 600}
-                sx={{
-                  fontSize: compact ? '1rem' : undefined,
-                  lineHeight: compact ? 1.4 : undefined,
-                }}
               >
                 {title}
               </Typography>
             )}
             subheader={subtitle && (
               <Typography
-                variant="body2"
+                variant={compact ? "caption" : "body2"}
                 color="text.secondary"
                 sx={{
-                  fontSize: compact ? '0.75rem' : '0.875rem',
                   mt: compact ? 0.5 : 1,
                 }}
               >
