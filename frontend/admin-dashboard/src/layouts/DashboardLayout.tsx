@@ -51,6 +51,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
 import ThemeToggle from '../components/ui/ThemeToggle';
+import { AnnouncementBanner } from '../components/ui';
 import ReferralModal from '../components/ReferralModal';
 
 // Responsive drawer width
@@ -197,9 +198,23 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   isGuestMode?: boolean;
   onOpenReferralModal?: () => void;
+  announcementProps?: {
+    message: string;
+    ctaText?: string;
+    ctaLink?: string;
+    bannerColor?: string;
+    textColor?: string;
+    bannerId?: string;
+    enabled?: boolean;
+  };
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode = false, onOpenReferralModal }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({
+  children,
+  isGuestMode = false,
+  onOpenReferralModal,
+  announcementProps
+}) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -560,6 +575,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isGuestMode
 
       <Main open={open} className="always-show-scrollbar">
         <DrawerHeader />
+        {/* Show announcement banner if enabled or if announcementProps is provided */}
+        {(announcementProps?.enabled !== false && announcementProps?.message) ? (
+          <AnnouncementBanner
+            message={announcementProps.message}
+            ctaText={announcementProps.ctaText}
+            ctaLink={announcementProps.ctaLink}
+            bannerColor={announcementProps.bannerColor}
+            textColor={announcementProps.textColor}
+            bannerId={announcementProps.bannerId}
+          />
+        ) : (
+          // Default announcement banner
+          <AnnouncementBanner
+            message="Välkommen till vår Beta! Vissa funktioner kan fortfarande innehålla buggar. Kontakta oss gärna för att lämna feedback eller ställa frågor."
+            ctaText="Kontakta oss"
+            ctaLink="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+            bannerId="welcome-beta-2023"
+            bannerColor="#3949ab" // Slightly different blue to stand out
+            textColor="#ffffff"
+          />
+        )}
         {children}
       </Main>
 

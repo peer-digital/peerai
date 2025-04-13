@@ -39,3 +39,6 @@ export * from './PageLoader';
 
 export { default as MobileLoadingIndicator } from './MobileLoadingIndicator';
 export * from './MobileLoadingIndicator';
+
+export { default as AnnouncementBanner } from './AnnouncementBanner';
+export * from './AnnouncementBanner';
