@@ -16,20 +16,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import text
 
-# Import model default configuration
-try:
-    from backend.config.model_defaults import (
-        ALWAYS_ACTIVE_MODELS,
-        ALWAYS_INACTIVE_MODELS,
-        DEFAULT_NEW_MODEL_STATUS
-    )
-except ImportError:
-    # Default values if config file doesn't exist
-    print("Warning: model_defaults.py not found, using default values")
-    ALWAYS_ACTIVE_MODELS = ["mistral-large", "mistral-medium", "mistral-tiny"]
-    ALWAYS_INACTIVE_MODELS = []
-    DEFAULT_NEW_MODEL_STATUS = "inactive"
-
 # --- Load DATABASE_URL first ---
 # Load .env file if it exists, primarily for EXTERNAL_LLM_API_KEY
 dotenv_path = Path(__file__).parent.parent / ".env"
@@ -78,19 +64,19 @@ def fetch_mistral_models(api_key):
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-
+    
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print(f"Error fetching models: {response.status_code}, {response.text}")
         return None
-
+    
     return response.json().get("data", [])
 
 
 def get_or_create_mistral_provider(db: Session):
     """Get or create the Mistral provider in the database"""
     provider = db.query(ModelProvider).filter(ModelProvider.name == "mistral").first()
-
+    
     if not provider:
         print("Creating Mistral provider...")
         provider = ModelProvider(
@@ -107,7 +93,7 @@ def get_or_create_mistral_provider(db: Session):
         print(f"Created Mistral provider with ID: {provider.id}")
     else:
         print(f"Found existing Mistral provider with ID: {provider.id}")
-
+    
     return provider
 
 
@@ -116,72 +102,49 @@ def seed_mistral_models(db: Session, provider, models):
     if not models:
         print("No models to seed")
         return
-
+    
     # Default model flags - first model of each type will be set as default
     default_models = {}
-
+    
     for model_data in models:
         model_id = model_data.get("id")
         # Skip if no id is present
         if not model_id:
             continue
-
+            
         # Extract model display name - usually like "mistral-tiny-latest"
         display_name = model_id.replace("-latest", "").title().replace("-", " ")
-
+        
         # Determine model type based on capabilities
         model_type = "text"  # Default to text
-
+        
         # Check if model already exists
         existing_model = db.query(AIModel).filter(
             AIModel.name == model_id,
             AIModel.provider_id == provider.id
         ).first()
-
+        
         if existing_model:
             print(f"Model '{model_id}' already exists, updating...")
             existing_model.display_name = display_name
-
-            # Apply status rules from configuration
-            if model_id in ALWAYS_ACTIVE_MODELS:
-                if existing_model.status != "active":
-                    print(f"  Setting {model_id} to active (in ALWAYS_ACTIVE_MODELS list)")
-                    existing_model.status = "active"
-            elif model_id in ALWAYS_INACTIVE_MODELS:
-                if existing_model.status != "inactive":
-                    print(f"  Setting {model_id} to inactive (in ALWAYS_INACTIVE_MODELS list)")
-                    existing_model.status = "inactive"
-            # Otherwise, preserve existing status
-
-            # Update the config
+            existing_model.status = "active"
             existing_model.config = {
                 "api_model_id": model_id,
                 "description": model_data.get("description", "")
             }
-
+            
             if model_type not in default_models and existing_model.is_default:
                 default_models[model_type] = True
-
+                
             db.commit()
         else:
             print(f"Creating new model '{model_id}'...")
-
+            
             # Check if this should be the default model for its type
             is_default = model_type not in default_models
             if is_default:
                 default_models[model_type] = True
-
-            # Determine status for new model based on configuration
-            if model_id in ALWAYS_ACTIVE_MODELS:
-                status = "active"
-                print(f"  Setting new model {model_id} to active (in ALWAYS_ACTIVE_MODELS list)")
-            elif model_id in ALWAYS_INACTIVE_MODELS:
-                status = "inactive"
-                print(f"  Setting new model {model_id} to inactive (in ALWAYS_INACTIVE_MODELS list)")
-            else:
-                status = DEFAULT_NEW_MODEL_STATUS
-                print(f"  Setting new model {model_id} to {status} (default for new models)")
-
+            
             # Create the model
             new_model = AIModel(
                 name=model_id,
@@ -189,7 +152,7 @@ def seed_mistral_models(db: Session, provider, models):
                 provider_id=provider.id,
                 model_type=model_type,
                 capabilities=["chat", "completion"],
-                status=status,
+                status="active",
                 is_default=is_default,
                 cost_per_1k_input_tokens=0.0,  # Set appropriate cost if available
                 cost_per_1k_output_tokens=0.0,  # Set appropriate cost if available
@@ -198,10 +161,10 @@ def seed_mistral_models(db: Session, provider, models):
                     "description": model_data.get("description", "")
                 }
             )
-
+            
             db.add(new_model)
             db.commit()
-
+    
     print(f"Successfully seeded {len(models)} Mistral models")
 
 
@@ -248,4 +211,4 @@ def main():
 if __name__ == "__main__":
     # Import text here to avoid potential circular imports earlier
     from sqlalchemy import text
-    main()
+    main() 

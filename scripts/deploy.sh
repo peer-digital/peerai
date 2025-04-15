@@ -98,26 +98,18 @@ sudo systemctl restart peerai-backend.service
 
 echo "peerai-backend service restart command issued."
 
-# --- Check if models exist and run seeding script only if needed ---
-echo "Checking if models exist in the database..."
+# --- Run the model seeding script --- 
+echo "Running model seeding script..."
+# Use the python executable from the virtual environment
 # The environment variables (DATABASE_URL, EXTERNAL_LLM_API_KEY) are available
 # because they are passed by the GitHub Actions ssh-action 'envs' parameter.
-
-# Run the check script - returns 0 if models exist, 1 if no models exist
-if ! $DEPLOY_DIR/.venv/bin/python -m backend.scripts.check_models_exist; then
-  echo "No models found in database. Running model seeding script..."
-  # This script fetches available models from Mistral API and adds them to the database
-  $DEPLOY_DIR/.venv/bin/python -m backend.scripts.seed_mistral_models || {
-    echo "WARNING: Model seeding script failed, but deployment continues."
-    # If you want seeding failure to STOP the deployment, uncomment the next line:
-    # echo "ERROR: Model seeding script failed!" && exit 1
-  }
-  echo "Model seeding script finished."
-else
-  echo "Models already exist in database. Skipping model seeding to preserve configurations."
-  echo "To manually update models, run: python -m backend.scripts.seed_mistral_models"
-fi
-# --- End model seeding section ---
+$DEPLOY_DIR/.venv/bin/python -m backend.scripts.seed_mistral_models || {
+  echo "WARNING: Model seeding script failed, but deployment continues."
+  # If you want seeding failure to STOP the deployment, uncomment the next line:
+  # echo "ERROR: Model seeding script failed!" && exit 1
+}
+echo "Model seeding script finished."
+# --- End model seeding script --- 
 
 # Optional: Add commands here to run database migrations if needed
 # Example:
@@ -126,4 +118,4 @@ fi
 # source .venv/bin/activate  # @note: Or however you activate your environment
 # alembic upgrade head  # @note: Or your migration command
 
-echo "deploy.sh script finished successfully on VM."
+echo "deploy.sh script finished successfully on VM." 
