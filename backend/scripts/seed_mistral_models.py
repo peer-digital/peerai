@@ -16,19 +16,21 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import text
 
-# Import model default configuration
-try:
-    from backend.config.model_defaults import (
-        ALWAYS_ACTIVE_MODELS,
-        ALWAYS_INACTIVE_MODELS,
-        DEFAULT_NEW_MODEL_STATUS
-    )
-except ImportError:
-    # Default values if config file doesn't exist
-    print("Warning: model_defaults.py not found, using default values")
-    ALWAYS_ACTIVE_MODELS = ["mistral-large", "mistral-medium", "mistral-tiny"]
-    ALWAYS_INACTIVE_MODELS = []
-    DEFAULT_NEW_MODEL_STATUS = "inactive"
+# Define models that should always be active or inactive
+# These models will not be deactivated by the seed_mistral_models script
+ALWAYS_ACTIVE_MODELS = [
+    "mistral-large",
+    "mistral-medium",
+    "mistral-tiny",
+    "open-mistral-nemo-2407",
+    "pixtral-large-2411"
+]
+
+# Models that should always be inactive
+ALWAYS_INACTIVE_MODELS = []
+
+# Default status for new models not in either list above
+DEFAULT_NEW_MODEL_STATUS = "inactive"
 
 # --- Load DATABASE_URL first ---
 # Load .env file if it exists, primarily for EXTERNAL_LLM_API_KEY

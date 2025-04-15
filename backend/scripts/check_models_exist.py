@@ -25,8 +25,8 @@ if not DATABASE_URL:
     # Fallback to the default from config if not set in env
     try:
         # Temporarily import just the setting
-        from backend.config import Settings
-        DATABASE_URL = Settings().DATABASE_URL
+        from backend.config import settings
+        DATABASE_URL = settings.DATABASE_URL
         print("Warning: DATABASE_URL not found in environment, using default from config.")
     except ImportError:
         print("Error: Cannot determine DATABASE_URL. Set it in the environment or ensure backend.config is available.")
@@ -47,11 +47,11 @@ def check_models_exist():
     try:
         # Verify connection
         db.execute(text("SELECT 1"))
-        
+
         # Check if any models exist
         result = db.execute(text("SELECT COUNT(*) FROM ai_models"))
         count = result.scalar()
-        
+
         if count > 0:
             print(f"Found {count} models in the database.")
             return True
