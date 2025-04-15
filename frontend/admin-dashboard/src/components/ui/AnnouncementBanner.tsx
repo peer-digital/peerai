@@ -17,7 +17,7 @@ const BANNER_DISMISSED_KEY = 'announcement_banner_dismissed';
 const BANNER_ID_KEY = 'announcement_banner_id';
 
 interface AnnouncementBannerProps {
-  message: string;
+  message: React.ReactNode;
   ctaText?: string;
   ctaLink?: string;
   bannerColor?: string;

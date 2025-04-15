@@ -570,7 +570,14 @@ function Playground() {
                     ) : (
                       availableModels.map((model) => (
                         <MenuItem key={model.name} value={model.name}>
-                          {model.display_name}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography component="span" sx={{ fontWeight: 'bold' }}>
+                              {model.display_name}
+                            </Typography>
+                            <Typography component="span" color="text.secondary" variant="body2">
+                              {model.name}
+                            </Typography>
+                          </Box>
                         </MenuItem>
                       ))
                     )}

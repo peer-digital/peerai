@@ -22,6 +22,7 @@ import {
   Collapse,
   Fade,
   Button,
+  Link,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -589,10 +590,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           ) : (
             // Default announcement banner
             <AnnouncementBanner
-              message="Välkommen till vår Beta, plattformen är fortfarande under utveckling! Kontakta oss gärna för att lämna feedback eller ställa frågor."
-              ctaText="Kontakta oss"
-              ctaLink="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
-              bannerId="welcome-beta-2023"
+              message={<>
+                Welcome to our Beta, the platform is still under development! Please <Link
+                  href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+                  target="_blank"
+                  rel="noopener"
+                  sx={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    '&:hover': { textDecoration: 'underline' }
+                  }}
+                >
+                  contact us
+                </Link> to provide feedback or ask questions.
+              </>}
+              bannerId="welcome-beta-2023-en"
               // Using theme colors instead of hardcoded values
             />
           )}
