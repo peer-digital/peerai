@@ -19,9 +19,9 @@ from sqlalchemy import text
 # Define models that should always be active or inactive
 # These models will not be deactivated by the seed_mistral_models script
 ALWAYS_ACTIVE_MODELS = [
-    "mistral-large-latest",
-    "mistral-medium-latest",
-    "mistral-small-latest",
+    "mistral-large",
+    "mistral-medium",
+    "mistral-tiny",
     "open-mistral-nemo-2407",
     "pixtral-large-2411"
 ]
