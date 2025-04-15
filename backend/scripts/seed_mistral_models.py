@@ -64,19 +64,19 @@ def fetch_mistral_models(api_key):
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    
+
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print(f"Error fetching models: {response.status_code}, {response.text}")
         return None
-    
+
     return response.json().get("data", [])
 
 
 def get_or_create_mistral_provider(db: Session):
     """Get or create the Mistral provider in the database"""
     provider = db.query(ModelProvider).filter(ModelProvider.name == "mistral").first()
-    
+
     if not provider:
         print("Creating Mistral provider...")
         provider = ModelProvider(
@@ -93,7 +93,7 @@ def get_or_create_mistral_provider(db: Session):
         print(f"Created Mistral provider with ID: {provider.id}")
     else:
         print(f"Found existing Mistral provider with ID: {provider.id}")
-    
+
     return provider
 
 
@@ -102,28 +102,28 @@ def seed_mistral_models(db: Session, provider, models):
     if not models:
         print("No models to seed")
         return
-    
+
     # Default model flags - first model of each type will be set as default
     default_models = {}
-    
+
     for model_data in models:
         model_id = model_data.get("id")
         # Skip if no id is present
         if not model_id:
             continue
-            
+
         # Extract model display name - usually like "mistral-tiny-latest"
         display_name = model_id.replace("-latest", "").title().replace("-", " ")
-        
+
         # Determine model type based on capabilities
         model_type = "text"  # Default to text
-        
+
         # Check if model already exists
         existing_model = db.query(AIModel).filter(
             AIModel.name == model_id,
             AIModel.provider_id == provider.id
         ).first()
-        
+
         if existing_model:
             print(f"Model '{model_id}' already exists, updating...")
             existing_model.display_name = display_name
@@ -132,19 +132,19 @@ def seed_mistral_models(db: Session, provider, models):
                 "api_model_id": model_id,
                 "description": model_data.get("description", "")
             }
-            
+
             if model_type not in default_models and existing_model.is_default:
                 default_models[model_type] = True
-                
+
             db.commit()
         else:
             print(f"Creating new model '{model_id}'...")
-            
+
             # Check if this should be the default model for its type
             is_default = model_type not in default_models
             if is_default:
                 default_models[model_type] = True
-            
+
             # Create the model
             new_model = AIModel(
                 name=model_id,
@@ -161,39 +161,60 @@ def seed_mistral_models(db: Session, provider, models):
                     "description": model_data.get("description", "")
                 }
             )
-            
+
             db.add(new_model)
             db.commit()
-    
+
     print(f"Successfully seeded {len(models)} Mistral models")
+
+
+def check_models_exist(db: Session) -> bool:
+    """Check if any models exist in the database"""
+    try:
+        count = db.query(AIModel).count()
+        if count > 0:
+            print(f"Found {count} existing models in the database")
+            return True
+        else:
+            print("No models found in the database")
+            return False
+    except Exception as e:
+        print(f"Error checking for existing models: {str(e)}")
+        # If there's an error, assume models exist to be safe
+        return True
 
 
 def main():
     """Main function to run the script"""
-    # Load environment variables (API Key)
-    env = load_env_variables()
-    api_key = env["api_key"]
-
-    if not api_key:
-        print("Error: EXTERNAL_LLM_API_KEY not found in .env file or environment")
-        return
-
-    # Fetch models from Mistral API
-    print("Fetching models from Mistral API...")
-    models = fetch_mistral_models(api_key)
-
-    if not models:
-        print("No models received from Mistral API")
-        return
-
-    print(f"Received {len(models)} models from Mistral API")
-
-    # Connect to database using the explicitly configured SessionLocal
+    # Connect to database first to check if models exist
     db = SessionLocal()
     try:
         # Verify connection
         db.execute(text("SELECT 1")) # Import text from sqlalchemy
         print(f"Successfully connected to database using URL: {DATABASE_URL}")
+
+        # Check if models already exist
+        if check_models_exist(db):
+            print("Models already exist in the database. Skipping seeding to preserve configurations.")
+            return
+
+        # Load environment variables (API Key)
+        env = load_env_variables()
+        api_key = env["api_key"]
+
+        if not api_key:
+            print("Error: EXTERNAL_LLM_API_KEY not found in .env file or environment")
+            return
+
+        # Fetch models from Mistral API
+        print("Fetching models from Mistral API...")
+        models = fetch_mistral_models(api_key)
+
+        if not models:
+            print("No models received from Mistral API")
+            return
+
+        print(f"Received {len(models)} models from Mistral API")
 
         # Get or create Mistral provider
         provider = get_or_create_mistral_provider(db)
@@ -211,4 +232,4 @@ def main():
 if __name__ == "__main__":
     # Import text here to avoid potential circular imports earlier
     from sqlalchemy import text
-    main() 
+    main()

@@ -98,18 +98,20 @@ sudo systemctl restart peerai-backend.service
 
 echo "peerai-backend service restart command issued."
 
-# --- Run the model seeding script --- 
-echo "Running model seeding script..."
+# --- Run the model seeding script ---
+echo "Running model seeding script (only if no models exist in the database)..."
 # Use the python executable from the virtual environment
 # The environment variables (DATABASE_URL, EXTERNAL_LLM_API_KEY) are available
 # because they are passed by the GitHub Actions ssh-action 'envs' parameter.
 $DEPLOY_DIR/.venv/bin/python -m backend.scripts.seed_mistral_models || {
   echo "WARNING: Model seeding script failed, but deployment continues."
+  echo "This may be due to database connection issues or API key problems."
+  echo "You can manually run the script later if needed."
   # If you want seeding failure to STOP the deployment, uncomment the next line:
   # echo "ERROR: Model seeding script failed!" && exit 1
 }
 echo "Model seeding script finished."
-# --- End model seeding script --- 
+# --- End model seeding script ---
 
 # Optional: Add commands here to run database migrations if needed
 # Example:
@@ -118,4 +120,4 @@ echo "Model seeding script finished."
 # source .venv/bin/activate  # @note: Or however you activate your environment
 # alembic upgrade head  # @note: Or your migration command
 
-echo "deploy.sh script finished successfully on VM." 
+echo "deploy.sh script finished successfully on VM."
