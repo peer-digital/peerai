@@ -498,16 +498,20 @@ function Playground() {
         flexDirection: { xs: 'column', md: 'row' },
         gap: { xs: 2, sm: 3 },
         flexGrow: 1,
-        minHeight: 0
+        minHeight: 0,
+        height: '100%'
       }}>
         <Box sx={{
           flex: { xs: '1 0 100%', md: '1 0 50%' },
-          maxWidth: { xs: '100%', md: '50%' }
+          maxWidth: { xs: '100%', md: '50%' },
+          display: 'flex',
+          flexDirection: 'column',
+          height: { xs: 'auto', md: '100%' }
         }}>
           <Card sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: { xs: 'auto', md: '100%' },
+            height: '100%',
             mb: { xs: 2, md: 0 }
           }}>
             <CardContent sx={{
@@ -517,8 +521,10 @@ function Playground() {
               flexDirection: 'column',
               gap: { xs: 2, sm: 3 },
               width: '100%',
+              height: '100%',
               '&.MuiCardContent-root': {
                 padding: { xs: 2, sm: 3 },
+                height: '100%',
                 maxHeight: { xs: 'auto', md: '100%' }
               }
             }}>
@@ -819,12 +825,15 @@ function Playground() {
 
         <Box sx={{
           flex: { xs: '1 0 100%', md: '1 0 50%' },
-          maxWidth: { xs: '100%', md: '50%' }
+          maxWidth: { xs: '100%', md: '50%' },
+          display: 'flex',
+          flexDirection: 'column',
+          height: { xs: 'auto', md: '100%' }
         }}>
           <Card sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: { xs: 'auto', md: '100%' },
+            height: '100%',
             mb: { xs: 2, md: 0 }
           }}>
             <CardContent sx={{
@@ -834,8 +843,10 @@ function Playground() {
               flexDirection: 'column',
               gap: { xs: 1.5, sm: 2 },
               width: '100%',
+              height: '100%',
               '&.MuiCardContent-root': {
                 padding: { xs: 2, sm: 3 },
+                height: '100%',
                 maxHeight: { xs: '400px', md: '100%' } // Limit height on mobile
               }
             }}>
@@ -880,6 +891,9 @@ function Playground() {
                     flex: 1,
                     width: '100%',
                     minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
                   }}
                 >
                   <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
@@ -902,14 +916,15 @@ function Playground() {
                       borderRadius: theme.shape.borderRadius,
                       height: '100%',
                       minHeight: '150px',
-                      maxHeight: '300px',
                       overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       width: '100%',
                       minWidth: 0,
                       maxWidth: '100%',
-                      fontSize: '0.75rem'
+                      fontSize: '0.75rem',
+                      flex: 1,
+                      display: 'block'
                     }}
                     wrapLines={true}
                     wrapLongLines={true}
