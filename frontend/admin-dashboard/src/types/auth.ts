@@ -1,4 +1,4 @@
-import { Role } from './rbac';
+import { Role, Permission } from './rbac';
 
 export interface User {
   id: string;
@@ -7,6 +7,7 @@ export interface User {
   role: Role;
   name?: string;
   token_limit: number;  // Default is 2500
+  permissions?: Permission[];
 }
 
 export interface AuthResponse {
@@ -31,4 +32,4 @@ export interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
-} 
+}

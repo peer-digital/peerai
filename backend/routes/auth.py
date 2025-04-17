@@ -97,7 +97,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
     hashed_password = get_password_hash(user.password)
     verification_token = generate_verification_token()
-    
+
     db_user = User(
         email=user.email,
         hashed_password=hashed_password,
@@ -116,12 +116,12 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             code = user.referral_code.lower().lstrip('0')  # Remove leading zeros
             if not code:  # If all zeros, use '0'
                 code = '0'
-                
+
             alphabet = string.digits + string.ascii_lowercase
             referrer_id = 0
             for char in code:
                 referrer_id = referrer_id * 36 + alphabet.index(char)
-            
+
             referrer = db.query(User).filter(User.id == referrer_id).first()
             if referrer and referrer.id != db_user.id:
                 # Create a new referral first
@@ -141,12 +141,12 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             subject="Verify your Peer AI account",
             body=f"""
             Welcome to Peer AI!
-            
+
             Please verify your email address by clicking the link below:
             {verification_url}
-            
+
             If you didn't create an account with us, you can safely ignore this email.
-            
+
             Best regards,
             The Peer AI Team
             """,
@@ -154,9 +154,9 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #2563eb;">Welcome to Peer AI!</h2>
                 <p>Please verify your email address by clicking the button below:</p>
-                
+
                 <div style="text-align: left; margin: 30px 0;">
-                    <a href="{verification_url}" 
+                    <a href="{verification_url}"
                        style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                         Verify Email
                     </a>
@@ -184,18 +184,30 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login endpoint that returns a JWT token"""
+    print(f"Login attempt for user: {form_data.username}")
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user:
+        print(f"User not found: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if not verify_password(form_data.password, user.hashed_password):
+        print(f"Invalid password for user: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    print(f"Login successful for user: {user.email}")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
+    print(f"Generated token: {access_token[:10]}...")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -278,14 +290,14 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     """Verify user's email address."""
     # First try to find user by token
     user = db.query(User).filter(User.email_verification_token == token).first()
-    
+
     if not user:
         # If token not found, check if any user was verified with this token
         user = db.query(User).filter(
             User.email_verified == True,
             User.email_verification_token == None
         ).order_by(User.email_verification_sent_at.desc()).first()
-        
+
         if user:
             return {
                 "message": "Email already verified. You can proceed to login.",
@@ -296,17 +308,17 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid verification token"
             )
-    
+
     if user.email_verified:
         return {
             "message": "Email already verified. You can proceed to login.",
             "status": "already_verified"
         }
-    
+
     user.email_verified = True
     user.email_verification_token = None  # Clear the token after use
     db.commit()
-    
+
     return {
         "message": "Email verified successfully",
         "status": "verified"

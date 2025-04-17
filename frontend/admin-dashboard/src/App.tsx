@@ -24,9 +24,15 @@ const EmailVerification = React.lazy(() => import('./pages/EmailVerification'));
 const Playground = React.lazy(() => import('./pages/Playground'));
 const DeveloperDocs = React.lazy(() => import('./pages/DeveloperDocs'));
 const GetStarted = React.lazy(() => import('./pages/GetStarted'));
+const PublicApp = React.lazy(() => import('./pages/PublicApp'));
 const TeamManagement = React.lazy(() => import('./pages/TeamManagement'));
 const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
+// App Store removed - replaced with App Templates
+const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesManagement'));
+const MyApps = React.lazy(() => import('./pages/MyApps'));
+const AppPlayground = React.lazy(() => import('./pages/AppPlayground'));
+const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
@@ -62,6 +68,9 @@ function App() {
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />
                   <Route path="/get-started" element={<GetStarted />} />
+
+                  {/* Public App route - accessible without authentication */}
+                  <Route path="/apps/:slug" element={<PublicApp />} />
 
                   {/* Protected routes */}
                   <Route
@@ -128,6 +137,38 @@ function App() {
                     <Route path="/playground" element={
                       <PermissionGuard requiredPermissions={[Permission.USE_API]}>
                         <Playground />
+                      </PermissionGuard>
+                    } />
+
+                    {/* App Store route removed - functionality merged into App Playground */}
+
+                    {/* App Store Management route removed - replaced with App Templates */}
+
+                    {/* App Templates - for admins only */}
+                    <Route path="/app-templates-management" element={
+                      <PermissionGuard requiredPermissions={[Permission.MANAGE_APP_STORE]}>
+                        <AppTemplatesManagement />
+                      </PermissionGuard>
+                    } />
+
+                    {/* DeployedApps routes removed - replaced with MyApps */}
+
+                    {/* My Apps */}
+                    <Route path="/my-apps" element={
+                      <PermissionGuard requiredPermissions={[Permission.USE_APP_STORE]}>
+                        <MyApps />
+                      </PermissionGuard>
+                    } />
+                    <Route path="/my-apps/:slug" element={
+                      <PermissionGuard requiredPermissions={[Permission.USE_APP_STORE]}>
+                        <DeployedAppView />
+                      </PermissionGuard>
+                    } />
+
+                    {/* App Playground */}
+                    <Route path="/app-playground" element={
+                      <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
+                        <AppPlayground />
                       </PermissionGuard>
                     } />
 
@@ -230,5 +271,7 @@ function GetStartedRoute() {
     </DashboardLayout>
   );
 }
+
+// Redirect components removed
 
 export default App;

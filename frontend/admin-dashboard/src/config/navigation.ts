@@ -8,6 +8,7 @@ import {
   Group as TeamIcon,
   Person as UserIcon,
   SmartToy as ModelIcon,
+  Apps as AppsIcon,
 } from '@mui/icons-material';
 import { Permission } from '../types/rbac';
 
@@ -24,6 +25,18 @@ export const navigation: NavItem[] = [
     path: '/dashboard',
     icon: DashboardIcon,
     requiredPermissions: [Permission.VIEW_DASHBOARD],
+  },
+  {
+    title: 'My Apps',
+    path: '/my-apps',
+    icon: AppsIcon,
+    requiredPermissions: [Permission.USE_APP_STORE],
+  },
+  {
+    title: 'App Playground',
+    path: '/app-playground',
+    icon: CodeIcon,
+    requiredPermissions: [Permission.DEPLOY_APPS],
   },
   {
     title: 'API Keys',
@@ -63,9 +76,15 @@ export const navigation: NavItem[] = [
     requiredPermissions: [Permission.MANAGE_MODELS],
   },
   {
+    title: 'App Templates',
+    path: '/app-templates-management',
+    icon: AppsIcon,
+    requiredPermissions: [Permission.MANAGE_APP_STORE],
+  },
+  {
     title: 'Developer Docs',
     path: '/docs',
     icon: CodeIcon,
     requiredPermissions: [Permission.VIEW_DOCS],
   },
-]; 
+];

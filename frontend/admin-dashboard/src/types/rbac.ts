@@ -13,17 +13,17 @@ export enum Permission {
     // Documentation access
     VIEW_DOCS = 'view_docs',
     VIEW_API_DOCS = 'view_api_docs',  // Permission to view API documentation
-    
+
     // User-level permissions
     VIEW_OWN_USAGE = 'view_own_usage',
     USE_API = 'use_api',
     MANAGE_OWN_ACCOUNT = 'manage_own_account',
-    
+
     // Team-level permissions
     MANAGE_TEAM_MEMBERS = 'manage_team_members',
     MANAGE_TEAM_BILLING = 'manage_team_billing',
     VIEW_TEAM_USAGE = 'view_team_usage',
-    
+
     // Super admin permissions
     VIEW_ALL_USAGE = 'view_all_usage',
     MANAGE_ALL_TEAMS = 'manage_all_teams',
@@ -43,6 +43,15 @@ export enum Permission {
     MANAGE_USERS = 'manage_users',
     MANAGE_MODELS = 'manage_models',
     MANAGE_SYSTEM = 'manage_system',
+
+    // App Templates permissions
+    VIEW_APP_STORE = 'view_app_store', // Used for viewing App Templates
+    USE_APP_STORE = 'use_app_store',   // Used for using App Templates and My Apps
+    MANAGE_APP_STORE = 'manage_app_store', // Used for App Templates management
+
+    // App deployment permissions
+    DEPLOY_APPS = 'deploy_apps',
+    CONFIGURE_APPS = 'configure_apps',
 }
 
 export interface Team {
@@ -71,12 +80,15 @@ export interface User {
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     [Role.GUEST]: [
         Permission.VIEW_DOCS,
+        Permission.VIEW_APP_STORE,
     ],
     [Role.USER]: [
         Permission.VIEW_DOCS,
         Permission.VIEW_OWN_USAGE,
         Permission.USE_API,
         Permission.MANAGE_OWN_ACCOUNT,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
     ],
     [Role.USER_ADMIN]: [
         Permission.VIEW_DOCS,
@@ -86,6 +98,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         Permission.MANAGE_TEAM_MEMBERS,
         Permission.MANAGE_TEAM_BILLING,
         Permission.VIEW_TEAM_USAGE,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
+        Permission.DEPLOY_APPS,
+        Permission.CONFIGURE_APPS,
     ],
     [Role.SUPER_ADMIN]: [
         // Super admin has access to ALL permissions
@@ -99,6 +115,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         Permission.MANAGE_TEAM_MEMBERS,
         Permission.MANAGE_TEAM_BILLING,
         Permission.VIEW_TEAM_USAGE,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
+        Permission.DEPLOY_APPS,
+        Permission.CONFIGURE_APPS,
     ],
     [Role.ADMIN]: [
         ...Object.values(Permission)
@@ -119,4 +139,4 @@ export const hasAnyPermission = (role: Role, permissions: Permission[]): boolean
 export const hasAllPermissions = (role: Role, permissions: Permission[]): boolean => {
     if (!role || !permissions?.length) return false;
     return permissions.every(permission => ROLE_PERMISSIONS[role]?.includes(permission));
-}; 
+};

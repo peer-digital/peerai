@@ -101,9 +101,13 @@ const Login: React.FC = () => {
       setIsLoading(true);
 
       if (mode === 'login') {
-        await login(credentials);
+        const result = await login(credentials);
+        console.log('Login successful:', result);
+        console.log('Token:', localStorage.getItem('access_token'));
       } else {
-        await register(credentials);
+        const result = await register(credentials);
+        console.log('Registration successful:', result);
+        console.log('Token:', localStorage.getItem('access_token'));
       }
 
       navigate('/dashboard');

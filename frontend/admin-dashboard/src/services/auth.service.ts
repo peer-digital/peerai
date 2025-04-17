@@ -1,6 +1,7 @@
 import api from '../api/config';
 import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../types/auth';
-import { Role } from '../types/rbac';
+import { Role, Permission } from '../types/rbac';
+import { getRolePermissions } from '../utils/permissions';
 
 // Storage keys
 const USER_DATA_KEY = 'user_data';
@@ -76,13 +77,15 @@ class AuthService {
       // If user data is included in login response, use it
       let userData: User;
       if (response.data.user) {
+        const userRole = ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER;
         userData = {
           id: response.data.user.id.toString(),
           email: response.data.user.email,
           is_active: response.data.user.is_active ?? true,
-          role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
+          role: userRole,
           name: response.data.user.full_name,
-          token_limit: response.data.user.token_limit ?? 10000
+          token_limit: response.data.user.token_limit ?? 10000,
+          permissions: getRolePermissions(userRole)
         };
       } else {
         // Otherwise get user data from validation endpoint
@@ -114,6 +117,7 @@ class AuthService {
 
   async validateToken(): Promise<User> {
     try {
+      console.log('Validating token:', this.getToken());
       const validateResponse = await api.get<{
         id: number;
         email: string;
@@ -122,6 +126,7 @@ class AuthService {
         full_name?: string;
         token_limit: number;
       }>('/auth/validate');
+      console.log('Token validation response:', validateResponse);
 
       console.log('Token validation response:', {
         rawData: validateResponse.data,
@@ -144,13 +149,15 @@ class AuthService {
         throw new Error('Invalid user data received from server');
       }
 
+      const userRole = ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING] || Role.USER;
       const userData: User = {
         id: validateResponse.data.id.toString(),
         email: validateResponse.data.email,
         is_active: validateResponse.data.is_active ?? true,
-        role: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING] || Role.USER,
+        role: userRole,
         name: validateResponse.data.full_name,
-        token_limit: validateResponse.data.token_limit
+        token_limit: validateResponse.data.token_limit,
+        permissions: getRolePermissions(userRole)
       };
 
       console.log('Mapped user data:', userData);
@@ -195,13 +202,15 @@ class AuthService {
     try {
       const userData = localStorage.getItem(USER_DATA_KEY);
       if (!userData) return null;
-      
+
       const parsedUser = JSON.parse(userData);
       console.log('Retrieved user from storage:', parsedUser); // Add storage retrieval log
       // Map the role string to enum value without assuming case
+      const userRole = ROLE_MAPPING[parsedUser.role as keyof typeof ROLE_MAPPING] || Role.USER;
       return {
         ...parsedUser,
-        role: ROLE_MAPPING[parsedUser.role as keyof typeof ROLE_MAPPING] || Role.USER
+        role: userRole,
+        permissions: parsedUser.permissions || getRolePermissions(userRole)
       };
     } catch (error) {
       console.error('Error parsing stored user data:', error);
@@ -266,13 +275,15 @@ class AuthService {
       // If user data is included in registration response, use it
       let userData: User;
       if (response.data.user) {
+        const userRole = ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER;
         userData = {
           id: response.data.user.id.toString(),
           email: response.data.user.email,
           is_active: response.data.user.is_active ?? true,
-          role: ROLE_MAPPING[response.data.user.role as keyof typeof ROLE_MAPPING] || Role.USER,
+          role: userRole,
           name: response.data.user.full_name,
-          token_limit: response.data.user.token_limit ?? 10000
+          token_limit: response.data.user.token_limit ?? 10000,
+          permissions: getRolePermissions(userRole)
         };
       } else {
         // Otherwise get user data from validation endpoint
@@ -303,4 +314,4 @@ class AuthService {
   }
 }
 
-export const authService = AuthService.getInstance(); 
+export const authService = AuthService.getInstance();

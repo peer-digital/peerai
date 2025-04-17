@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), monacoEditorPlugin.default({})],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -45,6 +46,8 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           mui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
           charts: ['recharts'],
+          editor: ['monaco-editor', 'react-monaco-editor'],
+          forms: ['@rjsf/core', '@rjsf/mui', '@rjsf/validator-ajv8', '@rjsf/utils'],
         },
       },
     },

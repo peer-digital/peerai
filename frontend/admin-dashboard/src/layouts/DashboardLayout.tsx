@@ -46,6 +46,7 @@ import {
   Science as ScienceIcon,
   Share as ShareIcon,
   PersonAdd as PersonAddIcon,
+  Apps as AppsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -339,6 +340,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // @important: Menu items with required permissions
   const menuItems: MenuItem[] = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    // App Store removed - functionality merged into App Playground
+    { text: 'My Apps', icon: <AppsIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+    { text: 'App Playground', icon: <CodeIcon />, path: '/app-playground', requiredPermissions: [Permission.DEPLOY_APPS] },
     { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
     { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
     { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
@@ -348,6 +352,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       { text: 'Users', icon: <PeopleIcon />, path: '/users' },
       { text: 'Teams', icon: <PeopleIcon />, path: '/teams' },
       { text: 'Models', icon: <ScienceIcon />, path: '/models' },
+      { text: 'App Templates', icon: <AppsIcon />, path: '/app-templates-management', requiredPermissions: [Permission.MANAGE_APP_STORE] },
     ] : []),
   ];
 

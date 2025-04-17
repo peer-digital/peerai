@@ -5,6 +5,9 @@ from .auth import User, APIKey, DBSystemSettings, Team
 from .usage import UsageRecord
 from .models import ModelProvider, AIModel, ModelRequestMapping, ModelStatus
 from .referral import Referral
+from .app_templates import AppTemplate
+from .deployed_apps import DeployedApp
+from .ai_apps import AIApp
 
 __all__ = [
     "Base",
@@ -18,4 +21,7 @@ __all__ = [
     "ModelRequestMapping",
     "ModelStatus",
     "Referral",
+    "AppTemplate",
+    "DeployedApp",
+    "AIApp",
 ]

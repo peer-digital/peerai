@@ -40,11 +40,11 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# CORS for main app - allow all origins
+# CORS for main app - allow specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when using "*"
+    allow_origins=ADMIN_ALLOWED_ORIGINS,  # Use the same origins as admin routes
+    allow_credentials=True,  # Allow credentials for all routes
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=[
         "Content-Type",
@@ -58,20 +58,27 @@ app.add_middleware(
     max_age=3600,
 )
 
-# Add a middleware to handle CORS for admin routes specifically
+# Add a middleware to log requests and handle authentication for debugging
 @app.middleware("http")
-async def admin_cors_middleware(request: Request, call_next):
-    # Logic simplified as we don't need to check for /llm prefix separately anymore
-    origin = request.headers.get("Origin")
+async def request_logger_middleware(request: Request, call_next):
+    # Log the request details
+    print(f"Request: {request.method} {request.url.path}")
+    print(f"Headers: {request.headers}")
+
+    # Check for redirects that might lose the Authorization header
+    if request.url.path.endswith('/deployed-apps') and not request.url.path.endswith('/'):
+        print("Detected potential redirect that might lose Authorization header")
+
+    # Process the request
     response = await call_next(request)
-    # Allow credentials ONLY if the origin is in the admin list
-    if origin and origin in ADMIN_ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Origin"] = origin
-    # If not an allowed admin origin, ensure allow_origin is set (to '*' from main middleware)
-    # and credentials are not allowed (as per main middleware)
-    elif "access-control-allow-origin" not in response.headers:
-         response.headers["Access-Control-Allow-Origin"] = "*"
+
+    # Log the response status
+    print(f"Response status: {response.status_code}")
+
+    # If we're redirecting, ensure we preserve the Authorization header
+    if response.status_code in (307, 308) and 'Authorization' in request.headers:
+        print("Preserving Authorization header in redirect")
+        # This won't actually modify the client's request, but it's useful for debugging
 
     return response
 
@@ -138,12 +145,48 @@ app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin"
 app.include_router(referral.router)      # NO prefix
 app.include_router(inference.router, prefix=f"{settings.API_V1_PREFIX}/llm") # ADDED LLM router here
 
+# App Store router (deprecated - kept for backward compatibility)
+from backend.routes.app_store import router as app_store_router
+app.include_router(app_store_router, prefix=f"{settings.API_V1_PREFIX}")
+
+# App Templates router
+from backend.routes.app_templates import router as app_templates_router
+app.include_router(app_templates_router, prefix=f"{settings.API_V1_PREFIX}")
+
+# Deployed Apps router
+from backend.routes.deployed_apps import router as deployed_apps_router
+app.include_router(deployed_apps_router, prefix=f"{settings.API_V1_PREFIX}")
+
+# Public Apps router - no authentication required
+from backend.routes.public_apps import router as public_apps_router
+app.include_router(public_apps_router, prefix=f"{settings.API_V1_PREFIX}")
+
 # Debug: Print all registered routes AFTER including all routers
 print("\nRegistered routes AFTER including all routers:")
 for route in app.routes:
     # Filter out internal routes like static files or websocket if any
     if hasattr(route, 'path'):
         print(f"Path: {route.path}, Name: {route.name}, Methods: {getattr(route, 'methods', 'N/A')}")
+
+# Create database tables and seed the app store with sample apps
+try:
+    # Create tables
+    from backend.models.base import Base
+    from backend.database import engine
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created.")
+
+    # Seed app store (deprecated - kept for backward compatibility)
+    from backend.scripts.seed_app_store import seed_app_store
+    seed_app_store()
+    print("App store seeding completed (deprecated).")
+
+    # Seed app templates
+    from backend.scripts.seed_app_templates import seed_app_templates
+    seed_app_templates()
+    print("App templates seeding completed.")
+except Exception as e:
+    print(f"Error in database setup: {e}")
 
 @app.get("/")
 async def root():
