@@ -47,10 +47,18 @@ function TabPanel(props: TabPanelProps) {
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{ height: '100%', overflow: 'auto' }}
+      style={{
+        height: '100%',
+        overflow: 'auto',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
       {value === index && (
-        <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+        <Box sx={{ p: 3, height: 'auto', minHeight: '100%' }}>
           {children}
         </Box>
       )}
@@ -317,18 +325,25 @@ const DeployedAppView: React.FC = () => {
         </Alert>
       )}
 
-      <Box sx={{ flex: 1, minHeight: '400px', display: 'flex', flexDirection: 'column', mt: 3 }}>
+      <Box sx={{ flex: 1, minHeight: '400px', display: 'flex', flexDirection: 'column', mt: 3, overflow: 'hidden' }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           aria-label="app tabs"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            bgcolor: theme.palette.background.paper,
+          }}
         >
           <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
           <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
         </Tabs>
 
-        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <Box sx={{ flexGrow: 1, overflow: 'auto', position: 'relative' }}>
           <TabPanel value={tabValue} index={0}>
             {app.template.template_config?.schema && (
               <EnhancedConfigForm

@@ -65,10 +65,18 @@ function TabPanel(props: TabPanelProps) {
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{ height: '100%', overflow: 'auto' }}
+      style={{
+        height: '100%',
+        overflow: 'auto',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
       {value === index && (
-        <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+        <Box sx={{ p: 3, height: 'auto', minHeight: '100%' }}>
           {children}
         </Box>
       )}
@@ -430,20 +438,27 @@ const AppPlayground: React.FC = () => {
           value={tabValue}
           onChange={handleTabChange}
           aria-label="app configuration tabs"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            bgcolor: theme.palette.background.paper,
+          }}
         >
           <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
           <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
         </Tabs>
 
-        <DialogContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 0 }}>
+        <DialogContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 0, overflow: 'hidden' }}>
           {deployError && (
             <Alert severity="error" sx={{ m: 2 }}>
               {deployError}
             </Alert>
           )}
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
