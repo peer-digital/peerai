@@ -26,6 +26,7 @@ export interface DeployedAppDetail extends DeployedApp {
     template_config: {
       schema: any;
       default_values: any;
+      uiSchema?: any;
     };
     template_code: string;
     tags?: string[];

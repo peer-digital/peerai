@@ -17,19 +17,19 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Settings as SettingsIcon,
-  Code as CodeIcon,
   Preview as PreviewIcon,
   Delete as DeleteIcon,
+  Code as CodeIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedAppDetail } from '../api/deployedApps';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
-import CodeEditor from '../components/editor/CodeEditor';
 import { JSONSchema7 } from 'json-schema';
-import Form from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { replacePlaceholders } from '../utils/templateHelpers';
+import DevicePreview from '../components/preview/DevicePreview';
+import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,7 +66,6 @@ const DeployedAppView: React.FC = () => {
   const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState<any>({});
-  const [customCode, setCustomCode] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -98,11 +97,10 @@ const DeployedAppView: React.FC = () => {
     },
   });
 
-  // Set initial form data and code when app data is loaded
+  // Set initial form data when app data is loaded
   useEffect(() => {
     if (app) {
       setFormData(app.configuration || {});
-      setCustomCode(app.custom_code || app.template.template_code);
     }
   }, [app]);
 
@@ -116,10 +114,7 @@ const DeployedAppView: React.FC = () => {
     setFormData(formData);
   };
 
-  // Handle code change
-  const handleCodeChange = (value: string) => {
-    setCustomCode(value);
-  };
+
 
   // Handle save changes
   const handleSaveChanges = () => {
@@ -129,7 +124,7 @@ const DeployedAppView: React.FC = () => {
       slug: app.slug,
       updates: {
         configuration: formData,
-        custom_code: customCode,
+        custom_code: app.template.template_code,
       },
     });
   };
@@ -149,24 +144,13 @@ const DeployedAppView: React.FC = () => {
       // Create a preview by replacing placeholders in the template code
       if (app) {
         // Use the helper function to replace all placeholders, including nested ones
-        const preview = replacePlaceholders(customCode, formData);
+        const preview = replacePlaceholders(app.template.template_code, formData);
         setPreviewHtml(preview);
       }
-    }, [customCode, formData]);
+    }, [formData, app]);
 
     return (
-      <Box sx={{ height: '100%', overflow: 'auto' }}>
-        <iframe
-          srcDoc={previewHtml}
-          title="App Preview"
-          style={{
-            width: '100%',
-            height: '100%',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-          }}
-        />
-      </Box>
+      <DevicePreview html={previewHtml} title="App Preview" />
     );
   };
 
@@ -341,41 +325,23 @@ const DeployedAppView: React.FC = () => {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
-          <Tab icon={<CodeIcon />} label="Code" id="tab-1" aria-controls="tabpanel-1" />
-          <Tab icon={<PreviewIcon />} label="Preview" id="tab-2" aria-controls="tabpanel-2" />
+          <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
         </Tabs>
 
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           <TabPanel value={tabValue} index={0}>
             {app.template.template_config?.schema && (
-              <Form
+              <EnhancedConfigForm
                 schema={app.template.template_config.schema as JSONSchema7}
                 formData={formData}
                 onChange={handleFormChange}
-                validator={validator}
                 disabled={!isEditing}
-                uiSchema={app.template.template_config.uiSchema || {
-                  'ui:submitButtonOptions': {
-                    norender: true,
-                  },
-                }}
+                uiSchema={app.template.template_config.uiSchema || {}}
               />
             )}
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <Box sx={{ height: '100%' }}>
-              <CodeEditor
-                value={customCode}
-                onChange={handleCodeChange}
-                language="html"
-                height="100%"
-                readOnly={!isEditing}
-              />
-            </Box>
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={2}>
             <PreviewComponent />
           </TabPanel>
         </Box>

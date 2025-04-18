@@ -538,7 +538,7 @@ const AppTemplatesManagement: React.FC = () => {
                 Template Code
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Use {{variable}} syntax to reference configuration variables.
+                Use double curly braces to reference configuration variables.
               </Typography>
               <CodeEditor
                 value={formData.template_code}
@@ -603,11 +603,8 @@ const AppTemplatesManagement: React.FC = () => {
             Are you sure you want to delete the template "{selectedTemplate?.name}"? This action cannot be
             undone.
           </Typography>
-          {selectedTemplate?.deployments && selectedTemplate.deployments.length > 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              This template has active deployments. Deleting it may affect deployed apps.
-            </Alert>
-          )}
+          {/* Deployment check removed as it's not available in the current API */}
+
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>

@@ -25,7 +25,6 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Code as CodeIcon,
   Settings as SettingsIcon,
   Preview as PreviewIcon,
   Close as CloseIcon,
@@ -34,6 +33,7 @@ import {
   Info as InfoIcon,
   ArrowBack as ArrowBackIcon,
   Apps as AppsIcon,
+  Code as CodeIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState } from '../components/ui';
@@ -43,12 +43,11 @@ import deployedAppsApi, { DeployedAppCreate } from '../api/deployedApps';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
 import { useNavigate } from 'react-router-dom';
-import CodeEditor from '../components/editor/CodeEditor';
 import { JSONSchema7 } from 'json-schema';
-import Form from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { replacePlaceholders } from '../utils/templateHelpers';
-// App Templates components
+import DevicePreview from '../components/preview/DevicePreview';
+import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -87,7 +86,6 @@ const AppPlayground: React.FC = () => {
   // Detail modal removed as App Store concept is replaced with App Templates
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState<any>({});
-  const [customCode, setCustomCode] = useState('');
   const [deploymentData, setDeploymentData] = useState({
     name: '',
     slug: '',
@@ -119,7 +117,6 @@ const AppPlayground: React.FC = () => {
   // Handle template selection
   const handleSelectTemplate = (template: AppTemplate) => {
     setSelectedTemplate(template);
-    setCustomCode(template.template_code);
     setFormData(template.template_config.default_values || {});
     setDeploymentData({
       name: template.name,
@@ -163,10 +160,7 @@ const AppPlayground: React.FC = () => {
     setFormData(formData);
   };
 
-  // Handle code change
-  const handleCodeChange = (value: string) => {
-    setCustomCode(value);
-  };
+
 
   // Handle deployment data change
   const handleDeploymentDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +202,7 @@ const AppPlayground: React.FC = () => {
         name: deploymentData.name,
         slug: deploymentData.slug,
         configuration: formData,
-        custom_code: customCode,
+        custom_code: selectedTemplate.template_code,
       };
 
       await deployedAppsApi.deployApp(deployData);
@@ -234,24 +228,13 @@ const AppPlayground: React.FC = () => {
       // Create a preview by replacing placeholders in the template code
       if (selectedTemplate) {
         // Use the helper function to replace all placeholders, including nested ones
-        const preview = replacePlaceholders(customCode, formData);
+        const preview = replacePlaceholders(selectedTemplate.template_code, formData);
         setPreviewHtml(preview);
       }
-    }, [customCode, formData]);
+    }, [formData, selectedTemplate]);
 
     return (
-      <Box sx={{ height: '100%', overflow: 'auto' }}>
-        <iframe
-          srcDoc={previewHtml}
-          title="App Preview"
-          style={{
-            width: '100%',
-            height: '100%',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-          }}
-        />
-      </Box>
+      <DevicePreview html={previewHtml} title="App Preview" />
     );
   };
 
@@ -449,8 +432,7 @@ const AppPlayground: React.FC = () => {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
-          <Tab icon={<CodeIcon />} label="Code" id="tab-1" aria-controls="tabpanel-1" />
-          <Tab icon={<PreviewIcon />} label="Preview" id="tab-2" aria-controls="tabpanel-2" />
+          <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
         </Tabs>
 
         <DialogContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 0 }}>
@@ -503,32 +485,16 @@ const AppPlayground: React.FC = () => {
               </Typography>
 
               {selectedTemplate && (
-                <Form
+                <EnhancedConfigForm
                   schema={selectedTemplate.template_config.schema as JSONSchema7}
                   formData={formData}
                   onChange={handleFormChange}
-                  validator={validator}
-                  uiSchema={selectedTemplate.template_config.uiSchema || {
-                    'ui:submitButtonOptions': {
-                      norender: true,
-                    },
-                  }}
+                  uiSchema={selectedTemplate.template_config.uiSchema}
                 />
               )}
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ height: '100%' }}>
-                <CodeEditor
-                  value={customCode}
-                  onChange={handleCodeChange}
-                  language="html"
-                  height="100%"
-                />
-              </Box>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={2}>
               <PreviewComponent />
             </TabPanel>
           </Box>
