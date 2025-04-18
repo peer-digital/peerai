@@ -47,6 +47,16 @@ import {
   Share as ShareIcon,
   PersonAdd as PersonAddIcon,
   Apps as AppsIcon,
+  AppShortcut as AppShortcutIcon,
+  DesignServices as DesignServicesIcon,
+  Storage as StorageIcon,
+  Api as ApiIcon,
+  Terminal as TerminalIcon,
+  Article as ArticleIcon,
+  Group as GroupIcon,
+  Settings as SettingsIcon,
+  SmartToy as SmartToyIcon,
+  GridView as GridViewIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,7 +67,7 @@ import { AnnouncementBanner } from '../components/ui';
 import ReferralModal from '../components/ReferralModal';
 
 // Responsive drawer width
-const drawerWidth = 260;
+const drawerWidth = 250; // Slightly reduced for better proportions
 const mobileDrawerWidth = '100%';
 
 interface MenuItem {
@@ -66,6 +76,11 @@ interface MenuItem {
   path: string;
   requiredPermissions?: Permission[];
   guestAccessible?: boolean;
+}
+
+interface MenuGroup {
+  title?: string;
+  items: MenuItem[];
 }
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
@@ -337,24 +352,46 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     setHelpMenuOpen(!helpMenuOpen);
   };
 
-  // @important: Menu items with required permissions
-  const menuItems: MenuItem[] = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    // App Store removed - functionality merged into App Playground
-    { text: 'My Apps', icon: <AppsIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
-    { text: 'App Playground', icon: <CodeIcon />, path: '/app-playground', requiredPermissions: [Permission.DEPLOY_APPS] },
-    { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
-    { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
-    { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
-    // Analytics and Settings menu items removed
-    // Only show these items for super admins
-    ...(user?.role === Role.SUPER_ADMIN ? [
-      { text: 'Users', icon: <PeopleIcon />, path: '/users' },
-      { text: 'Teams', icon: <PeopleIcon />, path: '/teams' },
-      { text: 'Models', icon: <ScienceIcon />, path: '/models' },
-      { text: 'App Templates', icon: <AppsIcon />, path: '/app-templates-management', requiredPermissions: [Permission.MANAGE_APP_STORE] },
-    ] : []),
+  // @important: Menu items with required permissions grouped by category
+  const menuGroups: MenuGroup[] = [
+    {
+      title: 'Main',
+      items: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' }
+      ]
+    },
+    {
+      title: 'Apps',
+      items: [
+        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'App Playground', icon: <DesignServicesIcon />, path: '/app-playground', requiredPermissions: [Permission.DEPLOY_APPS] },
+        ...(user?.role === Role.SUPER_ADMIN ? [
+          { text: 'App Templates', icon: <AppShortcutIcon />, path: '/app-templates-management', requiredPermissions: [Permission.MANAGE_APP_STORE] }
+        ] : [])
+      ]
+    },
+    {
+      title: 'Development',
+      items: [
+        { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
+        { text: 'API Playground', icon: <TerminalIcon />, path: '/playground' },
+        { text: 'Documentation', icon: <ArticleIcon />, path: '/docs' }
+      ]
+    },
+    {
+      title: 'Administration',
+      items: [
+        ...(user?.role === Role.SUPER_ADMIN ? [
+          { text: 'Users', icon: <PeopleIcon />, path: '/users' },
+          { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
+          { text: 'Models', icon: <SmartToyIcon />, path: '/models' }
+        ] : [])
+      ]
+    }
   ];
+
+  // Flatten menu items for use in page title lookup
+  const menuItems: MenuItem[] = menuGroups.flatMap(group => group.items);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -492,6 +529,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           '& .MuiDrawer-paper': {
             width: { xs: '85%', sm: drawerWidth },
             boxSizing: 'border-box',
+            backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
           },
           // Fix for the persistent overlay issue
           '& .MuiModal-root': {
@@ -534,49 +572,113 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </Box>
         </DrawerHeader>
         <Divider />
-        <List>
-          {menuItems.map((item) => {
-            // Skip menu items that require permissions the user doesn't have
-            if (item.requiredPermissions && !hasRequiredPermissions(item.requiredPermissions)) {
-              return null;
-            }
-            // Skip menu items that aren't guest accessible in guest mode
-            if (isGuestMode && !item.guestAccessible) {
+        <Box sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 64px)' }}>
+          {menuGroups.map((group, groupIndex) => {
+            // Filter items based on permissions
+            const visibleItems = group.items.filter(item => {
+              // Skip items that require permissions the user doesn't have
+              if (item.requiredPermissions && !hasRequiredPermissions(item.requiredPermissions)) {
+                return false;
+              }
+              // Skip items that aren't guest accessible in guest mode
+              if (isGuestMode && !item.guestAccessible) {
+                return false;
+              }
+              return true;
+            });
+
+            // Skip empty groups
+            if (visibleItems.length === 0) {
               return null;
             }
 
             return (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  selected={location.pathname === item.path}
-                  onClick={() => {
-                    // Only navigate if we're not already on this path
-                    if (location.pathname !== item.path) {
-                      // Update the ref before navigation to prevent the useEffect from closing the drawer
-                      prevPathnameRef.current = item.path;
+              <React.Fragment key={`group-${groupIndex}`}>
+                {/* Add divider between groups (but not before the first group) */}
+                {groupIndex > 0 && <Divider sx={{ my: 0.75 }} />}
 
-                      // Navigate to the new path
-                      navigate(item.path);
+                {/* Group title */}
+                {group.title && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      px: 2.5,
+                      py: 0.75,
+                      mt: 0.5,
+                      mb: 0.25,
+                      display: 'block',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      fontSize: '0.7rem',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {group.title}
+                  </Typography>
+                )}
 
-                      // Close the drawer on mobile after a short delay
-                      if (isMobile) {
-                        setTimeout(() => {
-                          handleDrawerClose();
-                        }, 150);
-                      }
-                    } else if (isMobile) {
-                      // If we're already on this path, just close the drawer
-                      handleDrawerClose();
-                    }
-                  }}
-                >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
+                {/* Group items */}
+                <List sx={{ py: 0, mb: 0.5 }}>
+                  {visibleItems.map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton
+                        selected={location.pathname === item.path}
+                        sx={{
+                          py: 0.75,
+                          px: 2,
+                          '&.Mui-selected': {
+                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                          },
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                          }
+                        }}
+                        onClick={() => {
+                          // Only navigate if we're not already on this path
+                          if (location.pathname !== item.path) {
+                            // Update the ref before navigation to prevent the useEffect from closing the drawer
+                            prevPathnameRef.current = item.path;
+
+                            // Navigate to the new path
+                            navigate(item.path);
+
+                            // Close the drawer on mobile after a short delay
+                            if (isMobile) {
+                              setTimeout(() => {
+                                handleDrawerClose();
+                              }, 150);
+                            }
+                          } else if (isMobile) {
+                            // If we're already on this path, just close the drawer
+                            handleDrawerClose();
+                          }
+                        }}
+                      >
+                        <ListItemIcon sx={{
+                          minWidth: 36,
+                          color: location.pathname === item.path ? 'primary.main' : 'inherit',
+                          '& .MuiSvgIcon-root': {
+                            fontSize: '1.3rem'
+                          }
+                        }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.text}
+                          primaryTypographyProps={{
+                            fontSize: '0.9rem',
+                            fontWeight: location.pathname === item.path ? 500 : 400
+                          }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </React.Fragment>
             );
           })}
-        </List>
+        </Box>
       </Drawer>
 
       <Main open={open} className="always-show-scrollbar">
