@@ -65,10 +65,10 @@ function TabPanel(props: TabPanelProps) {
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{ height: '100%' }}
+      style={{ height: '100%', overflow: 'auto' }}
     >
       {value === index && (
-        <Box sx={{ p: 3, height: '100%' }}>
+        <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
           {children}
         </Box>
       )}
@@ -442,7 +442,7 @@ const AppPlayground: React.FC = () => {
             </Alert>
           )}
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>

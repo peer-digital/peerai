@@ -47,10 +47,10 @@ function TabPanel(props: TabPanelProps) {
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{ height: '100%' }}
+      style={{ height: '100%', overflow: 'auto' }}
     >
       {value === index && (
-        <Box sx={{ p: 3, height: '100%' }}>
+        <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
           {children}
         </Box>
       )}
@@ -207,7 +207,7 @@ const DeployedAppView: React.FC = () => {
   }
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%', height: 'calc(100vh - 64px)' }}>
+    <Box p={3} sx={{ width: '100%', minWidth: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton
@@ -317,7 +317,7 @@ const DeployedAppView: React.FC = () => {
         </Alert>
       )}
 
-      <Box sx={{ height: 'calc(100% - 200px)', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, minHeight: '400px', display: 'flex', flexDirection: 'column', mt: 3 }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
