@@ -10,6 +10,7 @@ export interface AppTemplate {
   template_config: {
     schema: any;
     default_values: any;
+    uiSchema?: any;
   };
   template_code: string;
   tags?: string[];
@@ -26,6 +27,7 @@ export interface AppTemplateCreate {
   template_config: {
     schema: any;
     default_values: any;
+    uiSchema?: any;
   };
   template_code: string;
   tags?: string[];
@@ -39,6 +41,7 @@ export interface AppTemplateUpdate {
   template_config?: {
     schema: any;
     default_values: any;
+    uiSchema?: any;
   };
   template_code?: string;
   tags?: string[];

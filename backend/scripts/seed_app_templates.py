@@ -17,6 +17,15 @@ from backend.models.base import Base
 # Create tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
+# Read the Intelligent Chatbot template HTML
+with open(os.path.join(os.path.dirname(__file__), 'intelligent-chatbot-template.html'), 'r') as f:
+    intelligent_chatbot_template_html = f.read()
+
+# Read the Intelligent Chatbot template config
+with open(os.path.join(os.path.dirname(__file__), 'intelligent-chatbot-template-config.json'), 'r') as f:
+    import json
+    intelligent_chatbot_template_config = json.load(f)
+
 # Sample app templates to seed
 SAMPLE_TEMPLATES = [
     {
@@ -509,26 +518,63 @@ SAMPLE_TEMPLATES = [
         "tags": ["knowledge base", "search", "enterprise"],
         "is_active": True,
     },
+    {
+        "slug": "intelligent-chatbot",
+        "name": "Intelligent Chatbot",
+        "description": "A modern, customizable chatbot with a beautiful UI. Perfect for customer support, knowledge base search, and automated conversations.",
+        "icon_url": "https://via.placeholder.com/300x150?text=Intelligent+Chatbot",
+        "template_config": intelligent_chatbot_template_config,
+        "template_code": intelligent_chatbot_template_html,
+        "tags": ["chatbot", "ai", "customer-support", "modern-ui"],
+        "is_active": True,
+    },
 ]
 
 
-def seed_app_templates():
-    """Seed the database with app templates."""
+def seed_app_templates(force_update=False):
+    """Seed the database with app templates.
+
+    Args:
+        force_update: If True, update existing templates. If False, only add new templates.
+    """
     db = SessionLocal()
     try:
         # Check if there are already templates in the database
-        existing_templates = db.query(AppTemplate).count()
-        if existing_templates > 0:
-            print(f"Found {existing_templates} existing templates. Skipping seeding.")
+        existing_templates_count = db.query(AppTemplate).count()
+
+        if existing_templates_count > 0 and not force_update:
+            print(f"Found {existing_templates_count} existing templates. Use force_update=True to update them.")
             return
 
-        # Add sample templates
+        added_count = 0
+        updated_count = 0
+
+        # Add or update templates
         for template_data in SAMPLE_TEMPLATES:
-            template = AppTemplate(**template_data)
-            db.add(template)
+            # Check if template already exists
+            existing_template = db.query(AppTemplate).filter(AppTemplate.slug == template_data["slug"]).first()
+
+            if existing_template:
+                if force_update:
+                    # Update existing template (except slug)
+                    for key, value in template_data.items():
+                        if key != 'slug':  # Don't update the slug
+                            setattr(existing_template, key, value)
+                    updated_count += 1
+                # If not force_update, skip existing templates
+            else:
+                # Add new template
+                template = AppTemplate(**template_data)
+                db.add(template)
+                added_count += 1
 
         db.commit()
-        print(f"Successfully added {len(SAMPLE_TEMPLATES)} sample templates to the database.")
+
+        if added_count > 0 or updated_count > 0:
+            print(f"Successfully added {added_count} and updated {updated_count} app templates.")
+        else:
+            print("No templates were added or updated.")
+
     except Exception as e:
         db.rollback()
         print(f"Error seeding app templates: {e}")
@@ -537,4 +583,10 @@ def seed_app_templates():
 
 
 if __name__ == "__main__":
-    seed_app_templates()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Seed app templates')
+    parser.add_argument('--force-update', action='store_true', help='Update existing templates')
+    args = parser.parse_args()
+
+    seed_app_templates(force_update=args.force_update)

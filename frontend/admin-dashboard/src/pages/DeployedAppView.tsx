@@ -29,6 +29,7 @@ import CodeEditor from '../components/editor/CodeEditor';
 import { JSONSchema7 } from 'json-schema';
 import Form from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
+import { replacePlaceholders } from '../utils/templateHelpers';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -147,13 +148,8 @@ const DeployedAppView: React.FC = () => {
     useEffect(() => {
       // Create a preview by replacing placeholders in the template code
       if (app) {
-        let preview = customCode;
-
-        // Replace configuration placeholders
-        Object.entries(formData).forEach(([key, value]) => {
-          preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
-        });
-
+        // Use the helper function to replace all placeholders, including nested ones
+        const preview = replacePlaceholders(customCode, formData);
         setPreviewHtml(preview);
       }
     }, [customCode, formData]);
@@ -358,7 +354,7 @@ const DeployedAppView: React.FC = () => {
                 onChange={handleFormChange}
                 validator={validator}
                 disabled={!isEditing}
-                uiSchema={{
+                uiSchema={app.template.template_config.uiSchema || {
                   'ui:submitButtonOptions': {
                     norender: true,
                   },

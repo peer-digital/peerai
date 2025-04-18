@@ -1,7 +1,7 @@
 """
 Public routes for accessing deployed AI apps.
 """
-from typing import Dict, Any, Optional
+from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.responses import HTMLResponse
@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from backend.database import get_db
 from backend.models.deployed_apps import DeployedApp
 from backend.models.app_templates import AppTemplate
+from backend.utils.template_helpers import replace_placeholders
 
 router = APIRouter(prefix="/public-apps", tags=["public-apps"])
 
@@ -45,11 +46,9 @@ async def get_public_app(
     # Use the custom code if available, otherwise use the template code
     html_content = deployed_app.custom_code or template.template_code
 
-    # Replace configuration placeholders in the HTML
+    # Replace configuration placeholders in the HTML using the helper function
     if deployed_app.configuration:
-        for key, value in deployed_app.configuration.items():
-            placeholder = f"{{{{{key}}}}}"
-            html_content = html_content.replace(placeholder, str(value))
+        html_content = replace_placeholders(html_content, deployed_app.configuration)
 
     # Add the server's base URL as a meta tag to help client-side scripts
     # determine the correct API endpoint

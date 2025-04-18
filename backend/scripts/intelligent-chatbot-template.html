@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="{{app_settings.language}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{app_settings.app_title}}</title>
+    <style>
+        :root {
+            /* Color variables - configurable */
+            --primary-color: {{styling.primary_color}};
+            --secondary-color: {{styling.secondary_color}};
+            --background-color: {{styling.background_color}};
+            --text-color: {{styling.text_color}};
+            --light-bg-color: {{styling.light_bg_color}};
+            --border-color: {{styling.border_color}};
+
+            /* Font variables - configurable */
+            --font-family: {{styling.font_family}};
+
+            /* Font size variables - configurable */
+            --font-size-small: {{styling.font_size_small}};
+            --font-size-medium: {{styling.font_size_medium}};
+            --font-size-large: {{styling.font_size_large}};
+
+            /* Border radius - configurable */
+            --border-radius: {{styling.border_radius}};
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Page title */
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title h1 {
+            font-size: var(--font-size-large);
+            color: var(--text-color);
+            font-weight: bold;
+        }
+
+        /* Main container */
+        .app-container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Header section */
+        .header {
+            background-color: var(--light-bg-color);
+            padding: 40px;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .header h1 {
+            font-size: var(--font-size-large);
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .header p {
+            font-size: var(--font-size-medium);
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        /* Content section */
+        .content {
+            padding: 40px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .content-title {
+            font-size: var(--font-size-large);
+            font-weight: bold;
+        }
+
+
+
+        /* Quick actions */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .quick-action {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: var(--font-size-small);
+            transition: all 0.3s ease;
+        }
+
+        .quick-action:hover {
+            background-color: var(--light-bg-color);
+        }
+
+        /* Chat container */
+        .chat-container {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            margin-left: auto;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+        }
+
+        .ai-message {
+            margin-right: auto;
+            background-color: var(--light-bg-color);
+            color: var(--text-color);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+        }
+
+        /* Input section */
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-medium);
+            font-family: var(--font-family);
+        }
+
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 0 25px;
+            cursor: pointer;
+            font-size: var(--font-size-medium);
+            font-weight: bold;
+        }
+
+
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header, .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header title -->
+    <div class="page-title">
+        <h1>{{app_settings.app_title}}</h1>
+    </div>
+
+    <!-- Main container -->
+    <div class="app-container">
+        <!-- Header section -->
+        <div class="header">
+            <h1>{{app_settings.app_title}}</h1>
+            <p>{{app_settings.app_description}}</p>
+        </div>
+
+        <!-- Content section -->
+        <div class="content">
+            <div class="content-header">
+                <div class="content-title">{{content.content_title}}</div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="quick-actions">
+                <button class="quick-action">{{quick_actions.quick_action1}}</button>
+                <button class="quick-action">{{quick_actions.quick_action2}}</button>
+                <button class="quick-action">{{quick_actions.quick_action3}}</button>
+                <button class="quick-action">{{quick_actions.quick_action4}}</button>
+                <button class="quick-action">{{quick_actions.quick_action5}}</button>
+            </div>
+
+            <!-- Chat container -->
+            <div class="chat-container" id="chat-container">
+                <div class="message ai-message">
+                    {{content.welcome_message}}
+                </div>
+            </div>
+
+            <!-- Input section -->
+            <div class="input-container">
+                <input type="text" class="chat-input" id="user-input" placeholder="{{content.input_placeholder}}">
+                <button class="send-button" id="send-button">{{content.send_button_text}}</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Configuration from template
+        const API_KEY = '{{ai_settings.api_key}}';
+        const MODEL = '{{ai_settings.model}}';
+
+        // Dynamically determine the API base URL based on the current environment
+        // 1. Check for server-url meta tag (added by the server)
+        // 2. In preview mode (iframe), use the parent window's origin
+        // 3. In public mode, use the current window's origin
+        // 4. Fallback to a default URL if needed
+        const getApiBaseUrl = () => {
+            // Check if we're in an iframe (preview mode)
+            const isInIframe = window !== window.parent;
+
+            try {
+                // First, check for the server-url meta tag
+                const serverUrlMeta = document.querySelector('meta[name="server-url"]');
+                if (serverUrlMeta && serverUrlMeta.getAttribute('content')) {
+                    console.log('Using server-url from meta tag:', serverUrlMeta.getAttribute('content'));
+                    return serverUrlMeta.getAttribute('content');
+                }
+
+                if (isInIframe) {
+                    // In preview mode, try to use the parent window's origin
+                    // This works because the iframe is hosted on the same domain as the API
+                    return window.parent.location.origin;
+                } else {
+                    // In public mode, use the current window's origin
+                    // This assumes the API is hosted on the same domain as the app
+                    return window.location.origin;
+                }
+            } catch (e) {
+                console.warn('Error determining API base URL:', e);
+                // Fallback to a default URL
+                return 'http://localhost:8000';
+            }
+        };
+
+        const apiBaseUrl = getApiBaseUrl();
+        const isInIframe = window !== window.parent;
+
+        // Construct the full API URL
+        const API_URL = `${apiBaseUrl}/api/v1/llm/completions`;
+
+        // DOM elements
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const quickActions = document.querySelectorAll('.quick-action');
+
+        // Add event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Add event listeners to quick action buttons
+        quickActions.forEach(button => {
+            button.addEventListener('click', function() {
+                userInput.value = this.textContent;
+                sendMessage();
+            });
+        });
+
+        // Function to send message
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage(message, 'user');
+
+            // Clear input
+            userInput.value = '';
+
+            try {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message ai-message';
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.textContent = '{{content.typing_indicator_text}}';
+                chatContainer.appendChild(typingIndicator);
+
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // Prepare request body
+                const requestBody = {
+                    messages: [
+                        {role: 'system', content: '{{ai_settings.system_prompt}}'},
+                        {role: 'user', content: message}
+                    ],
+                    model: MODEL,
+                    temperature: {{ai_settings.temperature}}
+                };
+
+                // Determine the appropriate fetch options based on the environment
+                const fetchOptions = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    // Use 'same-origin' credentials in iframe mode, 'omit' in public mode
+                    // This helps avoid CORS issues in different contexts
+                    credentials: isInIframe ? 'same-origin' : 'omit',
+                    body: JSON.stringify(requestBody)
+                };
+
+                // Make API call
+                const response = await fetch(API_URL, fetchOptions);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                // Remove typing indicator
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    chatContainer.removeChild(indicator);
+                }
+
+                // Extract the content from the response
+                let content = '';
+                if (data.content) {
+                    content = data.content;
+                } else if (data.choices && data.choices.length > 0) {
+                    const choice = data.choices[0];
+                    if (choice.message && choice.message.content) {
+                        content = choice.message.content;
+                    } else if (choice.text) {
+                        content = choice.text;
+                    } else if (choice.content) {
+                        content = choice.content;
+                    }
+                }
+
+                // Add AI response to chat
+                addMessage(content || '{{content.no_response_text}}', 'ai');
+
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Remove typing indicator
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    chatContainer.removeChild(indicator);
+                }
+
+                // Add error message
+                addMessage('{{content.error_message}}', 'ai');
+            }
+        }
+
+        // Function to add message to chat
+        function addMessage(message, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${sender}-message`;
+            messageElement.textContent = message;
+
+            chatContainer.appendChild(messageElement);
+
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Initialize tabs
+        const tabs = document.querySelectorAll('.nav-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
