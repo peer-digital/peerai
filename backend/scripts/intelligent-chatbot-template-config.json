@@ -140,15 +140,9 @@
             "title": "System Prompt",
             "description": "Instructions for the AI model",
             "default": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses."
-          },
-          "api_key": {
-            "type": "string",
-            "title": "API Key",
-            "description": "API key for accessing the AI model",
-            "format": "password"
           }
         },
-        "required": ["model", "api_key"]
+        "required": ["model"]
       },
       "styling": {
         "type": "object",

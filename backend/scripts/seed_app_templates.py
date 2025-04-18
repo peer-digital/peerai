@@ -217,14 +217,9 @@ SAMPLE_TEMPLATES = [
                         "description": "URL to your knowledge base API",
                         "default": "https://api.example.com/kb"
                     },
-                    "api_key": {
-                        "type": "string",
-                        "title": "API Key",
-                        "description": "API key for accessing the knowledge base",
-                        "format": "password"
-                    }
+
                 },
-                "required": ["model", "knowledge_base_url", "api_key"]
+                "required": ["model", "knowledge_base_url"]
             },
             "default_values": {
                 "model": "mistral-large-latest",

@@ -278,10 +278,10 @@ const MyApps: React.FC = () => {
           description={
             searchQuery
               ? "No apps match your search criteria."
-              : "You haven't deployed any apps yet. Visit the App Playground to create and deploy apps."
+              : "You haven't deployed any apps yet. Visit the App Library to create and deploy apps."
           }
-          actionText="Go to App Playground"
-          onAction={() => navigate('/app-playground')}
+          actionText="Go to App Library"
+          onAction={() => navigate('/app-library')}
         />
       )}
 

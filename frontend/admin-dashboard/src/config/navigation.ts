@@ -33,8 +33,8 @@ export const navigation: NavItem[] = [
     requiredPermissions: [Permission.USE_APP_STORE],
   },
   {
-    title: 'App Playground',
-    path: '/app-playground',
+    title: 'App Library',
+    path: '/app-library',
     icon: CodeIcon,
     requiredPermissions: [Permission.DEPLOY_APPS],
   },

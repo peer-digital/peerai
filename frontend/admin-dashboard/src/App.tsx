@@ -31,7 +31,7 @@ const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 // App Store removed - replaced with App Templates
 const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesManagement'));
 const MyApps = React.lazy(() => import('./pages/MyApps'));
-const AppPlayground = React.lazy(() => import('./pages/AppPlayground'));
+const AppLibrary = React.lazy(() => import('./pages/AppLibrary'));
 const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
@@ -165,10 +165,10 @@ function App() {
                       </PermissionGuard>
                     } />
 
-                    {/* App Playground */}
-                    <Route path="/app-playground" element={
+                    {/* App Library */}
+                    <Route path="/app-library" element={
                       <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
-                        <AppPlayground />
+                        <AppLibrary />
                       </PermissionGuard>
                     } />
 
