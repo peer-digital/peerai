@@ -405,9 +405,10 @@ const AppPlayground: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            height: '80vh',
+            height: '90vh',
             display: 'flex',
             flexDirection: 'column',
+            maxWidth: '90vw',
           },
         }}
       >
@@ -442,7 +443,7 @@ const AppPlayground: React.FC = () => {
             </Alert>
           )}
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
