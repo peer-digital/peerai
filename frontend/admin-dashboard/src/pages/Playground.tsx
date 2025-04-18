@@ -41,6 +41,7 @@ import { apiClient } from '../api/client';
 import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../api/config';
+import ApiKeySelector from '../components/common/ApiKeySelector';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -159,20 +160,7 @@ function Playground() {
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
   const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
 
-  // Fetch user's API keys
-  const { data: userApiKeys, isLoading: isLoadingKeys } = useQuery<ApiKey[]>({
-    queryKey: ['api-keys'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/auth/api-keys');
-        return response.data;
-      } catch (error) {
-        console.error('Error fetching API keys:', error);
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // We'll use the ApiKeySelector component instead of fetching API keys directly
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -344,44 +332,14 @@ function Playground() {
     }
   };
 
-  // Validate if the current API key exists in the user's API keys
-  const validateApiKey = (key: string) => {
-    if (!key || !userApiKeys || userApiKeys.length === 0) {
-      setIsApiKeyValid(null);
-      return false;
-    }
+  // The ApiKeySelector component handles validation internally
 
-    // Check if the key exists in the user's API keys
-    const isValid = userApiKeys.some(userKey => userKey.key === key && userKey.is_active);
-    setIsApiKeyValid(isValid);
-    return isValid;
-  };
-
-  // Load API key from localStorage on component mount
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('apiKey');
-    if (storedApiKey) {
-      // Validate that the API key is a simple string without special characters
-      if (/^[a-zA-Z0-9_-]+$/.test(storedApiKey)) {
-        setApiKey(storedApiKey);
-      } else {
-        // If invalid, clear it from localStorage
-        localStorage.removeItem('apiKey');
-        console.error('Invalid API key format in localStorage');
-      }
-    }
-  }, []);
-
-  // Validate API key when it changes or when user's API keys are loaded
+  // Fetch models when API key changes
   useEffect(() => {
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
-      localStorage.setItem('apiKey', apiKey); // Save API key to localStorage
-      validateApiKey(apiKey);
       fetchAvailableModels();
-    } else {
-      setIsApiKeyValid(null);
     }
-  }, [apiKey, userApiKeys]);
+  }, [apiKey]);
 
   // Initialize with empty model if no models are available
   useEffect(() => {
@@ -597,67 +555,13 @@ function Playground() {
                 </Alert>
               )}
 
-              <TextField
+              <ApiKeySelector
+                value={apiKey}
+                onChange={setApiKey}
+                error={apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey)}
+                required
                 fullWidth
                 size="small"
-                label="API Key"
-                value={apiKey}
-                onChange={(e) => {
-                  // Only allow alphanumeric characters, hyphens, and underscores
-                  const newValue = e.target.value;
-                  if (newValue === '' || /^[a-zA-Z0-9_-]+$/.test(newValue)) {
-                    setApiKey(newValue);
-                  }
-                }}
-                type="password"
-                placeholder="Enter your API key"
-                InputProps={{
-                  endAdornment: apiKey ? (
-                    isApiKeyValid === true ? (
-                      <Tooltip title="Valid API key" arrow>
-                        <CheckCircleIcon color="success" fontSize="small" />
-                      </Tooltip>
-                    ) : isApiKeyValid === false ? (
-                      <Tooltip title="Invalid API key" arrow>
-                        <ErrorIcon color="error" fontSize="small" />
-                      </Tooltip>
-                    ) : null
-                  ) : (
-                    <Tooltip title="API key is required" arrow>
-                      <KeyIcon color="action" fontSize="small" sx={{ opacity: 0.5 }} />
-                    </Tooltip>
-                  )
-                }}
-                helperText={
-                  <>
-                    {apiKey && isApiKeyValid === false ? (
-                      <Typography variant="caption" color="error">
-                        Invalid API key. <Link component={RouterLink} to="/api-keys">Manage your API keys</Link>
-                      </Typography>
-                    ) : apiKey && isApiKeyValid === true ? (
-                      <Typography variant="caption" color="success.main">
-                        Valid API key
-                      </Typography>
-                    ) : apiKey ? (
-                      <Typography variant="caption">
-                        API keys should only contain letters, numbers, hyphens, and underscores
-                      </Typography>
-                    ) : (
-                      <Typography variant="caption">
-                        Please enter an API key from your <Link component={RouterLink} to="/api-keys">API Keys</Link> page
-                      </Typography>
-                    )}
-                  </>
-                }
-                error={apiKey !== '' && (!/^[a-zA-Z0-9_-]+$/.test(apiKey) || isApiKeyValid === false)}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    fontSize: { xs: '0.875rem', sm: '1rem' }
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                  }
-                }}
               />
 
               {endpointConfigs[selectedEndpoint].requiresBody && selectedEndpoint === 'completions' && (

@@ -48,6 +48,10 @@ class APIKeyCreate(BaseModel):
     expires_in_days: Optional[int] = None
 
 
+class DefaultAPIKeyUpdate(BaseModel):
+    key_id: int
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -241,6 +245,47 @@ async def list_api_keys(
 ):
     """List all API keys for the current user"""
     return db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
+
+
+@router.get("/api/v1/auth/default-api-key")
+async def get_default_api_key(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Get the default API key for the current user"""
+    return {"default_key_id": current_user.default_api_key_id}
+
+
+@router.post("/api/v1/auth/default-api-key")
+async def set_default_api_key(
+    data: DefaultAPIKeyUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set the default API key for the current user"""
+    print(f"Setting default API key. User ID: {current_user.id}, Key ID: {data.key_id}")
+
+    # Verify the API key belongs to the user
+    api_key = db.query(APIKey).filter(
+        APIKey.id == data.key_id,
+        APIKey.user_id == current_user.id,
+        APIKey.is_active == True
+    ).first()
+
+    if not api_key:
+        print(f"API key not found or not active. Key ID: {data.key_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key not found or not active"
+        )
+
+    print(f"Found API key: {api_key.id}, {api_key.name}, User ID: {api_key.user_id}")
+
+    # Update the user's default API key
+    current_user.default_api_key_id = api_key.id
+    db.commit()
+    print(f"Updated default API key for user {current_user.email} to {api_key.id}")
+
+    return {"message": "Default API key updated successfully", "key_id": api_key.id}
 
 
 @router.delete("/api/v1/auth/api-keys/{key_id}")
