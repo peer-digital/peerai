@@ -22,6 +22,7 @@ export interface LoginCredentials {
 export interface RegisterCredentials extends LoginCredentials {
   full_name?: string;
   referral_code?: string;
+  terms_accepted?: boolean;
 }
 
 export interface AuthContextType {
@@ -31,4 +32,4 @@ export interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
-} 
+}

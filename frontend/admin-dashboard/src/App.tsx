@@ -29,6 +29,7 @@ const UserManagement = React.lazy(() => import('./pages/UserManagement'));
 const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
+const LegalPages = React.lazy(() => import('./pages/LegalPages'));
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -62,6 +63,7 @@ function App() {
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />
                   <Route path="/get-started" element={<GetStarted />} />
+                  <Route path="/policy" element={<LegalPages />} />
 
                   {/* Protected routes */}
                   <Route

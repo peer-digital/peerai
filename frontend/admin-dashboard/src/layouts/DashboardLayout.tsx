@@ -19,8 +19,6 @@ import {
   // Badge removed,
   Tooltip,
   useMediaQuery,
-  Collapse,
-  Fade,
   Button,
   Link,
 } from '@mui/material';
@@ -47,7 +45,7 @@ import {
   Share as ShareIcon,
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
@@ -609,8 +607,42 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             />
           )}
         </Box>
-        <Box sx={{ width: '100%' }}>
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px - 48px)' }}>
           {children}
+
+          {/* Footer */}
+          <Box
+            component="footer"
+            sx={{
+              mt: 'auto',
+              py: 3,
+              textAlign: 'center',
+              borderTop: 1,
+              borderColor: 'divider'
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              © {new Date().getFullYear()} Peer Digital Sweden AB
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              <Link
+                component={RouterLink}
+                to="/policy"
+                color="text.secondary"
+                sx={{ mx: 1, fontSize: '0.875rem' }}
+              >
+                Terms of Use
+              </Link>
+              <Link
+                component={RouterLink}
+                to="/policy?tab=1"
+                color="text.secondary"
+                sx={{ mx: 1, fontSize: '0.875rem' }}
+              >
+                Privacy Policy
+              </Link>
+            </Box>
+          </Box>
         </Box>
       </Main>
 

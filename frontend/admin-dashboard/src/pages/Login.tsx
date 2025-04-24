@@ -17,6 +17,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControlLabel,
+  Checkbox,
+  Link,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { LoginCredentials, RegisterCredentials } from '../types/auth';
@@ -42,7 +45,7 @@ const Login: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const navigate = useNavigate();
   const { login, register } = useAuth();
-  const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string }>();
+  const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }>();
   const [referralCode, setReferralCode] = useState(urlReferralCode || "");
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [isValidCode, setIsValidCode] = useState<boolean | null>(null);
@@ -88,7 +91,7 @@ const Login: React.FC = () => {
     validateReferralCode(debouncedReferralCode);
   }, [debouncedReferralCode, validateReferralCode]);
 
-  const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string }) => {
+  const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }) => {
     try {
       setError(null);
 
@@ -128,7 +131,7 @@ const Login: React.FC = () => {
 
   return (
     <>
-      <Container component="main" maxWidth="xs" sx={{
+      <Container component="main" maxWidth="sm" sx={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
@@ -148,8 +151,10 @@ const Login: React.FC = () => {
           <Paper
             elevation={3}
             sx={{
-              p: 4,
+              p: { xs: 3, sm: 4 },
               width: '100%',
+              maxWidth: '500px',
+              mx: 'auto',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -158,9 +163,9 @@ const Login: React.FC = () => {
           >
             <Typography
               component="h1"
-              variant="h5"
+              variant="h4"
               color="primary"
-              sx={{ mb: 3 }}
+              sx={{ mb: 3, fontWeight: 600 }}
             >
               PeerAI Admin {mode === 'login' ? 'Login' : 'Register'}
             </Typography>
@@ -204,7 +209,7 @@ const Login: React.FC = () => {
               component="form"
               onSubmit={handleSubmit(onSubmit)}
               noValidate
-              sx={{ width: '100%' }}
+              sx={{ width: '100%', mt: 2 }}
             >
               {mode === 'register' && (
                 <>
@@ -261,6 +266,7 @@ const Login: React.FC = () => {
                   />
                 </>
               )}
+
               <TextField
                 margin="normal"
                 required
@@ -281,6 +287,7 @@ const Login: React.FC = () => {
                 inputProps={{
                   'aria-invalid': !!errors.email,
                 }}
+                sx={{ mt: 2 }}
               />
               <TextField
                 margin="normal"
@@ -302,15 +309,42 @@ const Login: React.FC = () => {
                 inputProps={{
                   'aria-invalid': !!errors.password,
                 }}
+                sx={{ mt: 2 }}
               />
+              {mode === 'register' && (
+                <Box sx={{ mt: 3 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        {...registerForm('terms_accepted', {
+                          required: 'You must accept the Terms of Use to register',
+                        })}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Typography variant="body2">
+                        I accept the <Link component={RouterLink} to="/policy" target="_blank">Terms of Use</Link> and <Link component={RouterLink} to="/policy?tab=1" target="_blank">Privacy Policy</Link>
+                      </Typography>
+                    }
+                    sx={{ alignItems: 'center' }}
+                  />
+                  {errors.terms_accepted && (
+                    <Typography color="error" variant="caption" sx={{ display: 'block', ml: 2 }}>
+                      {errors.terms_accepted.message}
+                    </Typography>
+                  )}
+                </Box>
+              )}
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{
-                  mt: 3,
+                  mt: mode === 'register' ? 2 : 4,
                   mb: 2,
-                  py: 1.5
+                  py: 1.5,
+                  fontSize: '1rem'
                 }}
                 disabled={isLoading}
               >
@@ -324,7 +358,7 @@ const Login: React.FC = () => {
               onChange={handleModeChange}
               aria-label="auth mode"
               size="small"
-              sx={{ mt: 2 }}
+              sx={{ mt: 3 }}
             >
               <ToggleButton value="login" aria-label="login mode">
                 Login
