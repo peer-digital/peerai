@@ -253,7 +253,7 @@ const LegalPages: React.FC = () => {
               When you use our services, your queries are passed to our third-party AI processing partners who are EU-based companies that process data in Sweden. We do not store the content of these queries or the responses on our servers.
             </Typography>
             <Typography paragraph>
-              For the purpose of abuse monitoring only, our AI processing partners may store certain data for up to 30 days within the European Union. This is limited to cases where monitoring is necessary to prevent misuse of the service. After this period, any such data is permanently deleted.
+              For the purpose of abuse monitoring, our AI processing partners may store data for up to 30 days within the European Union. This is necessary to prevent misuse of the service. After this period, any such data is permanently deleted.
             </Typography>
             <Typography paragraph>
               As both Peer AI and our partners are EU-based companies, we are not subject to the US CLOUD Act or similar legislation that affects US-based companies. This provides an additional layer of protection for your data.
@@ -288,7 +288,7 @@ const LegalPages: React.FC = () => {
               We do not retain the content of your queries or the responses generated. This data is only processed in real-time to provide the service.
             </Typography>
             <Typography paragraph>
-              As mentioned earlier, for abuse monitoring purposes only, our AI processing partners may retain certain data for up to 30 days within the EU, after which it is permanently deleted.
+              As mentioned earlier, for abuse monitoring purposes, our AI processing partners may retain data for up to 30 days within the EU, after which it is permanently deleted.
             </Typography>
 
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 3 }}>
