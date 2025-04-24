@@ -44,6 +44,7 @@ import {
   Science as ScienceIcon,
   Share as ShareIcon,
   PersonAdd as PersonAddIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -453,6 +454,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 keepMounted={false}
               >
                 {/* Profile menu item removed */}
+                <MenuItem component={RouterLink} to="/policy" onClick={handleUserMenuClose}>
+                  <ListItemIcon>
+                    <ArticleIcon fontSize="small" />
+                  </ListItemIcon>
+                  Terms & Privacy
+                </MenuItem>
+                <Divider sx={{ my: 1 }} />
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
