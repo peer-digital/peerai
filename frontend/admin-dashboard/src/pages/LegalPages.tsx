@@ -288,7 +288,7 @@ const LegalPages: React.FC = () => {
               We do not retain the content of your queries or the responses generated. This data is only processed in real-time to provide the service.
             </Typography>
             <Typography paragraph>
-              As mentioned earlier, for abuse monitoring purposes, our AI processing partners may retain data for up to 30 days within the EU, after which it is permanently deleted.
+              For abuse monitoring purposes, our AI processing partners may retain data for up to 30 days within the EU, after which it is permanently deleted.
             </Typography>
 
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 3 }}>
