@@ -116,10 +116,14 @@ const ApiKeys: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+      // Also invalidate default API key if it might have changed
+      queryClient.invalidateQueries({ queryKey: ['default-api-key'] });
       toast.success('API key deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to delete API key');
+    onError: (error: any) => {
+      console.error('Error deleting API key:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to delete API key';
+      toast.error(errorMessage);
     },
   });
 

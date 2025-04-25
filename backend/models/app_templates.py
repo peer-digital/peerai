@@ -17,7 +17,8 @@ class AppTemplate(Base):
     slug = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    icon_url = Column(String, nullable=True)
+    icon_url = Column(String, nullable=True)  # Light mode or default icon
+    dark_icon_url = Column(String, nullable=True)  # Dark mode icon
     template_config = Column(JSON, nullable=False)  # Configuration schema and default values
     template_code = Column(Text, nullable=False)  # Template code (HTML, JS, etc.)
     tags = Column(JSON, nullable=True)  # Array of tags

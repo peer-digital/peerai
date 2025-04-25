@@ -54,10 +54,12 @@ class DefaultAPIKeyUpdate(BaseModel):
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
+    # Use timezone-aware datetime
+    now = datetime.now(datetime.timezone.utc)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = now + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -107,7 +109,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         full_name=user.full_name,
         email_verification_token=verification_token,
-        email_verification_sent_at=datetime.utcnow()
+        email_verification_sent_at=datetime.now(datetime.timezone.utc)
     )
     db.add(db_user)
     db.commit()
@@ -128,9 +130,8 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
             referrer = db.query(User).filter(User.id == referrer_id).first()
             if referrer and referrer.id != db_user.id:
-                # Create a new referral first
-                referral = ReferralService.create_referral(db, referrer)
-                # Then use it
+                # Create a new referral first and then use it
+                ReferralService.create_referral(db, referrer)
                 ReferralService.use_referral(db, referrer, db_user)
         except Exception as e:
             print(f"Error processing referral code: {str(e)}")
@@ -224,7 +225,8 @@ async def create_api_key(
     """Create a new API key"""
     expires_at = None
     if key_data.expires_in_days:
-        expires_at = datetime.utcnow() + timedelta(days=key_data.expires_in_days)
+        # Use timezone-aware datetime
+        expires_at = datetime.now(datetime.timezone.utc) + timedelta(days=key_data.expires_in_days)
 
     api_key = APIKey(
         key=f"pk_{secrets.token_urlsafe(32)}",
@@ -252,6 +254,8 @@ async def get_default_api_key(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get the default API key for the current user"""
+    # We need db dependency for the get_current_user dependency, but don't use it directly
+    _ = db  # Mark as used to avoid linter warnings
     return {"default_key_id": current_user.default_api_key_id}
 
 
@@ -295,25 +299,65 @@ async def delete_api_key(
     db: Session = Depends(get_db),
 ):
     """Delete an API key"""
-    api_key = (
-        db.query(APIKey)
-        .filter(APIKey.id == key_id, APIKey.user_id == current_user.id)
-        .first()
-    )
-
-    if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="API key not found"
+    try:
+        # Find the API key
+        api_key = (
+            db.query(APIKey)
+            .filter(APIKey.id == key_id, APIKey.user_id == current_user.id)
+            .first()
         )
 
-    db.delete(api_key)
-    db.commit()
-    return {"status": "success"}
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="API key not found"
+            )
+
+        # Check if any users have this as their default API key
+        users_with_default = db.query(User).filter(User.default_api_key_id == api_key.id).all()
+
+        if users_with_default:
+            print(f"Found {len(users_with_default)} users with this API key as default")
+
+            # Update each user to remove the reference
+            for user_to_update in users_with_default:
+                print(f"Removing default API key reference for user {user_to_update.id}")
+                print(f"Current default API key ID: {user_to_update.default_api_key_id}")
+
+                # Update the user
+                user_to_update.default_api_key_id = None
+                db.add(user_to_update)
+
+            # Commit all user updates in a single transaction
+            db.commit()
+            print(f"Updated all users' default API key to None. Committing changes.")
+
+            # Refresh the session to ensure we have the latest state
+            for user_to_update in users_with_default:
+                db.refresh(user_to_update)
+                print(f"After update, user {user_to_update.id} default API key ID: {user_to_update.default_api_key_id}")
+
+        # Now delete the API key in a separate transaction
+        print(f"Deleting API key with ID: {api_key.id}")
+        db.delete(api_key)
+        db.commit()
+        print(f"API key deleted successfully")
+
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting API key: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete API key: {str(e)}"
+        )
 
 
 @router.post("/api/v1/auth/logout")
 async def logout(current_user: User = Depends(get_current_user)):
     """Logout endpoint (client should discard token)"""
+    # We require current_user to ensure the user is authenticated
+    # but we don't actually use it since JWT tokens are stateless
+    _ = current_user  # Mark as used to avoid linter warnings
     return {"message": "Successfully logged out"}
 
 

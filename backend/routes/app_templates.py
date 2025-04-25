@@ -25,7 +25,7 @@ async def list_templates_no_slash(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Redirect to the route with trailing slash."""
+    """Handle requests to the root path without trailing slash."""
     # Just call the main handler
     return await list_templates(db=db, current_user=current_user)
 
@@ -66,7 +66,9 @@ async def list_templates(
     return db.query(AppTemplate).all()
 
 
+# Add handlers for both with and without trailing slash
 @router.get("/{slug}", response_model=AppTemplateResponse)
+@router.get("/{slug}/", response_model=AppTemplateResponse, include_in_schema=False)
 async def get_template(
     slug: str,
     db: Session = Depends(get_db),
@@ -94,7 +96,9 @@ async def get_template(
     return template_obj
 
 
+# Add handlers for both with and without trailing slash
 @router.post("/", response_model=AppTemplateResponse)
+@router.post("", response_model=AppTemplateResponse, include_in_schema=False)
 async def create_template(
     payload: AppTemplateCreate,
     db: Session = Depends(get_db),
@@ -119,7 +123,9 @@ async def create_template(
         )
 
 
+# Add handlers for both with and without trailing slash
 @router.put("/{slug}", response_model=AppTemplateResponse)
+@router.put("/{slug}/", response_model=AppTemplateResponse, include_in_schema=False)
 async def update_template(
     slug: str,
     payload: AppTemplateUpdate,
@@ -146,7 +152,9 @@ async def update_template(
     return template_obj
 
 
+# Add handlers for both with and without trailing slash
 @router.delete("/{slug}")
+@router.delete("/{slug}/", include_in_schema=False)
 async def delete_template(
     slug: str,
     db: Session = Depends(get_db),

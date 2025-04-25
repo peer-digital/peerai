@@ -43,6 +43,7 @@ interface TemplateFormData {
   name: string;
   description: string;
   icon_url: string;
+  dark_icon_url: string;
   template_code: string;
   template_config: {
     schema: any;
@@ -57,6 +58,7 @@ const initialFormData: TemplateFormData = {
   name: '',
   description: '',
   icon_url: '',
+  dark_icon_url: '',
   template_code: '<div class="app-template">{{content}}</div>',
   template_config: {
     schema: {
@@ -144,6 +146,7 @@ const AppTemplatesManagement: React.FC = () => {
       name: template.name,
       description: template.description || '',
       icon_url: template.icon_url || '',
+      dark_icon_url: template.dark_icon_url || '',
       template_code: template.template_code,
       template_config: template.template_config,
       tags: template.tags ? template.tags.join(', ') : '',
@@ -229,6 +232,10 @@ const AppTemplatesManagement: React.FC = () => {
       errors.icon_url = 'Icon URL must start with http:// or https://';
     }
 
+    if (formData.dark_icon_url && !/^https?:\/\//.test(formData.dark_icon_url)) {
+      errors.dark_icon_url = 'Dark Icon URL must start with http:// or https://';
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -241,6 +248,7 @@ const AppTemplatesManagement: React.FC = () => {
       name: formData.name,
       description: formData.description || undefined,
       icon_url: formData.icon_url || undefined,
+      dark_icon_url: formData.dark_icon_url || undefined,
       template_code: formData.template_code,
       template_config: formData.template_config,
       tags: formData.tags ? formData.tags.split(',').map((tag) => tag.trim()) : undefined,
@@ -493,9 +501,9 @@ const AppTemplatesManagement: React.FC = () => {
                   rows={3}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Icon URL"
+                  label="Light Mode Icon URL"
                   name="icon_url"
                   value={formData.icon_url}
                   onChange={handleInputChange}
@@ -503,6 +511,18 @@ const AppTemplatesManagement: React.FC = () => {
                   margin="normal"
                   error={!!formErrors.icon_url}
                   helperText={formErrors.icon_url || 'Must start with http:// or https://'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Dark Mode Icon URL"
+                  name="dark_icon_url"
+                  value={formData.dark_icon_url}
+                  onChange={handleInputChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!formErrors.dark_icon_url}
+                  helperText={formErrors.dark_icon_url || 'Must start with http:// or https://'}
                 />
               </Grid>
               <Grid item xs={12}>

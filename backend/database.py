@@ -1,6 +1,7 @@
 """
 Database connection module
 """
+from typing import Generator, Any
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
@@ -22,7 +23,7 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_db() -> Session:
+def get_db() -> Generator[Session, Any, None]:
     """Get database session with proper error handling"""
     db = SessionLocal()
     try:
@@ -30,8 +31,9 @@ def get_db() -> Session:
         db.execute(text("SELECT 1"))
         yield db
     except Exception as e:
-        # Log the error and close the session
-        print(f"Database connection error: {e}")
+        # Log the error with more details
+        print(f"Database connection error: {type(e).__name__}: {e}")
+        print(f"Error details: {str(e)}")
         db.close()
         raise
     finally:

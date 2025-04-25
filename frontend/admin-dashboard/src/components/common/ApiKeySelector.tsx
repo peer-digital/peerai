@@ -93,15 +93,17 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
   // Set default key mutation
   const setDefaultKeyMutation = useMutation({
     mutationFn: async (keyId: number) => {
-      console.log('Setting default key ID:', keyId);
       const response = await api.post('/auth/default-api-key', { key_id: keyId });
-      console.log('Response:', response.data);
       return response.data;
     },
     onSuccess: (data) => {
-      console.log('Default key set successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['default-api-key'] });
-      toast.success('Default API key updated');
+      // Use a less intrusive toast that auto-closes faster
+      toast.success('Default API key updated', {
+        autoClose: 2000, // Close after 2 seconds
+        hideProgressBar: true,
+        position: 'bottom-right'
+      });
     },
     onError: (error) => {
       console.error('Error setting default key:', error);
@@ -111,6 +113,16 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
 
   // Find the selected key object
   const selectedKey = apiKeys?.find(k => k.key === value);
+
+  // Handle key change
+  const handleKeyChange = (event: SelectChangeEvent<string>) => {
+    onChange(event.target.value);
+  };
+
+  // Handle setting default key
+  const handleSetDefaultKey = (keyId: number) => {
+    setDefaultKeyMutation.mutate(keyId);
+  };
 
   // Check if the selected key is the default key
   useEffect(() => {
@@ -124,28 +136,24 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
   // Load default key on component mount if no key is selected
   useEffect(() => {
     if (!value && apiKeys && apiKeys.length > 0 && defaultKeyData) {
-      const defaultKey = apiKeys.find(k => k.id === defaultKeyData.default_key_id);
-      if (defaultKey) {
-        onChange(defaultKey.key);
-      } else {
-        // If no default key is set, use the first active key
-        const firstActiveKey = apiKeys.find(k => k.is_active);
-        if (firstActiveKey) {
-          onChange(firstActiveKey.key);
+      // Check if default key exists and is valid
+      if (defaultKeyData.default_key_id) {
+        const defaultKey = apiKeys.find(k => k.id === defaultKeyData.default_key_id);
+        if (defaultKey && defaultKey.is_active) {
+          onChange(defaultKey.key);
+          return;
         }
+      }
+
+      // If no valid default key is found, use the first active key
+      const firstActiveKey = apiKeys.find(k => k.is_active);
+      if (firstActiveKey) {
+        onChange(firstActiveKey.key);
+        // We'll skip automatically setting as default to avoid multiple toasts
+        // If needed, user can manually set as default
       }
     }
   }, [apiKeys, defaultKeyData, value, onChange]);
-
-  // Handle key change
-  const handleKeyChange = (event: SelectChangeEvent<string>) => {
-    onChange(event.target.value);
-  };
-
-  // Handle setting default key
-  const handleSetDefaultKey = (keyId: number) => {
-    setDefaultKeyMutation.mutate(keyId);
-  };
 
   // Load API key from localStorage on component mount
   useEffect(() => {

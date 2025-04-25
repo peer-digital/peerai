@@ -7,6 +7,7 @@ export interface AppTemplate {
   name: string;
   description?: string;
   icon_url?: string;
+  dark_icon_url?: string;
   template_config: {
     schema: any;
     default_values: any;
@@ -24,6 +25,7 @@ export interface AppTemplateCreate {
   name: string;
   description?: string;
   icon_url?: string;
+  dark_icon_url?: string;
   template_config: {
     schema: any;
     default_values: any;
@@ -38,6 +40,7 @@ export interface AppTemplateUpdate {
   name?: string;
   description?: string;
   icon_url?: string;
+  dark_icon_url?: string;
   template_config?: {
     schema: any;
     default_values: any;
@@ -53,7 +56,8 @@ const appTemplatesApi = {
   getTemplates: async (): Promise<AppTemplate[]> => {
     try {
       // Call the backend API directly with the correct URL to avoid redirect
-      const response: AxiosResponse<AppTemplate[]> = await api.get('/app-templates/');
+      // Remove trailing slash to avoid redirect issues
+      const response: AxiosResponse<AppTemplate[]> = await api.get('/app-templates');
       return response.data;
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -65,28 +69,50 @@ const appTemplatesApi = {
   // Get a specific template by slug
   getTemplate: async (slug: string): Promise<AppTemplate> => {
     try {
-      const response: AxiosResponse<AppTemplate> = await api.get(`/app-templates/${slug}/`);
+      // Remove trailing slash to avoid redirect issues
+      const response: AxiosResponse<AppTemplate> = await api.get(`/app-templates/${slug}`);
       return response.data;
     } catch (error) {
+      console.error(`Error fetching template ${slug}:`, error);
       throw error;
     }
   },
 
   // Create a new template (super admin only)
   createTemplate: async (template: AppTemplateCreate): Promise<AppTemplate> => {
-    const response: AxiosResponse<AppTemplate> = await api.post('/app-templates/', template);
-    return response.data;
+    try {
+      // Remove trailing slash to avoid redirect issues
+      const response: AxiosResponse<AppTemplate> = await api.post('/app-templates', template);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating template:', error);
+      throw error;
+    }
   },
 
   // Update an existing template (super admin only)
   updateTemplate: async (slug: string, template: AppTemplateUpdate): Promise<AppTemplate> => {
-    const response: AxiosResponse<AppTemplate> = await api.put(`/app-templates/${slug}/`, template);
-    return response.data;
+    try {
+      console.log(`Updating template ${slug} with data:`, template);
+      // Remove trailing slash to avoid redirect issues
+      const response: AxiosResponse<AppTemplate> = await api.put(`/app-templates/${slug}`, template);
+      console.log(`Update response:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating template ${slug}:`, error);
+      throw error;
+    }
   },
 
   // Delete a template (super admin only)
   deleteTemplate: async (slug: string): Promise<void> => {
-    await api.delete(`/app-templates/${slug}/`);
+    try {
+      // Remove trailing slash to avoid redirect issues
+      await api.delete(`/app-templates/${slug}`);
+    } catch (error) {
+      console.error(`Error deleting template ${slug}:`, error);
+      throw error;
+    }
   },
 };
 

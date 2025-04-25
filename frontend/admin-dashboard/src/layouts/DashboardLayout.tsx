@@ -57,6 +57,9 @@ import {
   Settings as SettingsIcon,
   SmartToy as SmartToyIcon,
   GridView as GridViewIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Security as SecurityIcon,
+  LockPerson as LockPersonIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,6 +79,8 @@ interface MenuItem {
   path: string;
   requiredPermissions?: Permission[];
   guestAccessible?: boolean;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
 interface MenuGroup {
@@ -255,6 +260,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     return hasAnyPermission(user, requiredPermissions);
   };
 
+  // Check if user has admin or super admin role
+  const isAdmin = user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+  const isSuperAdmin = user?.role === Role.SUPER_ADMIN;
+
   // Close drawer on mobile by default
   useEffect(() => {
     if (isMobile) {
@@ -364,9 +373,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       title: 'Apps',
       items: [
         { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
-        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS] },
+        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         ...(user?.role === Role.SUPER_ADMIN ? [
-          { text: 'App Templates', icon: <AppShortcutIcon />, path: '/app-templates-management', requiredPermissions: [Permission.MANAGE_APP_STORE] }
+          {
+            text: 'App Templates',
+            icon: <AppShortcutIcon />,
+            path: '/app-templates-management',
+            requiredPermissions: [Permission.MANAGE_APP_STORE],
+            superAdminOnly: true
+          }
         ] : [])
       ]
     },
@@ -382,9 +397,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       title: 'Administration',
       items: [
         ...(user?.role === Role.SUPER_ADMIN ? [
-          { text: 'Users', icon: <PeopleIcon />, path: '/users' },
-          { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
-          { text: 'Models', icon: <SmartToyIcon />, path: '/models' }
+          {
+            text: 'Users',
+            icon: <PeopleIcon />,
+            path: '/users',
+            superAdminOnly: true
+          },
+          {
+            text: 'Teams',
+            icon: <GroupIcon />,
+            path: '/teams',
+            superAdminOnly: true
+          },
+          {
+            text: 'Models',
+            icon: <SmartToyIcon />,
+            path: '/models',
+            superAdminOnly: true
+          }
         ] : [])
       ]
     }
@@ -584,6 +614,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               if (isGuestMode && !item.guestAccessible) {
                 return false;
               }
+              // Skip admin-only items if user is not an admin
+              if (item.adminOnly && !isAdmin) {
+                return false;
+              }
+              // Skip super-admin-only items if user is not a super admin
+              if (item.superAdminOnly && !isSuperAdmin) {
+                return false;
+              }
               return true;
             });
 
@@ -627,6 +665,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         sx={{
                           py: 0.75,
                           px: 2,
+                          display: 'flex',
+                          justifyContent: 'space-between',
                           '&.Mui-selected': {
                             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
                           },
@@ -671,6 +711,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             fontWeight: location.pathname === item.path ? 500 : 400
                           }}
                         />
+                        {(item.superAdminOnly || item.adminOnly) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                            {item.superAdminOnly && (
+                              <Tooltip title="Super Admin only" arrow placement="right">
+                                <SecurityIcon
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    opacity: 0.5,
+                                    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                            {item.adminOnly && (
+                              <Tooltip title="Admin only" arrow placement="right">
+                                <LockPersonIcon
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    opacity: 0.5,
+                                    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        )}
                       </ListItemButton>
                     </ListItem>
                   ))}

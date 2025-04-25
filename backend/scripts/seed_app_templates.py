@@ -32,7 +32,8 @@ SAMPLE_TEMPLATES = [
         "slug": "document-qa",
         "name": "Document Q&A",
         "description": "A simple app that allows users to ask questions about documents and get AI-powered answers.",
-        "icon_url": "https://via.placeholder.com/300x150?text=Document+QA",
+        "icon_url": "https://via.placeholder.com/300x150?text=Document+QA&bg=FFFFFF&fg=000000",
+        "dark_icon_url": "https://via.placeholder.com/300x150?text=Document+QA&bg=333333&fg=FFFFFF",
         "template_config": {
             "schema": {
                 "title": "Document Q&A Configuration",
@@ -198,7 +199,8 @@ SAMPLE_TEMPLATES = [
         "slug": "knowledge-base-search",
         "name": "Knowledge Base Search",
         "description": "Search through your company's knowledge base and get AI-powered answers to your questions.",
-        "icon_url": "https://via.placeholder.com/300x150?text=Knowledge+Base",
+        "icon_url": "https://via.placeholder.com/300x150?text=Knowledge+Base&bg=FFFFFF&fg=000000",
+        "dark_icon_url": "https://via.placeholder.com/300x150?text=Knowledge+Base&bg=333333&fg=FFFFFF",
         "template_config": {
             "schema": {
                 "title": "Knowledge Base Search Configuration",

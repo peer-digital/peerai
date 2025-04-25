@@ -161,7 +161,7 @@ const AppLibrary: React.FC = () => {
       ).sort()
     : [];
 
-  // Filter templates based on search query and selected tag
+  // Filter templates based on search query, selected tag, and active status
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch =
       searchQuery === '' ||
@@ -171,7 +171,10 @@ const AppLibrary: React.FC = () => {
     const matchesTag =
       selectedTag === null || (template.tags && template.tags.includes(selectedTag));
 
-    return matchesSearch && matchesTag;
+    // Only show active templates
+    const isActive = template.is_active;
+
+    return matchesSearch && matchesTag && isActive;
   });
 
   // Handle form data change
@@ -366,7 +369,11 @@ const AppLibrary: React.FC = () => {
                     <CardMedia
                       component="img"
                       height="140"
-                      image={template.icon_url || 'https://via.placeholder.com/300x150?text=App+Template'}
+                      image={
+                        theme.palette.mode === 'dark' && template.dark_icon_url
+                          ? template.dark_icon_url
+                          : template.icon_url || 'https://via.placeholder.com/300x150?text=App+Template'
+                      }
                       alt={template.name}
                       sx={{ objectFit: 'contain', bgcolor: theme.palette.background.paper, p: 2 }}
                     />
