@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -55,7 +55,7 @@ class DefaultAPIKeyUpdate(BaseModel):
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     # Use timezone-aware datetime
-    now = datetime.now(datetime.timezone.utc)
+    now = datetime.now(timezone.utc)
     if expires_delta:
         expire = now + expires_delta
     else:
@@ -109,7 +109,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         full_name=user.full_name,
         email_verification_token=verification_token,
-        email_verification_sent_at=datetime.now(datetime.timezone.utc)
+        email_verification_sent_at=datetime.now(timezone.utc)
     )
     db.add(db_user)
     db.commit()
@@ -226,7 +226,7 @@ async def create_api_key(
     expires_at = None
     if key_data.expires_in_days:
         # Use timezone-aware datetime
-        expires_at = datetime.now(datetime.timezone.utc) + timedelta(days=key_data.expires_in_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=key_data.expires_in_days)
 
     api_key = APIKey(
         key=f"pk_{secrets.token_urlsafe(32)}",
