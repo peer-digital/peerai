@@ -167,7 +167,7 @@ const Login: React.FC = () => {
               color="primary"
               sx={{ mb: 3, fontWeight: 600 }}
             >
-              PeerAI Admin {mode === 'login' ? 'Login' : 'Register'}
+              PeerAI {mode === 'login' ? 'Login' : 'Register'}
             </Typography>
 
             {error && (
