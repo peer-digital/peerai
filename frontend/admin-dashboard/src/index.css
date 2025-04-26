@@ -215,3 +215,8 @@ body.MuiModal-open:not(:has(.MuiDrawer-root[aria-hidden="false"])) {
   width: 0 !important;
   overflow: hidden !important;
 }
+
+html, body, #root {
+  height: 100%;
+  min-height: 100vh;
+}

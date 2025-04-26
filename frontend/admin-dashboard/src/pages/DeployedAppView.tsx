@@ -47,18 +47,10 @@ function TabPanel(props: TabPanelProps) {
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{
-        height: '100%',
-        overflow: 'auto',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-      }}
+      style={{ width: '100%' }}
     >
       {value === index && (
-        <Box sx={{ p: 3, height: 'auto', minHeight: '100%' }}>
+        <Box sx={{ p: 3, width: '100%', height: '100%', boxSizing: 'border-box' }}>
           {children}
         </Box>
       )}
@@ -121,8 +113,6 @@ const DeployedAppView: React.FC = () => {
   const handleFormChange = ({ formData }: { formData: any }) => {
     setFormData(formData);
   };
-
-
 
   // Handle save changes
   const handleSaveChanges = () => {
@@ -215,7 +205,7 @@ const DeployedAppView: React.FC = () => {
   }
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box p={3} sx={{ width: '100%', minWidth: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton
@@ -325,7 +315,7 @@ const DeployedAppView: React.FC = () => {
         </Alert>
       )}
 
-      <Box sx={{ flex: 1, minHeight: '400px', display: 'flex', flexDirection: 'column', mt: 3, overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', mt: 3, overflow: 'hidden' }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
@@ -343,7 +333,7 @@ const DeployedAppView: React.FC = () => {
           <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
         </Tabs>
 
-        <Box sx={{ flexGrow: 1, overflow: 'auto', position: 'relative' }}>
+        <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
           <TabPanel value={tabValue} index={0}>
             {app.template.template_config?.schema && (
               <EnhancedConfigForm
