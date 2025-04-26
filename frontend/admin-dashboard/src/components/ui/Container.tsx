@@ -21,18 +21,17 @@ const StyledContainer = styled(Box)(({ theme }) => ({
   minWidth: '100%',
   marginLeft: 'auto',
   marginRight: 'auto',
-  padding: theme.spacing(2),
+  padding: 0, // Remove padding as it's handled by the parent container
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center', // Center content horizontally
   [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(3),
+    padding: 0,
   },
   [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(3),
+    padding: 0,
   },
   [theme.breakpoints.up('lg')]: {
-    padding: theme.spacing(4),
+    padding: 0,
   },
 }));
 
@@ -85,11 +84,7 @@ const Container: React.FC<ContainerProps> = ({
               : `${theme.breakpoints.values[maxWidth as Exclude<CustomMaxWidth, 'xxl' | false>]}px`,
           },
         }),
-        // Adjust padding for better mobile experience
-        ...(isMobile && !disableGutters && {
-          px: 2,
-          py: 2,
-        }),
+        // Removed mobile padding as it's handled by the parent container
         ...props.sx,
       }}
       {...props}
