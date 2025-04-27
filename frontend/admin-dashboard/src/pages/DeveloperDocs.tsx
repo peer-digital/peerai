@@ -14,6 +14,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import { toast } from 'react-toastify';
+import { PageContainer, SectionContainer } from '../components/ui';
 
 // Import code examples from separate files
 import { completionsExample, visionExample, audioExample } from '../data/examples/codeExamples';
@@ -71,12 +72,7 @@ const DeveloperDocs: React.FC = () => {
   };
 
   return (
-    <Box sx={{
-      width: '100%',
-      minWidth: '100%',
-      maxWidth: '100%',
-      height: 'auto',
-      position: 'relative',
+    <PageContainer sx={{
       touchAction: 'manipulation', // Ensure touch scrolling works on mobile
       '& *': {
         touchAction: 'manipulation' // Apply to all children
@@ -105,7 +101,7 @@ const DeveloperDocs: React.FC = () => {
           <Typography paragraph>
             All API requests require an API key sent in the X-API-Key header. You can generate an API key from your dashboard.
           </Typography>
-          <Paper sx={{ p: 2, mb: 4, bgcolor: theme.palette.error.main + '10' }}>
+          <SectionContainer sx={{ mb: 4, bgcolor: theme.palette.error.main + '10' }}>
             <Typography variant="body2" color="error">
               🔒 Security Best Practices:
               <ul>
@@ -115,7 +111,7 @@ const DeveloperDocs: React.FC = () => {
                 <li>Regularly rotate your API keys and monitor usage for any suspicious activity</li>
               </ul>
             </Typography>
-          </Paper>
+          </SectionContainer>
 
           <Typography variant="h5" gutterBottom>
             Quick Start Examples

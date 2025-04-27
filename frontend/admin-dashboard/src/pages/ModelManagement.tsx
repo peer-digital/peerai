@@ -38,6 +38,7 @@ import { Permission } from '../types/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 import { apiClient } from '../api/client';
 import { toast } from 'react-toastify';
+import { PageContainer, SectionContainer, SearchField, FilterBar } from '../components/ui';
 
 interface ModelProvider {
   id: number;
@@ -307,8 +308,8 @@ const ModelManagement: React.FC = () => {
 
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
-      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={2}>
+      <PageContainer>
+        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
           <Box>
             <Tooltip title="Refresh Models" arrow>
               <IconButton onClick={fetchModels} disabled={loading}>
@@ -361,29 +362,22 @@ const ModelManagement: React.FC = () => {
         )}
 
         {/* Filter Bar */}
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Grid container spacing={2} alignItems="center">
+        <FilterBar
+          onClearAll={clearFilters}
+          activeFiltersCount={
+            (nameFilter ? 1 : 0) +
+            (providerFilter ? 1 : 0) +
+            (typeFilter ? 1 : 0) +
+            (statusFilter ? 1 : 0)
+          }
+          title="Filter Models"
+        >
               <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  fullWidth
+                <SearchField
                   label="Search by Name"
                   value={nameFilter}
                   onChange={(e) => setNameFilter(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                    endAdornment: nameFilter ? (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setNameFilter('')}>
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                  }}
+                  onClear={() => setNameFilter('')}
                   size="small"
                 />
               </Grid>
@@ -460,7 +454,7 @@ const ModelManagement: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Paper>
+        <SectionContainer>
           {/* Define columns for the DataGrid */}
           {(() => {
             // Filter models based on filter criteria
@@ -584,7 +578,7 @@ const ModelManagement: React.FC = () => {
               />
             );
           })()}
-        </Paper>
+        </SectionContainer>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>

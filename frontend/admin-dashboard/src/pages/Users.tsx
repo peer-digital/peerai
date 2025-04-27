@@ -35,6 +35,7 @@ import {
   Edit as EditIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
+import { PageContainer, SectionContainer, SearchField } from '../components/ui';
 import { toast } from 'react-toastify';
 import api from '../api/config';
 import { Role } from '../types/rbac';
@@ -191,26 +192,22 @@ const Users: React.FC = () => {
   }
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+    <PageContainer>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="body2" color="text.secondary" mt={0.5}>
           {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} total
         </Typography>
         <Box sx={{ width: 300 }}>
-          <TextField
-            fullWidth
-            size="small"
+          <SearchField
             placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />,
-            }}
+            onClear={() => setSearchQuery('')}
           />
         </Box>
       </Stack>
 
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <SectionContainer sx={{ width: '100%', overflow: 'hidden' }}>
         {isLoading && <LinearProgress />}
 
         <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
@@ -355,7 +352,7 @@ const Users: React.FC = () => {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         )}
-      </Paper>
+      </SectionContainer>
 
       <Dialog
         open={editDialogOpen}

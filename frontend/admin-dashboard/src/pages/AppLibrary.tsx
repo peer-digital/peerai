@@ -41,7 +41,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { EmptyState } from '../components/ui';
+import { EmptyState, PageContainer, SectionContainer, SearchField } from '../components/ui';
 import appTemplatesApi, { AppTemplate } from '../api/appTemplates';
 // Using App Templates only
 import deployedAppsApi, { DeployedAppCreate } from '../api/deployedApps';
@@ -282,7 +282,7 @@ const AppLibrary: React.FC = () => {
   };
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+    <PageContainer>
 
       {/* Debug component removed */}
 
@@ -302,19 +302,11 @@ const AppLibrary: React.FC = () => {
       {showTemplates ? (
         <>
           <Box sx={{ mb: 4 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
+            <SearchField
               placeholder="Search templates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
+              onClear={() => setSearchQuery('')}
               sx={{ mb: 2 }}
             />
 
