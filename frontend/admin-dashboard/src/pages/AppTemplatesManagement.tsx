@@ -35,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import appTemplatesApi, { AppTemplate, AppTemplateCreate, AppTemplateUpdate } from '../api/appTemplates';
-import { EmptyState } from '../components/ui';
+import { EmptyState, PageContainer } from '../components/ui';
 import CodeEditor from '../components/editor/CodeEditor';
 
 interface TemplateFormData {
@@ -286,7 +286,7 @@ const AppTemplatesManagement: React.FC = () => {
   };
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+    <PageContainer>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
         <Button
@@ -635,7 +635,7 @@ const AppTemplatesManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 };
 

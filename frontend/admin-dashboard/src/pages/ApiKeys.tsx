@@ -25,6 +25,7 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
+import { PageContainer } from '../components/ui';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -207,18 +208,18 @@ const ApiKeys: React.FC = () => {
 
   if (error) {
     return (
-      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+      <PageContainer>
         <Alert severity="error">
           Error loading API keys. Please try again later.
         </Alert>
-      </Box>
+      </PageContainer>
     );
   }
 
   const keys = apiKeys || [];
 
   return (
-    <Box p={{ xs: 2, sm: 3 }} sx={{ width: '100%', minWidth: '100%' }}>
+    <PageContainer>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
@@ -486,7 +487,7 @@ const ApiKeys: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 };
 

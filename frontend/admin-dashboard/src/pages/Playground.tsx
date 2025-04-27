@@ -23,7 +23,7 @@ import {
   Alert,
   Link,
 } from '@mui/material';
-import { PageTitle } from '../components/ui';
+import { PageContainer } from '../components/ui';
 import {
   ContentCopy as ContentCopyIcon,
   Send as SendIcon,
@@ -459,15 +459,12 @@ function Playground() {
   }, []);
 
   return (
-    <Box sx={{
-      p: { xs: 2, sm: 3 },
+    <PageContainer sx={{
       height: { xs: 'auto', sm: 'calc(100vh - 88px)' },
       display: 'flex',
       flexDirection: 'column',
       mb: { xs: 4, sm: 0 }, // Add bottom margin on mobile
       overflow: 'hidden', // Prevent overflow
-      width: '100%', // Take full width
-      minWidth: '100%', // Ensure minimum width is also 100%
       maxWidth: '100vw', // Limit width to viewport
       boxSizing: 'border-box', // Include padding in width calculation
       touchAction: 'manipulation', // Ensure touch scrolling works on mobile
@@ -876,7 +873,7 @@ function Playground() {
           </Card>
         </Box>
       </Box>
-    </Box>
+    </PageContainer>
   );
 }
 

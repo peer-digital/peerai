@@ -167,7 +167,7 @@ const DeveloperDocs: React.FC = () => {
       >
         Open API Playground
       </Button>
-    </Box>
+    </PageContainer>
   );
 };
 
