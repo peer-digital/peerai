@@ -382,7 +382,7 @@ const ModelManagement: React.FC = () => {
         >
               <Grid item xs={12} sm={6} md={3}>
                 <SearchField
-                  label="Search by Name"
+                  placeholder="Search by Name"
                   value={nameFilter}
                   onChange={(e) => setNameFilter(e.target.value)}
                   onClear={() => setNameFilter('')}

@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedApp, DeployedAppDetail, DeployedAppUpdate } from '../api/deployedApps';
-import { EmptyState, PageTitle } from '../components/ui';
+import { EmptyState, PageTitle, SearchField } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
 import { useNavigate } from 'react-router-dom';
@@ -169,19 +169,11 @@ const MyApps: React.FC = () => {
       ) : null}
 
       <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
+        <SearchField
           placeholder="Search my apps..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
+          onClear={() => setSearchQuery('')}
         />
       </Box>
 
