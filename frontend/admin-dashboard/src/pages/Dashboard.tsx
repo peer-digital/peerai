@@ -19,6 +19,7 @@ import {
   Snackbar,
   IconButton,
 } from '@mui/material';
+import { PageTitle } from '../components/ui';
 import {
   BarChart,
   Bar,
@@ -225,9 +226,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
 
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' }, mb: 4 }}>
-        {getDashboardTitle()}
-      </Typography>
 
       {/* Token Status Alert */}
       {stats && user && tokenUsagePercentage >= 100 && (

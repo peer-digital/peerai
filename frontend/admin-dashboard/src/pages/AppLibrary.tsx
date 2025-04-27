@@ -284,12 +284,6 @@ const AppLibrary: React.FC = () => {
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          App Library
-        </Typography>
-      </Box>
-
       {/* Debug component removed */}
 
       {!showTemplates && (

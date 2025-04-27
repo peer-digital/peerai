@@ -193,14 +193,9 @@ const Users: React.FC = () => {
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Users
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} total
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} total
+        </Typography>
         <Box sx={{ width: 300 }}>
           <TextField
             fullWidth

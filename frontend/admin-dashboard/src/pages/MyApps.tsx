@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedApp, DeployedAppDetail, DeployedAppUpdate } from '../api/deployedApps';
-import { EmptyState } from '../components/ui';
+import { EmptyState, PageTitle } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
 import { useNavigate } from 'react-router-dom';
@@ -152,12 +152,7 @@ const MyApps: React.FC = () => {
   };
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          My Apps
-        </Typography>
-      </Box>
+    <Box p={0} sx={{ width: '100%', minWidth: '100%' }}>
 
       {error ? (
         <Alert
@@ -173,7 +168,7 @@ const MyApps: React.FC = () => {
         </Alert>
       ) : null}
 
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
           variant="outlined"
@@ -195,9 +190,9 @@ const MyApps: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : filteredApps && filteredApps.length > 0 ? (
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {filteredApps.map((app) => (
-            <Grid item xs={12} sm={6} md={4} key={app.id}>
+            <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={app.id}>
               <Card
                 sx={{
                   height: '100%',

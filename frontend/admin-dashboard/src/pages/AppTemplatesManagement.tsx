@@ -288,10 +288,7 @@ const AppTemplatesManagement: React.FC = () => {
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          App Templates
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
         <Button
           variant="contained"
           color="primary"

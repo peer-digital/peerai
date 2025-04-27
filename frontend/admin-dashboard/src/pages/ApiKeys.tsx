@@ -226,14 +226,9 @@ const ApiKeys: React.FC = () => {
         spacing={{ xs: 2, sm: 0 }}
         mb={3}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            API Keys
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            {keys.length} {keys.length === 1 ? 'key' : 'keys'} total
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {keys.length} {keys.length === 1 ? 'key' : 'keys'} total
+        </Typography>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh API keys" arrow>
             <IconButton onClick={() => refetch()}>

@@ -23,6 +23,7 @@ import {
   Alert,
   Link,
 } from '@mui/material';
+import { PageTitle } from '../components/ui';
 import {
   ContentCopy as ContentCopyIcon,
   Send as SendIcon,
@@ -475,16 +476,6 @@ function Playground() {
         touchAction: 'manipulation' // Apply to all children
       }
     }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            API Playground
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            Test and explore the PeerAI API endpoints
-          </Typography>
-        </Box>
-      </Stack>
 
       <Box sx={{
         display: 'flex',
