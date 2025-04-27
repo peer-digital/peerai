@@ -306,6 +306,14 @@ const ModelManagement: React.FC = () => {
     return provider ? provider.display_name : `Provider ${providerId}`;
   };
 
+  // Clear all filters
+  const clearFilters = () => {
+    setNameFilter('');
+    setProviderFilter('');
+    setTypeFilter('');
+    setStatusFilter('');
+  };
+
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
       <PageContainer>
