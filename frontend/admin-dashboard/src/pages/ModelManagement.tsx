@@ -436,23 +436,8 @@ const ModelManagement: React.FC = () => {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={12} md={2} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ClearIcon />}
-                  onClick={() => {
-                    setNameFilter('');
-                    setProviderFilter('');
-                    setTypeFilter('');
-                    setStatusFilter('');
-                  }}
-                  size="small"
-                >
-                  Clear Filters
-                </Button>
               </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+        </FilterBar>
 
         <SectionContainer>
           {/* Define columns for the DataGrid */}
@@ -853,7 +838,7 @@ const ModelManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      </PageContainer>
     </PermissionGuard>
   );
 };

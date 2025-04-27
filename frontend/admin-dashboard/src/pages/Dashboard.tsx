@@ -454,7 +454,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
           <EmptyState />
         </TabPanel>
       )}
-    </Box>
+    </PageContainer>
   );
 };
 
