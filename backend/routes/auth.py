@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Tuple
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -92,6 +92,83 @@ def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def ensure_default_api_key(db: Session, user: User) -> Tuple[bool, Optional[APIKey]]:
+    """
+    Ensure the user has a default API key.
+
+    This function:
+    1. Checks if the user has a valid default API key
+    2. If not, checks if user has any API keys and sets the first active one as default
+    3. If user has no API keys, creates a default key
+
+    Returns:
+    - Tuple of (created_new_key, api_key_object)
+    - created_new_key is True if a new key was created, False otherwise
+    - api_key_object is the API key object or None if no key was created/found
+    """
+    created_new_key = False
+    api_key = None
+
+    # First, check if the user already has a valid default API key
+    if user.default_api_key_id is not None:
+        # Verify the default key exists and is active
+        default_key = db.query(APIKey).filter(
+            APIKey.id == user.default_api_key_id,
+            APIKey.user_id == user.id,
+            APIKey.is_active == True
+        ).first()
+
+        if default_key:
+            print(f"User {user.email} already has valid default API key {default_key.id}")
+            return False, default_key
+        else:
+            print(f"User {user.email} has invalid default API key ID {user.default_api_key_id}, will reassign")
+            # Clear the invalid default key reference
+            user.default_api_key_id = None
+            db.commit()
+
+    # Check if user has any active API keys
+    active_keys = db.query(APIKey).filter(
+        APIKey.user_id == user.id,
+        APIKey.is_active == True
+    ).all()
+
+    # If user has active keys, set the first one as default
+    if active_keys:
+        api_key = active_keys[0]
+        user.default_api_key_id = api_key.id
+        db.commit()
+        print(f"Set existing API key {api_key.id} as default for user {user.email}")
+        return False, api_key
+
+    # If user has no active keys, create a new default key
+    try:
+        # Create API key with 1 year expiration
+        expires_at = datetime.now(timezone.utc) + timedelta(days=365)
+        api_key = APIKey(
+            key=f"pk_{secrets.token_urlsafe(32)}",
+            name=f"Default Key",
+            user_id=user.id,
+            expires_at=expires_at,
+            is_active=True
+        )
+        db.add(api_key)
+        db.commit()
+        db.refresh(api_key)
+
+        # Set as default API key for the user
+        user.default_api_key_id = api_key.id
+        db.commit()
+        print(f"Created new default API key {api_key.id} for user {user.email}")
+        created_new_key = True
+    except Exception as e:
+        print(f"Error creating default API key: {str(e)}")
+        db.rollback()
+        return False, None
+
+    return created_new_key, api_key
+
+
 @router.post("/api/v1/auth/register", response_model=Token)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
@@ -114,6 +191,16 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Create a default API key for the new user
+    created, api_key = ensure_default_api_key(db, db_user)
+    if not created or not api_key:
+        print(f"Warning: Could not create default API key for new user {db_user.email}")
+        # Don't fail registration if API key creation fails
+    else:
+        print(f"Created default API key {api_key.id} for new user {db_user.email}")
+        # Refresh the user to ensure we have the latest data
+        db.refresh(db_user)
 
     # Handle referral code if provided
     if user.referral_code:
@@ -176,11 +263,50 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         print(f"Failed to send verification email: {str(e)}")
         # Don't fail registration if email sending fails
 
+    # Get the default API key information to return with the token
+    default_api_key = None
+    if db_user.default_api_key_id:
+        default_api_key = db.query(APIKey).filter(
+            APIKey.id == db_user.default_api_key_id,
+            APIKey.is_active == True
+        ).first()
+
+    # If we don't have a valid default key, try to get one
+    if not default_api_key:
+        print(f"No valid default API key found for user {db_user.email}, trying to find one")
+        # Get all active keys for the user
+        active_keys = db.query(APIKey).filter(
+            APIKey.user_id == db_user.id,
+            APIKey.is_active == True
+        ).all()
+
+        if active_keys:
+            # Use the first active key
+            default_api_key = active_keys[0]
+            db_user.default_api_key_id = default_api_key.id
+            db.commit()
+            print(f"Set existing API key {default_api_key.id} as default for user {db_user.email}")
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    # Return token with user data including default API key
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": db_user.id,
+            "email": db_user.email,
+            "is_active": db_user.is_active,
+            "role": db_user.role,
+            "full_name": db_user.full_name,
+            "token_limit": db_user.token_limit,
+            "default_api_key_id": db_user.default_api_key_id,
+            "default_api_key": default_api_key.key if default_api_key else None,
+        }
+    }
 
 
 @router.post("/api/v1/auth/login")
@@ -208,12 +334,57 @@ async def login(
         )
 
     print(f"Login successful for user: {user.email}")
+
+    # Ensure user has a default API key
+    _, _ = ensure_default_api_key(db, user)
+    # We don't need to check the result here as login should proceed regardless
+
+    # Get the default API key information to return with the token
+    default_api_key = None
+    if user.default_api_key_id:
+        default_api_key = db.query(APIKey).filter(
+            APIKey.id == user.default_api_key_id,
+            APIKey.user_id == user.id,
+            APIKey.is_active == True
+        ).first()
+
+    # If we don't have a valid default key, try to get one
+    if not default_api_key:
+        print(f"No valid default API key found for user {user.email}, trying to find one")
+        # Get all active keys for the user
+        active_keys = db.query(APIKey).filter(
+            APIKey.user_id == user.id,
+            APIKey.is_active == True
+        ).all()
+
+        if active_keys:
+            # Use the first active key
+            default_api_key = active_keys[0]
+            user.default_api_key_id = default_api_key.id
+            db.commit()
+            print(f"Set existing API key {default_api_key.id} as default for user {user.email}")
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     print(f"Generated token: {access_token[:10]}...")
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    # Return token with user data including default API key
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "is_active": user.is_active,
+            "role": user.role,
+            "full_name": user.full_name,
+            "token_limit": user.token_limit,
+            "default_api_key_id": user.default_api_key_id,
+            "default_api_key": default_api_key.key if default_api_key else None,
+        }
+    }
 
 
 @router.post("/api/v1/auth/api-keys", response_model=dict)
@@ -246,7 +417,28 @@ async def list_api_keys(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """List all API keys for the current user"""
-    return db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
+    # Get all API keys for the user
+    api_keys = db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
+
+    # Check if the default key ID is valid
+    if current_user.default_api_key_id:
+        default_key_exists = any(key.id == current_user.default_api_key_id for key in api_keys)
+        if not default_key_exists:
+            print(f"Default key ID {current_user.default_api_key_id} not found in user's keys. User: {current_user.email}")
+            # Find the first active key
+            active_keys = [key for key in api_keys if key.is_active]
+            if active_keys:
+                # Set the first active key as default
+                current_user.default_api_key_id = active_keys[0].id
+                db.commit()
+                print(f"Updated default key ID to {active_keys[0].id} for user {current_user.email}")
+            else:
+                # No active keys, clear the default key ID
+                current_user.default_api_key_id = None
+                db.commit()
+                print(f"Cleared invalid default key ID for user {current_user.email}")
+
+    return api_keys
 
 
 @router.get("/api/v1/auth/default-api-key")
@@ -254,8 +446,31 @@ async def get_default_api_key(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get the default API key for the current user"""
-    # We need db dependency for the get_current_user dependency, but don't use it directly
-    _ = db  # Mark as used to avoid linter warnings
+    # Ensure the default key is valid
+    default_api_key = None
+    if current_user.default_api_key_id:
+        default_api_key = db.query(APIKey).filter(
+            APIKey.id == current_user.default_api_key_id,
+            APIKey.user_id == current_user.id,
+            APIKey.is_active == True
+        ).first()
+
+    # If we don't have a valid default key, try to get one
+    if not default_api_key:
+        print(f"No valid default API key found for user {current_user.email}, trying to find one")
+        # Get all active keys for the user
+        active_keys = db.query(APIKey).filter(
+            APIKey.user_id == current_user.id,
+            APIKey.is_active == True
+        ).all()
+
+        if active_keys:
+            # Use the first active key
+            default_api_key = active_keys[0]
+            current_user.default_api_key_id = default_api_key.id
+            db.commit()
+            print(f"Set existing API key {default_api_key.id} as default for user {current_user.email}")
+
     return {"default_key_id": current_user.default_api_key_id}
 
 
@@ -362,8 +577,40 @@ async def logout(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/api/v1/auth/validate")
-async def validate_token(current_user: User = Depends(get_current_user)):
-    """Validate the current user's token"""
+async def validate_token(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Validate the current user's token and ensure user has a default API key"""
+
+    # Ensure user has a default API key
+    _, _ = ensure_default_api_key(db, current_user)
+
+    # Get the default API key information to return with the user data
+    default_api_key = None
+    if current_user.default_api_key_id:
+        default_api_key = db.query(APIKey).filter(
+            APIKey.id == current_user.default_api_key_id,
+            APIKey.user_id == current_user.id,
+            APIKey.is_active == True
+        ).first()
+
+    # If we don't have a valid default key, try to get one
+    if not default_api_key:
+        print(f"No valid default API key found for user {current_user.email}, trying to find one")
+        # Get all active keys for the user
+        active_keys = db.query(APIKey).filter(
+            APIKey.user_id == current_user.id,
+            APIKey.is_active == True
+        ).all()
+
+        if active_keys:
+            # Use the first active key
+            default_api_key = active_keys[0]
+            current_user.default_api_key_id = default_api_key.id
+            db.commit()
+            print(f"Set existing API key {default_api_key.id} as default for user {current_user.email}")
+
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -371,6 +618,8 @@ async def validate_token(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "full_name": current_user.full_name,
         "token_limit": current_user.token_limit,
+        "default_api_key_id": current_user.default_api_key_id,
+        "default_api_key": default_api_key.key if default_api_key else None,
     }
 
 

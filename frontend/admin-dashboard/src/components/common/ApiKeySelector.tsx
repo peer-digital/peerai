@@ -18,22 +18,18 @@ import {
   Key as KeyIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api/config';
-import { toast } from 'react-toastify';
 
 interface ApiKey {
-  id: string;
+  id: number;
   name: string;
   key: string;
   createdAt: string;
   lastUsed: string | null;
   is_active: boolean;
-  is_default?: boolean;
 }
 
 interface ApiKeySelectorProps {
@@ -57,9 +53,6 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
   fullWidth = true,
   size = 'small',
 }) => {
-  const queryClient = useQueryClient();
-  const [isDefaultKey, setIsDefaultKey] = useState<boolean>(false);
-
   // Fetch user's API keys
   const { data: apiKeys, isLoading } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
@@ -75,41 +68,7 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Fetch user's default API key
-  const { data: defaultKeyData } = useQuery<{ default_key_id: string | null }>({
-    queryKey: ['default-api-key'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/auth/default-api-key');
-        return response.data;
-      } catch (error) {
-        console.error('Error fetching default API key:', error);
-        return { default_key_id: null };
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Set default key mutation
-  const setDefaultKeyMutation = useMutation({
-    mutationFn: async (keyId: number) => {
-      const response = await api.post('/auth/default-api-key', { key_id: keyId });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['default-api-key'] });
-      // Use a less intrusive toast that auto-closes faster
-      toast.success('Default API key updated', {
-        autoClose: 2000, // Close after 2 seconds
-        hideProgressBar: true,
-        position: 'bottom-right'
-      });
-    },
-    onError: (error) => {
-      console.error('Error setting default key:', error);
-      toast.error('Failed to update default API key');
-    },
-  });
+  // We no longer need to fetch the default API key
 
   // Find the selected key object
   const selectedKey = apiKeys?.find(k => k.key === value);
@@ -119,68 +78,29 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
     onChange(event.target.value);
   };
 
-  // Handle setting default key
-  const handleSetDefaultKey = (keyId: number) => {
-    setDefaultKeyMutation.mutate(keyId);
-  };
-
-  // Check if the selected key is the default key
+  // Simply use the first active API key if no valid key is selected
   useEffect(() => {
-    if (selectedKey && defaultKeyData) {
-      setIsDefaultKey(selectedKey.id === defaultKeyData.default_key_id);
-    } else {
-      setIsDefaultKey(false);
-    }
-  }, [selectedKey, defaultKeyData]);
-
-  // Load default key on component mount if no key is selected
-  useEffect(() => {
-    if (!value && apiKeys && apiKeys.length > 0 && defaultKeyData) {
-      // Check if default key exists and is valid
-      if (defaultKeyData.default_key_id) {
-        const defaultKey = apiKeys.find(k => k.id === defaultKeyData.default_key_id);
-        if (defaultKey && defaultKey.is_active) {
-          onChange(defaultKey.key);
-          return;
-        }
+    // Only proceed if we have API keys
+    if (apiKeys && apiKeys.length > 0) {
+      // First, check if current value is valid
+      const isCurrentValueValid = value && apiKeys.some(k => k.key === value && k.is_active);
+      if (isCurrentValueValid) {
+        console.log('Current API key is valid, keeping it:', value?.slice(0, 4) + '...');
+        return;
       }
 
-      // If no valid default key is found, use the first active key
+      // If no valid key is selected, use the first active key
       const firstActiveKey = apiKeys.find(k => k.is_active);
       if (firstActiveKey) {
+        console.log('Setting first active API key:', firstActiveKey.key.slice(0, 4) + '...');
         onChange(firstActiveKey.key);
-        // We'll skip automatically setting as default to avoid multiple toasts
-        // If needed, user can manually set as default
       }
     }
-  }, [apiKeys, defaultKeyData, value, onChange]);
+    // Only include value in the dependency array for the initial check
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKeys, onChange]);
 
-  // Load API key from localStorage on component mount
-  useEffect(() => {
-    if (!value) {
-      const storedApiKey = localStorage.getItem('apiKey');
-      if (storedApiKey && /^[a-zA-Z0-9_-]+$/.test(storedApiKey)) {
-        onChange(storedApiKey);
-      }
-    }
-  }, [value, onChange]);
-
-  // Save API key to localStorage when it changes
-  // We're not storing the actual API key for security reasons
-  // Instead, we store a reference to the key ID if available
-  useEffect(() => {
-    if (value && /^[a-zA-Z0-9_-]+$/.test(value)) {
-      // Find the key object to get its ID
-      const keyObj = apiKeys?.find(k => k.key === value);
-      if (keyObj) {
-        // Store the key ID and a masked version of the key
-        localStorage.setItem('apiKeyId', keyObj.id.toString());
-        localStorage.setItem('apiKey', value); // Still need to store the actual key for functionality
-      } else {
-        localStorage.setItem('apiKey', value);
-      }
-    }
-  }, [value, apiKeys]);
+  // No localStorage handling - we'll rely entirely on the server-side default key
 
   return (
     <FormControl fullWidth={fullWidth} size={size} error={error} required={required}>
@@ -200,9 +120,22 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
             // If we have a raw key string but no key object, mask it for security
             if (typeof selected === 'string' && selected.length > 8) {
               return (
-                <Typography fontFamily="monospace" sx={{ opacity: 0.7 }}>
-                  {selected.slice(0, 4)}•••••{selected.slice(-4)}
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <KeyIcon fontSize="small" color="error" />
+                  <Box>
+                    <Typography color="error.main">Unknown API Key</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.7, fontFamily: 'monospace', display: 'block' }}>
+                      {selected.slice(0, 4)}•••••{selected.slice(-4)}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label="Invalid"
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    sx={{ ml: 1, height: 20 }}
+                  />
+                </Stack>
               );
             }
             return selected;
@@ -217,16 +150,6 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
                   {key.key.slice(0, 4)}•••••{key.key.slice(-4)}
                 </Typography>
               </Box>
-              {isDefaultKey && (
-                <Chip
-                  label="Default"
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  icon={<StarIcon fontSize="small" />}
-                  sx={{ ml: 1, height: 20 }}
-                />
-              )}
               {!key.is_active && (
                 <Chip
                   label="Inactive"
@@ -252,9 +175,7 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
             <Typography>Loading API keys...</Typography>
           </MenuItem>
         ) : apiKeys && apiKeys.length > 0 ? (
-          apiKeys.map((key) => {
-            const isDefault = key.id === defaultKeyData?.default_key_id;
-            return (
+          apiKeys.map((key) => (
               <MenuItem
                 key={key.id}
                 value={key.key}
@@ -284,24 +205,8 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
                     />
                   )}
                 </Stack>
-                <Tooltip title={isDefault ? "Default key" : "Set as default"}>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!isDefault && key.is_active) {
-                        handleSetDefaultKey(key.id);
-                      }
-                    }}
-                    color={isDefault ? "primary" : "default"}
-                    disabled={!key.is_active}
-                  >
-                    {isDefault ? <StarIcon /> : <StarBorderIcon />}
-                  </IconButton>
-                </Tooltip>
               </MenuItem>
-            );
-          })
+            ))
         ) : (
           <MenuItem disabled>
             <Typography>No API keys available</Typography>

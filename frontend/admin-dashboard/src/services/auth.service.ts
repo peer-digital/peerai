@@ -85,7 +85,9 @@ class AuthService {
           role: userRole,
           name: response.data.user.full_name,
           token_limit: response.data.user.token_limit ?? 10000,
-          permissions: getRolePermissions(userRole)
+          permissions: getRolePermissions(userRole),
+          default_api_key_id: response.data.user.default_api_key_id,
+          default_api_key: response.data.user.default_api_key
         };
       } else {
         // Otherwise get user data from validation endpoint
@@ -125,6 +127,8 @@ class AuthService {
         role: string;
         full_name?: string;
         token_limit: number;
+        default_api_key_id?: number;
+        default_api_key?: string;
       }>('/auth/validate');
       console.log('Token validation response:', validateResponse);
 
@@ -134,7 +138,10 @@ class AuthService {
         roleType: typeof validateResponse.data.role,
         roleMapping: ROLE_MAPPING,
         mappedRole: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING],
-        tokenLimit: validateResponse.data.token_limit
+        tokenLimit: validateResponse.data.token_limit,
+        defaultApiKeyId: validateResponse.data.default_api_key_id,
+        defaultApiKey: validateResponse.data.default_api_key ?
+          validateResponse.data.default_api_key.slice(0, 4) + '...' : null
       });
 
       // Ensure we have the required fields
@@ -157,7 +164,9 @@ class AuthService {
         role: userRole,
         name: validateResponse.data.full_name,
         token_limit: validateResponse.data.token_limit,
-        permissions: getRolePermissions(userRole)
+        permissions: getRolePermissions(userRole),
+        default_api_key_id: validateResponse.data.default_api_key_id,
+        default_api_key: validateResponse.data.default_api_key
       };
 
       console.log('Mapped user data:', userData);

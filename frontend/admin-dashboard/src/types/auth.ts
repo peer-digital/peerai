@@ -8,6 +8,8 @@ export interface User {
   name?: string;
   token_limit: number;  // Default is 2500
   permissions?: Permission[];
+  default_api_key_id?: number;
+  default_api_key?: string;
 }
 
 export interface AuthResponse {

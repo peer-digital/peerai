@@ -158,7 +158,7 @@ function Playground() {
   const [error, setError] = useState<string | null>(null);
   const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
-  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
+  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(true);
 
   // We'll use the ApiKeySelector component instead of fetching API keys directly
 
@@ -285,41 +285,59 @@ function Playground() {
 
       // Validate API key
       if (!apiKey) {
+        setIsApiKeyValid(false);
         throw new Error('API key is required');
       }
 
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        setIsApiKeyValid(false);
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
 
-      const response = await apiClient.get('/api/v1/llm/models', {
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
+      try {
+        const response = await apiClient.get('/api/v1/llm/models', {
+          headers: {
+            'X-API-Key': apiKey,
+          },
+        });
 
-      const models = response.data;
+        const models = response.data;
 
-      if (!Array.isArray(models)) {
-        throw new Error('Invalid response format: models data is not an array');
-      }
+        if (!Array.isArray(models)) {
+          throw new Error('Invalid response format: models data is not an array');
+        }
 
-      setAvailableModels(models);
+        // API key is valid if we got a successful response
+        setIsApiKeyValid(true);
+        setAvailableModels(models);
 
-      // Update the supportedModels for the completions endpoint
-      const modelNames = models.map((model: any) => model.name);
-      setEndpointConfigs({
-        ...endpointConfigs,
-        completions: {
-          ...endpointConfigs.completions,
-          supportedModels: modelNames,
-        },
-      });
+        // Update the supportedModels for the completions endpoint
+        const modelNames = models.map((model: any) => model.name);
+        setEndpointConfigs({
+          ...endpointConfigs,
+          completions: {
+            ...endpointConfigs.completions,
+            supportedModels: modelNames,
+          },
+        });
 
-      // If the current selected model is not in the list, select the first available model
-      if (modelNames.length > 0 && !modelNames.includes(selectedModel)) {
-        setSelectedModel(modelNames[0]);
-        updateRequestBody(modelNames[0], mockMode);
+        // If the current selected model is not in the list, select the first available model
+        if (modelNames.length > 0 && !modelNames.includes(selectedModel)) {
+          setSelectedModel(modelNames[0]);
+          updateRequestBody(modelNames[0], mockMode);
+        }
+      } catch (apiError) {
+        console.error('API error:', apiError);
+
+        // Check if this is an authentication error (401)
+        if (apiError.response && apiError.response.status === 401) {
+          setIsApiKeyValid(false);
+          throw new Error('Invalid API key. Please use a valid API key from your account.');
+        } else {
+          // For other errors, the API key might still be valid
+          setIsApiKeyValid(true);
+          throw apiError;
+        }
       }
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -337,7 +355,11 @@ function Playground() {
   // Fetch models when API key changes
   useEffect(() => {
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+      console.log('API key changed, fetching models with key:', apiKey);
       fetchAvailableModels();
+    } else if (apiKey) {
+      console.warn('Invalid API key format:', apiKey);
+      setIsApiKeyValid(false);
     }
   }, [apiKey]);
 
@@ -357,16 +379,13 @@ function Playground() {
     try {
       // Validate API key
       if (!apiKey) {
+        setIsApiKeyValid(false);
         throw new Error('API key is required');
       }
 
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        setIsApiKeyValid(false);
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
-      }
-
-      // Check if API key is valid
-      if (!isApiKeyValid) {
-        throw new Error('Invalid API key. Please use a valid API key from your account.');
       }
 
       const headers: Record<string, string> = {
@@ -377,14 +396,30 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await apiClient({
-        method: endpoint.method,
-        url: endpoint.path,
-        headers,
-        data: endpoint.requiresBody ? JSON.parse(requestBody) : undefined,
-      });
+      try {
+        const response = await apiClient({
+          method: endpoint.method,
+          url: endpoint.path,
+          headers,
+          data: endpoint.requiresBody ? JSON.parse(requestBody) : undefined,
+        });
 
-      setResponse(formatResponse(response.data));
+        // If we get here, the API key is valid
+        setIsApiKeyValid(true);
+        setResponse(formatResponse(response.data));
+      } catch (apiError) {
+        console.error('API error:', apiError);
+
+        // Check if this is an authentication error (401)
+        if (apiError.response && apiError.response.status === 401) {
+          setIsApiKeyValid(false);
+          throw new Error('Invalid API key. Please use a valid API key from your account.');
+        } else {
+          // For other errors, the API key might still be valid
+          setIsApiKeyValid(true);
+          throw apiError;
+        }
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       setError(errorMessage);
@@ -558,7 +593,8 @@ function Playground() {
               <ApiKeySelector
                 value={apiKey}
                 onChange={setApiKey}
-                error={apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey)}
+                error={!isApiKeyValid || (apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey))}
+                helperText={!isApiKeyValid ? "Invalid API key. Please select a valid API key." : null}
                 required
                 fullWidth
                 size="small"
