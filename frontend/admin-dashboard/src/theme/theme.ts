@@ -128,63 +128,63 @@ const getTypography = (): ThemeOptions => ({
   typography: {
     fontFamily: '"Inter", "IBM Plex Sans", "Helvetica Neue", "Arial", sans-serif',
     h1: {
-      fontSize: '2.5rem',
+      fontSize: '2rem',
       fontWeight: 600,
       letterSpacing: '-0.01em',
       lineHeight: 1.2,
     },
     h2: {
-      fontSize: '2rem',
+      fontSize: '1.75rem',
       fontWeight: 600,
       letterSpacing: '-0.01em',
       lineHeight: 1.25,
     },
     h3: {
-      fontSize: '1.75rem',
+      fontSize: '1.5rem',
       fontWeight: 600,
       letterSpacing: '-0.01em',
       lineHeight: 1.3,
     },
     h4: {
-      fontSize: '1.5rem',
+      fontSize: '1.25rem',
       fontWeight: 500,
       letterSpacing: '-0.01em',
       lineHeight: 1.35,
     },
     h5: {
-      fontSize: '1.25rem',
+      fontSize: '1.125rem',
       fontWeight: 500,
       letterSpacing: '-0.01em',
       lineHeight: 1.4,
     },
     h6: {
-      fontSize: '1rem',
+      fontSize: '0.875rem',
       fontWeight: 500,
       letterSpacing: '-0.01em',
       lineHeight: 1.4,
     },
     subtitle1: {
-      fontSize: '1rem',
+      fontSize: '0.875rem',
       fontWeight: 500,
       letterSpacing: '0.01em',
     },
     subtitle2: {
-      fontSize: '0.875rem',
+      fontSize: '0.8125rem',
       fontWeight: 500,
       letterSpacing: '0.01em',
     },
     body1: {
-      fontSize: '1rem',
+      fontSize: '0.875rem',
       letterSpacing: '0.01em',
       lineHeight: 1.5,
     },
     body2: {
-      fontSize: '0.875rem',
+      fontSize: '0.8125rem',
       letterSpacing: '0.01em',
       lineHeight: 1.5,
     },
     button: {
-      fontSize: '0.875rem',
+      fontSize: '0.8125rem',
       fontWeight: 500,
       letterSpacing: '0.01em',
       textTransform: 'none' as const,
@@ -194,7 +194,7 @@ const getTypography = (): ThemeOptions => ({
       letterSpacing: '0.01em',
     },
     overline: {
-      fontSize: '0.75rem',
+      fontSize: '0.6875rem',
       fontWeight: 500,
       letterSpacing: '0.05em',
       textTransform: 'uppercase' as const,
@@ -211,8 +211,9 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
           textTransform: 'none',
           borderRadius: '0.25rem',
           fontWeight: 500,
-          padding: '0.5rem 1rem',
+          padding: '0.375rem 0.75rem',
           boxShadow: 'none',
+          minHeight: '32px',
           '&:hover': {
             boxShadow: mode === 'light'
               ? '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)'
@@ -242,16 +243,26 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '0.5rem',
+          borderRadius: '0.375rem',
           boxShadow: mode === 'light'
-            ? '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)'
-            : '0 1px 3px 0 rgba(255,255,255,0.05), 0 1px 2px -1px rgba(255,255,255,0.03)',
+            ? '0 1px 2px 0 rgba(0,0,0,0.1), 0 1px 1px -1px rgba(0,0,0,0.06)'
+            : '0 1px 2px 0 rgba(255,255,255,0.05), 0 1px 1px -1px rgba(255,255,255,0.03)',
           overflow: 'hidden',
           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
           '&:hover': {
             boxShadow: mode === 'light'
-              ? '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)'
-              : '0 10px 15px -3px rgba(255,255,255,0.05), 0 4px 6px -2px rgba(255,255,255,0.03)',
+              ? '0 6px 10px -3px rgba(0,0,0,0.1), 0 3px 4px -2px rgba(0,0,0,0.05)'
+              : '0 6px 10px -3px rgba(255,255,255,0.05), 0 3px 4px -2px rgba(255,255,255,0.03)',
+          },
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: '12px',
+          '&:last-child': {
+            paddingBottom: '12px',
           },
         },
       },
@@ -260,26 +271,27 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          fontSize: '0.875rem',
         },
         elevation1: {
           boxShadow: mode === 'light'
-            ? '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)'
-            : '0 1px 3px 0 rgba(255,255,255,0.05), 0 1px 2px -1px rgba(255,255,255,0.03)',
+            ? '0 1px 2px 0 rgba(0,0,0,0.1), 0 1px 1px -1px rgba(0,0,0,0.05)'
+            : '0 1px 2px 0 rgba(255,255,255,0.05), 0 1px 1px -1px rgba(255,255,255,0.02)',
         },
         elevation2: {
           boxShadow: mode === 'light'
-            ? '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
-            : '0 4px 6px -1px rgba(255,255,255,0.05), 0 2px 4px -1px rgba(255,255,255,0.03)',
+            ? '0 3px 5px -1px rgba(0,0,0,0.1), 0 1px 3px -1px rgba(0,0,0,0.05)'
+            : '0 3px 5px -1px rgba(255,255,255,0.05), 0 1px 3px -1px rgba(255,255,255,0.02)',
         },
         elevation3: {
           boxShadow: mode === 'light'
-            ? '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)'
-            : '0 10px 15px -3px rgba(255,255,255,0.05), 0 4px 6px -2px rgba(255,255,255,0.03)',
+            ? '0 8px 12px -3px rgba(0,0,0,0.1), 0 3px 5px -2px rgba(0,0,0,0.05)'
+            : '0 8px 12px -3px rgba(255,255,255,0.05), 0 3px 5px -2px rgba(255,255,255,0.02)',
         },
         elevation4: {
           boxShadow: mode === 'light'
-            ? '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
-            : '0 20px 25px -5px rgba(255,255,255,0.05), 0 10px 10px -5px rgba(255,255,255,0.03)',
+            ? '0 16px 20px -5px rgba(0,0,0,0.1), 0 8px 8px -5px rgba(0,0,0,0.04)'
+            : '0 16px 20px -5px rgba(255,255,255,0.05), 0 8px 8px -5px rgba(255,255,255,0.02)',
         },
       },
     },
@@ -288,8 +300,24 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: '0.25rem',
+            fontSize: '0.875rem',
             '&:hover .MuiOutlinedInput-notchedOutline': {
               borderColor: mode === 'light' ? '#0F62FE' : '#4589FF',
+            },
+          },
+          '& .MuiInputBase-root': {
+            '& input': {
+              padding: '8px 12px',
+            },
+            '& textarea': {
+              padding: '8px 12px',
+            },
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '0.875rem',
+            transform: 'translate(12px, 9px) scale(1)',
+            '&.MuiInputLabel-shrink': {
+              transform: 'translate(12px, -6px) scale(0.75)',
             },
           },
         },
@@ -299,11 +327,13 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
       styleOverrides: {
         root: {
           borderBottom: mode === 'light' ? '1px solid #E0E0E0' : '1px solid #393939',
-          padding: '1rem',
+          padding: '0.5rem 0.75rem',
+          fontSize: '0.8125rem',
         },
         head: {
           fontWeight: 600,
           backgroundColor: mode === 'light' ? '#F4F4F4' : '#262626',
+          padding: '0.5rem 0.75rem',
         },
       },
     },
@@ -330,7 +360,9 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
           textTransform: 'none',
           fontWeight: 500,
           minWidth: 'auto',
-          padding: '0.75rem 1.5rem',
+          padding: '0.5rem 1rem',
+          minHeight: '40px',
+          fontSize: '0.8125rem',
         },
       },
     },
@@ -441,9 +473,10 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
         },
         paper: {
           boxShadow: mode === 'light'
-            ? '0 4px 20px rgba(0, 0, 0, 0.15)'
-            : '0 4px 20px rgba(0, 0, 0, 0.5)',
-          borderRadius: '8px',
+            ? '0 3px 16px rgba(0, 0, 0, 0.12)'
+            : '0 3px 16px rgba(0, 0, 0, 0.4)',
+          borderRadius: '6px',
+          fontSize: '0.8125rem',
         },
       },
     },
@@ -459,7 +492,19 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
           },
         },
         paper: {
-          marginTop: '8px',
+          marginTop: '6px',
+        },
+        list: {
+          padding: '4px',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.8125rem',
+          minHeight: '32px',
+          padding: '4px 12px',
         },
       },
     },
@@ -467,25 +512,25 @@ const getComponents = (mode: PaletteMode): ThemeOptions => ({
     MuiCssBaseline: {
       styleOverrides: {
         '*::-webkit-scrollbar': {
-          width: '8px',
-          height: '8px',
+          width: '6px',
+          height: '6px',
           backgroundColor: 'transparent',
         },
         '*::-webkit-scrollbar-track': {
           backgroundColor: 'transparent',
-          borderRadius: '10px',
+          borderRadius: '8px',
         },
         '*::-webkit-scrollbar-thumb': {
-          backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
-          borderRadius: '10px',
+          backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+          borderRadius: '8px',
           transition: 'background-color 0.3s ease',
           '&:hover': {
-            backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+            backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.25)',
           },
         },
         '*': {
           scrollbarWidth: 'thin',
-          scrollbarColor: `${mode === 'light' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'} transparent`,
+          scrollbarColor: `${mode === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'} transparent`,
         },
         // Auto-hide scrollbars for elements with overflow
         'div, section, article, aside, nav, main': {
@@ -518,7 +563,33 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
   });
 
   // Apply global styles
-  return baseTheme;
+  // Add custom overrides for MuiToolbar to make it more compact
+  const updatedTheme = {
+    ...baseTheme,
+    components: {
+      ...baseTheme.components,
+      MuiToolbar: {
+        ...baseTheme.components?.MuiToolbar,
+        styleOverrides: {
+          ...baseTheme.components?.MuiToolbar?.styleOverrides,
+          root: {
+            minHeight: '56px',
+            '@media (min-width:600px)': {
+              minHeight: '56px',
+            },
+          },
+          dense: {
+            minHeight: '48px',
+            '@media (min-width:600px)': {
+              minHeight: '48px',
+            },
+          },
+        },
+      },
+    },
+  };
+
+  return updatedTheme;
 };
 
 // Default theme (light mode)

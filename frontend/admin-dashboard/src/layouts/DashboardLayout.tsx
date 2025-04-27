@@ -68,7 +68,7 @@ import { AnnouncementBanner } from '../components/ui';
 import ReferralModal from '../components/ReferralModal';
 
 // Responsive drawer width
-const drawerWidth = 250; // Slightly reduced for better proportions
+const drawerWidth = 220; // Reduced for more compact layout
 const mobileDrawerWidth = '100%';
 
 interface MenuItem {
@@ -148,7 +148,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   padding: theme.spacing(0, 1),
-  ...theme.mixins.toolbar,
+  minHeight: '56px',
   justifyContent: 'space-between',
 }));
 
@@ -159,8 +159,8 @@ const LogoContainer = styled(Box)(({ theme }) => ({
 }));
 
 const Logo = styled('img')({
-  height: 32,
-  marginRight: 8,
+  height: 24,
+  marginRight: 6,
 });
 
 const MenuSection = styled(Box)(({ theme }) => ({
@@ -404,12 +404,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {/* Add logo to AppBar when drawer is closed */}
           {!open && (
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 24, marginRight: 6 }} />
             </Box>
           )}
 
-          {/* Page title based on current route */}
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          {/* Page title based on current route - more compact */}
+          <Typography
+            variant="subtitle1"
+            noWrap
+            component="div"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 500,
+              fontSize: '1rem',
+              letterSpacing: '0.01em'
+            }}
+          >
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
 
@@ -452,10 +462,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 >
                   <Avatar
                     sx={{
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',
+                      fontSize: '0.875rem',
                     }}
                   >
                     {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
@@ -566,7 +577,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <ChevronLeftIcon />
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-            <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+            <img src={logoSrc} alt="PeerAI Logo" style={{ height: 24, marginRight: 6 }} />
           </Box>
         </DrawerHeader>
         <Divider />
@@ -609,14 +620,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     variant="caption"
                     color="text.secondary"
                     sx={{
-                      px: 2.5,
-                      py: 0.75,
+                      px: 2,
+                      py: 0.5,
                       mt: 0.5,
                       mb: 0.25,
                       display: 'block',
                       fontWeight: 600,
                       textTransform: 'uppercase',
-                      fontSize: '0.7rem',
+                      fontSize: '0.65rem',
                       letterSpacing: '0.5px'
                     }}
                   >
@@ -631,8 +642,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       <ListItemButton
                         selected={location.pathname === item.path}
                         sx={{
-                          py: 0.75,
-                          px: 2,
+                          py: 0.5,
+                          px: 1.5,
                           display: 'flex',
                           justifyContent: 'space-between',
                           '&.Mui-selected': {
@@ -664,10 +675,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         }}
                       >
                         <ListItemIcon sx={{
-                          minWidth: 36,
+                          minWidth: 32,
                           color: location.pathname === item.path ? 'primary.main' : 'inherit',
                           '& .MuiSvgIcon-root': {
-                            fontSize: '1.3rem'
+                            fontSize: '1.1rem'
                           }
                         }}>
                           {item.icon}
@@ -675,7 +686,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         <ListItemText
                           primary={item.text}
                           primaryTypographyProps={{
-                            fontSize: '0.9rem',
+                            fontSize: '0.8125rem',
                             fontWeight: location.pathname === item.path ? 500 : 400
                           }}
                         />
@@ -720,22 +731,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         {/* Content container with centered layout on larger screens */}
         <Box sx={{
           width: '100%',
-          padding: { xs: 2, sm: 3 },
+          padding: { xs: 1.5, sm: 2 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center', // Center horizontally
           [theme.breakpoints.up('lg')]: {
-            width: '80%',
-            maxWidth: '1400px',
+            width: '98%',
+            maxWidth: '1800px',
             margin: '0 auto',
           },
           [theme.breakpoints.up('xl')]: {
-            width: '70%',
-            maxWidth: '1600px',
+            width: '95%',
+            maxWidth: '2000px',
           },
         }}>
           {/* Show announcement banner if enabled or if announcementProps is provided */}
-          <Box sx={{ width: '100%', mb: 2 }}>
+          <Box sx={{ width: '100%', mb: 1.5 }}>
             {(announcementProps?.enabled !== false && announcementProps?.message) ? (
               <AnnouncementBanner
                 message={announcementProps.message}
@@ -775,21 +786,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               component="footer"
               sx={{
                 mt: 'auto',
-                py: 3,
+                py: 2,
                 textAlign: 'center',
                 borderTop: 1,
                 borderColor: 'divider'
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 © {new Date().getFullYear()} Peer Digital Sweden AB
               </Typography>
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 0.5 }}>
                 <Link
                   component={RouterLink}
                   to="/policy"
                   color="text.secondary"
-                  sx={{ mx: 1, fontSize: '0.875rem' }}
+                  sx={{ mx: 1, fontSize: '0.75rem' }}
                 >
                   Terms of Use
                 </Link>
@@ -797,7 +808,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   component={RouterLink}
                   to="/policy?tab=1"
                   color="text.secondary"
-                  sx={{ mx: 1, fontSize: '0.875rem' }}
+                  sx={{ mx: 1, fontSize: '0.75rem' }}
                 >
                   Privacy Policy
                 </Link>
