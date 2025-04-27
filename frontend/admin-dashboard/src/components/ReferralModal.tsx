@@ -41,7 +41,7 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
 
   // Get the base URL for the referral link
   const baseUrl = window.location.origin;
-  const referralUrl = stats?.referral_code ? `${baseUrl}/login/${stats.referral_code}` : '';
+  const referralUrl = stats?.referral_code ? `${baseUrl}/referral/${stats.referral_code}` : '';
 
   // Handle copying referral URL
   const handleCopyUrl = () => {
@@ -158,4 +158,4 @@ const ReferralModal: React.FC<ReferralModalProps> = ({ open, onClose }) => {
   );
 };
 
-export default ReferralModal; 
+export default ReferralModal;

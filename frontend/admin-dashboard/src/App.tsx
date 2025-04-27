@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -61,6 +61,8 @@ function App() {
                   <Route path="/login/:referralCode" element={<Login />} />
                   <Route path="/register" element={<Login initialMode="register" />} />
                   <Route path="/register/:referralCode" element={<Login initialMode="register" />} />
+                  {/* Redirect /referral/:referralCode to /register/:referralCode */}
+                  <Route path="/referral/:referralCode" element={<ReferralRedirect />} />
                   <Route path="/verify-email/:token" element={<EmailVerification />} />
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />
@@ -233,6 +235,12 @@ function GetStartedRoute() {
       <GetStarted />
     </DashboardLayout>
   );
+}
+
+// Redirect component for referral links
+function ReferralRedirect() {
+  const { referralCode } = useParams();
+  return <Navigate to={`/register/${referralCode}`} replace />;
 }
 
 export default App;
