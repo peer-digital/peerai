@@ -33,7 +33,7 @@ class EmailService:
 
             # Decode base64 to JSON string
             creds_json = base64.b64decode(creds_base64).decode('utf-8')
-            
+
             # Create a temporary file with the credentials
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
@@ -68,7 +68,7 @@ class EmailService:
         """Send an email to the specified recipient."""
         try:
             service = cls._get_gmail_service()
-            
+
             # Create message
             message = MIMEMultipart('alternative')
             message['to'] = to_email
@@ -84,7 +84,7 @@ class EmailService:
 
             # Encode the message for Gmail API
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-            
+
             # Send the email
             service.users().messages().send(
                 userId='me',
@@ -170,7 +170,7 @@ class EmailService:
         {referrer_name} has invited you to join Peer AI, a powerful AI platform for developers and businesses.
         When you sign up using their referral link, you'll both receive 10,000 tokens as a welcome bonus!
 
-        Click here to get started: {cls.BASE_URL}/auth/login/{referral_code}
+        Click here to get started: {cls.BASE_URL}/register/{referral_code}
 
         Best regards,
         The Peer AI Team
@@ -180,9 +180,9 @@ class EmailService:
             <h2 style="color: #2563eb;">{referrer_name} invited you to join Peer AI!</h2>
             <p><strong>{referrer_name}</strong> has invited you to join Peer AI, a powerful AI platform for developers and businesses.</p>
             <p>When you sign up using their referral link, you'll both receive <strong>10,000 tokens</strong> as a welcome bonus!</p>
-            
+
             <div style="text-align: left; margin: 30px 0;">
-                <a href="{cls.BASE_URL}/auth/login/{referral_code}" 
+                <a href="{cls.BASE_URL}/register/{referral_code}"
                    style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Get Started
                 </a>
@@ -223,4 +223,4 @@ class EmailService:
             <p style="color: #666;">This is an automated notification from the Peer AI referral system.</p>
         </div>
         """
-        return cls.send_email(admin_email, subject, body, html) 
+        return cls.send_email(admin_email, subject, body, html)

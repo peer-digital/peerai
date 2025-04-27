@@ -19,8 +19,6 @@ import {
   // Badge removed,
   Tooltip,
   useMediaQuery,
-  Collapse,
-  Fade,
   Button,
   Link,
 } from '@mui/material';
@@ -61,7 +59,7 @@ import {
   Security as SecurityIcon,
   LockPerson as LockPersonIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
@@ -92,21 +90,19 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   open?: boolean;
 }>(({ theme, open }) => ({
   flexGrow: 1,
-  padding: theme.spacing(3),
+  padding: 0, // Remove padding from outer container
   transition: theme.transitions.create(['margin', 'width'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
   marginLeft: 0,
   overflowX: 'hidden', // Prevent horizontal scrolling
-  overflowY: 'auto', // Enable vertical scrolling when needed
   width: '100%', // Take full width when drawer is closed
   minWidth: '100%', // Ensure minimum width is also 100%
   maxWidth: '100vw', // Limit width to viewport
   boxSizing: 'border-box', // Include padding in width calculation
   display: 'flex', // Use flexbox for centering
   flexDirection: 'column', // Stack children vertically
-  alignItems: 'center', // Center horizontally
   ...(open && {
     transition: theme.transitions.create(['margin', 'width'], {
       easing: theme.transitions.easing.easeOut,
@@ -116,45 +112,10 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
     width: `calc(100% - ${drawerWidth}px)`, // Adjust width when drawer is open
     minWidth: `calc(100% - ${drawerWidth}px)`, // Adjust min-width when drawer is open
   }),
-  // Add width constraint for larger screens
-  [theme.breakpoints.up('lg')]: {
-    width: '80%',
-    minWidth: '80%',
-    maxWidth: '1400px',
-    ...(open ? {
-      // When sidebar is open, we need to adjust the left margin to account for the drawer
-      // and adjust the right margin to maintain visual balance
-      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 80%) / 2)`,
-      marginRight: `calc((100% - ${drawerWidth}px - 80%) / 2)`,
-    } : {
-      // When sidebar is closed, we can use auto margins to center
-      marginLeft: 'auto',
-      marginRight: 'auto',
-    }),
-  },
-  [theme.breakpoints.up('xl')]: {
-    width: '70%',
-    minWidth: '70%',
-    maxWidth: '1600px',
-    ...(open ? {
-      // When sidebar is open, we need to adjust the left margin to account for the drawer
-      // and adjust the right margin to maintain visual balance
-      marginLeft: `calc(${drawerWidth}px + (100% - ${drawerWidth}px - 70%) / 2)`,
-      marginRight: `calc((100% - ${drawerWidth}px - 70%) / 2)`,
-    } : {
-      // When sidebar is closed, we can use auto margins to center
-      marginLeft: 'auto',
-      marginRight: 'auto',
-    }),
-  },
   [theme.breakpoints.down('sm')]: {
     marginLeft: 0,
     width: '100%', // Always full width on mobile
     minWidth: '100%', // Always full min-width on mobile
-    padding: theme.spacing(2),
-  },
-  [theme.breakpoints.down('xs')]: {
-    padding: theme.spacing(1.5),
   },
 }));
 
@@ -527,6 +488,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 keepMounted={false}
               >
                 {/* Profile menu item removed */}
+                <MenuItem component={RouterLink} to="/policy" onClick={handleUserMenuClose}>
+                  <ListItemIcon>
+                    <ArticleIcon fontSize="small" />
+                  </ListItemIcon>
+                  Terms & Privacy
+                </MenuItem>
+                <Divider sx={{ my: 1 }} />
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
@@ -749,41 +717,93 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       <Main open={open} className="always-show-scrollbar">
         <DrawerHeader />
-        {/* Show announcement banner if enabled or if announcementProps is provided */}
-        <Box sx={{ width: '100%', mb: 2 }}>
-          {(announcementProps?.enabled !== false && announcementProps?.message) ? (
-            <AnnouncementBanner
-              message={announcementProps.message}
-              ctaText={announcementProps.ctaText}
-              ctaLink={announcementProps.ctaLink}
-              bannerColor={announcementProps.bannerColor}
-              textColor={announcementProps.textColor}
-              bannerId={announcementProps.bannerId}
-            />
-          ) : (
-            // Default announcement banner
-            <AnnouncementBanner
-              message={<>
-                Welcome to our Beta, the platform is still under development! Please <Link
-                  href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
-                  target="_blank"
-                  rel="noopener"
-                  sx={{
-                    color: 'inherit',
-                    textDecoration: 'underline',
-                    '&:hover': { textDecoration: 'underline' }
-                  }}
+        {/* Content container with centered layout on larger screens */}
+        <Box sx={{
+          width: '100%',
+          padding: { xs: 2, sm: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center', // Center horizontally
+          [theme.breakpoints.up('lg')]: {
+            width: '80%',
+            maxWidth: '1400px',
+            margin: '0 auto',
+          },
+          [theme.breakpoints.up('xl')]: {
+            width: '70%',
+            maxWidth: '1600px',
+          },
+        }}>
+          {/* Show announcement banner if enabled or if announcementProps is provided */}
+          <Box sx={{ width: '100%', mb: 2 }}>
+            {(announcementProps?.enabled !== false && announcementProps?.message) ? (
+              <AnnouncementBanner
+                message={announcementProps.message}
+                ctaText={announcementProps.ctaText}
+                ctaLink={announcementProps.ctaLink}
+                bannerColor={announcementProps.bannerColor}
+                textColor={announcementProps.textColor}
+                bannerId={announcementProps.bannerId}
+              />
+            ) : (
+              // Default announcement banner
+              <AnnouncementBanner
+                message={<>
+                  Welcome to our Beta, the platform is still under development! Please <Link
+                    href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+                    target="_blank"
+                    rel="noopener"
+                    sx={{
+                      color: 'inherit',
+                      textDecoration: 'underline',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    contact us
+                  </Link> to provide feedback or ask questions.
+                </>}
+                bannerId="welcome-beta-2023-en"
+                // Using theme colors instead of hardcoded values
+              />
+            )}
+          </Box>
+          <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px - 48px)' }}>
+            {children}
+
+            {/* Footer */}
+            <Box
+              component="footer"
+              sx={{
+                mt: 'auto',
+                py: 3,
+                textAlign: 'center',
+                borderTop: 1,
+                borderColor: 'divider'
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                © {new Date().getFullYear()} Peer Digital Sweden AB
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <Link
+                  component={RouterLink}
+                  to="/policy"
+                  color="text.secondary"
+                  sx={{ mx: 1, fontSize: '0.875rem' }}
                 >
-                  contact us
-                </Link> to provide feedback or ask questions.
-              </>}
-              bannerId="welcome-beta-2023-en"
-              // Using theme colors instead of hardcoded values
-            />
-          )}
-        </Box>
-        <Box sx={{ width: '100%' }}>
-          {children}
+                  Terms of Use
+                </Link>
+                <Link
+                  component={RouterLink}
+                  to="/policy?tab=1"
+                  color="text.secondary"
+                  sx={{ mx: 1, fontSize: '0.875rem' }}
+                >
+                  Privacy Policy
+                </Link>
+              </Box>
+            </Box>
+          </Box>
         </Box>
       </Main>
 

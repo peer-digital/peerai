@@ -72,17 +72,12 @@ const DeveloperDocs: React.FC = () => {
 
   return (
     <Box sx={{
-      p: { xs: 2, sm: 3 },
       width: '100%',
       minWidth: '100%',
       maxWidth: '100%',
-      margin: '0 auto',
-      overflowX: 'hidden', // Prevent horizontal scrolling
-      overflowY: 'auto', // Enable vertical scrolling
       height: 'auto',
       position: 'relative',
       touchAction: 'manipulation', // Ensure touch scrolling works on mobile
-      WebkitOverflowScrolling: 'touch', // Enable momentum scrolling on iOS
       '& *': {
         touchAction: 'manipulation' // Apply to all children
       }

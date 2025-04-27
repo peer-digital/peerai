@@ -25,6 +25,7 @@ export interface LoginCredentials {
 export interface RegisterCredentials extends LoginCredentials {
   full_name?: string;
   referral_code?: string;
+  terms_accepted?: boolean;
 }
 
 export interface AuthContextType {
