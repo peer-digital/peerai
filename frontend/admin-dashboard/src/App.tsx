@@ -59,6 +59,8 @@ function App() {
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/login/:referralCode" element={<Login />} />
+                  <Route path="/register" element={<Login initialMode="register" />} />
+                  <Route path="/register/:referralCode" element={<Login initialMode="register" />} />
                   <Route path="/verify-email/:token" element={<EmailVerification />} />
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />

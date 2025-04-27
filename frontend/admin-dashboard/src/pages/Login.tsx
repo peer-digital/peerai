@@ -38,11 +38,15 @@ const TEST_USERS = [
 
 type AuthMode = 'login' | 'register';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  initialMode?: AuthMode;
+}
+
+const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
   const { referralCode: urlReferralCode } = useParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const navigate = useNavigate();
   const { login, register } = useAuth();
   const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }>();
@@ -91,6 +95,11 @@ const Login: React.FC = () => {
     validateReferralCode(debouncedReferralCode);
   }, [debouncedReferralCode, validateReferralCode]);
 
+  // Update mode when initialMode prop changes
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
   const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }) => {
     try {
       setError(null);
@@ -122,10 +131,27 @@ const Login: React.FC = () => {
     setValue('password', password);
   };
 
-  const handleModeChange = (event: React.MouseEvent<HTMLElement>, newMode: AuthMode) => {
+  const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: AuthMode) => {
     if (newMode !== null) {
       setMode(newMode);
       setError(null);
+
+      // Update the URL to match the selected mode
+      if (newMode === 'login') {
+        // If there's a referral code, include it in the URL
+        if (urlReferralCode) {
+          navigate(`/login/${urlReferralCode}`, { replace: true });
+        } else {
+          navigate('/login', { replace: true });
+        }
+      } else {
+        // If there's a referral code, include it in the register URL too
+        if (urlReferralCode) {
+          navigate(`/register/${urlReferralCode}`, { replace: true });
+        } else {
+          navigate('/register', { replace: true });
+        }
+      }
     }
   };
 
