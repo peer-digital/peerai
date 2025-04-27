@@ -30,10 +30,20 @@ const SearchField: React.FC<SearchFieldProps> = ({
       size={size}
       fullWidth={fullWidth}
       variant="outlined"
+      sx={{
+        '& .MuiOutlinedInput-root': {
+          borderRadius: 1,
+          height: 40,
+          '& fieldset': {
+            borderColor: 'divider',
+          },
+        },
+        ...props.sx
+      }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
-            <SearchIcon color="action" />
+            <SearchIcon color="action" fontSize="small" />
           </InputAdornment>
         ),
         endAdornment: value && onClear ? (
@@ -43,6 +53,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
               onClick={onClear}
               edge="end"
               aria-label="clear search"
+              sx={{ p: 0.5 }}
             >
               <ClearIcon fontSize="small" />
             </IconButton>

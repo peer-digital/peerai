@@ -396,10 +396,16 @@ const ModelManagement: React.FC = () => {
                     value={providerFilter}
                     onChange={(e) => {
                       const newValue = e.target.value as number | '';
-                      console.log('Setting provider filter to:', newValue);
                       setProviderFilter(newValue);
                     }}
                     label="Provider"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Providers</MenuItem>
                     {providers.map((provider) => (
@@ -417,6 +423,13 @@ const ModelManagement: React.FC = () => {
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                     label="Type"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Types</MenuItem>
                     {Array.from(new Set(models.map(model => model.model_type))).map(type => (
@@ -434,6 +447,13 @@ const ModelManagement: React.FC = () => {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     label="Status"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Statuses</MenuItem>
                     <MenuItem value="active">Active</MenuItem>

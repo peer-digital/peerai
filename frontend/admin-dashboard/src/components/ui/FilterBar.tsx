@@ -35,20 +35,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: { xs: 2, sm: 3 },
-        mb: 3,
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: theme.shape.borderRadius,
-      }}
-    >
+    <Box sx={{ mb: 3 }}>
       <Stack
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 2 }}
+        sx={{ mb: 1.5 }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
           <FilterListIcon color="action" fontSize="small" />
@@ -68,17 +60,19 @@ const FilterBar: React.FC<FilterBarProps> = ({
             onClick={onClearAll}
             size="small"
             disabled={activeFiltersCount === 0}
+            variant="text"
+            sx={{ minWidth: 'auto', py: 0.5 }}
           >
             Clear All
           </Button>
         )}
       </Stack>
       <Box>
-        <Grid container spacing={2} alignItems="center">
+        <Grid container spacing={1.5} alignItems="center">
           {children}
         </Grid>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
