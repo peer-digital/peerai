@@ -7,6 +7,9 @@ export * from './Card';
 export { default as PageHeader } from './PageHeader';
 export * from './PageHeader';
 
+export { default as PageTitle } from './PageTitle';
+export * from './PageTitle';
+
 export { default as StatusBadge } from './StatusBadge';
 export * from './StatusBadge';
 
@@ -42,3 +45,12 @@ export * from './MobileLoadingIndicator';
 
 export { default as AnnouncementBanner } from './AnnouncementBanner';
 export * from './AnnouncementBanner';
+
+export { default as SearchField } from './SearchField';
+export * from './SearchField';
+
+export { default as FilterBar } from './FilterBar';
+export * from './FilterBar';
+
+export { PageContainer, SectionContainer } from './PageContainer';
+export * from './PageContainer';

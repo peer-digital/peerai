@@ -36,17 +36,27 @@ class Permission(str, Enum):
     VIEW_SETTINGS = "view_settings"
     EDIT_SETTINGS = "edit_settings"
 
+    # App Store permissions
+    VIEW_APP_STORE = "view_app_store"
+    USE_APP_STORE = "use_app_store"
+    MANAGE_APP_STORE = "manage_app_store"
+    DEPLOY_APPS = "deploy_apps"  # Permission to deploy apps from the App Store
+    CONFIGURE_APPS = "configure_apps"  # Permission to configure deployed apps
+
 
 # Define which permissions each role has
 ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
     Role.GUEST: {
         Permission.VIEW_DOCS,
+        Permission.VIEW_APP_STORE,
     },
     Role.USER: {
         Permission.VIEW_DOCS,
         Permission.VIEW_OWN_USAGE,
         Permission.USE_API,
         Permission.MANAGE_OWN_ACCOUNT,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
     },
     Role.USER_ADMIN: {
         Permission.VIEW_DOCS,
@@ -57,10 +67,15 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.MANAGE_TEAM_MEMBERS,
         Permission.MANAGE_TEAM_BILLING,
         Permission.VIEW_TEAM_USAGE,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
+        Permission.DEPLOY_APPS,  # User admins can deploy apps
+        Permission.CONFIGURE_APPS,  # User admins can configure apps
     },
     Role.SUPER_ADMIN: {
+        # Super admins have all permissions
         Permission.VIEW_DOCS,
-        Permission.VIEW_API_DOCS,  # Super admins can view API docs
+        Permission.VIEW_API_DOCS,
         Permission.VIEW_OWN_USAGE,
         Permission.USE_API,
         Permission.MANAGE_OWN_ACCOUNT,
@@ -72,6 +87,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.SYSTEM_CONFIGURATION,
         Permission.VIEW_SETTINGS,
         Permission.EDIT_SETTINGS,
+        Permission.VIEW_APP_STORE,
+        Permission.USE_APP_STORE,
+        Permission.MANAGE_APP_STORE,
+        Permission.DEPLOY_APPS,
+        Permission.CONFIGURE_APPS,
     },
 }
 

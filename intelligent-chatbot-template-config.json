@@ -1,0 +1,364 @@
+{
+  "schema": {
+    "title": "Intelligent Chatbot Configuration",
+    "type": "object",
+    "properties": {
+      "app_settings": {
+        "type": "object",
+        "title": "App Settings",
+        "properties": {
+          "app_title": {
+            "type": "string",
+            "title": "App Title",
+            "description": "The title of your chatbot app",
+            "default": "Intelligent Chatbot"
+          },
+          "app_description": {
+            "type": "string",
+            "title": "App Description",
+            "description": "A short description of your chatbot",
+            "default": "An advanced chatbot solution that understands context and nuances. Perfect for customer support and automated conversations."
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "The language of your chatbot interface",
+            "enum": ["en", "sv"],
+            "enumNames": ["English", "Swedish"],
+            "default": "en"
+          }
+        }
+      },
+      "content": {
+        "type": "object",
+        "title": "Content",
+        "properties": {
+          "content_title": {
+            "type": "string",
+            "title": "Content Title",
+            "description": "The title displayed in the content section",
+            "default": "Try it yourself"
+          },
+          "welcome_message": {
+            "type": "string",
+            "title": "Welcome Message",
+            "description": "The initial message displayed by the chatbot",
+            "default": "Hello! I'm here to help you. What would you like to know?"
+          },
+          "input_placeholder": {
+            "type": "string",
+            "title": "Input Placeholder",
+            "description": "Placeholder text for the input field",
+            "default": "Type your question here..."
+          },
+          "send_button_text": {
+            "type": "string",
+            "title": "Send Button Text",
+            "description": "Text for the send button",
+            "default": "Send"
+          },
+          "demo_button_text": {
+            "type": "string",
+            "title": "Demo Button Text",
+            "description": "Text for the demo button",
+            "default": "Live Demo"
+          },
+          "typing_indicator_text": {
+            "type": "string",
+            "title": "Typing Indicator Text",
+            "description": "Text shown while the AI is generating a response",
+            "default": "Thinking..."
+          },
+          "error_message": {
+            "type": "string",
+            "title": "Error Message",
+            "description": "Message shown when an error occurs",
+            "default": "Sorry, I encountered an error. Please try again."
+          },
+          "no_response_text": {
+            "type": "string",
+            "title": "No Response Text",
+            "description": "Text shown when no response is received",
+            "default": "No response received. Please try again."
+          }
+        }
+      },
+      "navigation": {
+        "type": "object",
+        "title": "Navigation",
+        "properties": {
+          "tab1_text": {
+            "type": "string",
+            "title": "Tab 1 Text",
+            "description": "Text for the first navigation tab",
+            "default": "Intelligent Chatbot"
+          },
+          "tab2_text": {
+            "type": "string",
+            "title": "Tab 2 Text",
+            "description": "Text for the second navigation tab",
+            "default": "Process Documents"
+          },
+          "tab3_text": {
+            "type": "string",
+            "title": "Tab 3 Text",
+            "description": "Text for the third navigation tab",
+            "default": "Create Reports"
+          }
+        }
+      },
+      "quick_actions": {
+        "type": "object",
+        "title": "Quick Actions",
+        "properties": {
+          "quick_action1": {
+            "type": "string",
+            "title": "Quick Action 1",
+            "description": "Text for the first quick action button",
+            "default": "Explain quantum physics simply"
+          },
+          "quick_action2": {
+            "type": "string",
+            "title": "Quick Action 2",
+            "description": "Text for the second quick action button",
+            "default": "Help me write a poem"
+          },
+          "quick_action3": {
+            "type": "string",
+            "title": "Quick Action 3",
+            "description": "Text for the third quick action button",
+            "default": "Summarize Swedish history"
+          },
+          "quick_action4": {
+            "type": "string",
+            "title": "Quick Action 4",
+            "description": "Text for the fourth quick action button",
+            "default": "Tips on healthy eating"
+          },
+          "quick_action5": {
+            "type": "string",
+            "title": "Quick Action 5",
+            "description": "Text for the fifth quick action button",
+            "default": "Explain blockchain"
+          }
+        }
+      },
+      "features": {
+        "type": "object",
+        "title": "Features",
+        "properties": {
+          "features_title": {
+            "type": "string",
+            "title": "Features Section Title",
+            "description": "Title for the features section",
+            "default": "Key Features"
+          },
+          "feature1": {
+            "type": "string",
+            "title": "Feature 1",
+            "description": "Description of the first feature",
+            "default": "Natural language understanding"
+          },
+          "feature2": {
+            "type": "string",
+            "title": "Feature 2",
+            "description": "Description of the second feature",
+            "default": "24/7 automated customer support"
+          },
+          "feature3": {
+            "type": "string",
+            "title": "Feature 3",
+            "description": "Description of the third feature",
+            "default": "Integration with existing systems"
+          },
+          "feature4": {
+            "type": "string",
+            "title": "Feature 4",
+            "description": "Description of the fourth feature",
+            "default": "Customizable responses and tone"
+          }
+        }
+      },
+      "ai_settings": {
+        "type": "object",
+        "title": "AI Settings",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "AI Model",
+            "description": "The AI model to use for the chatbot",
+            "enum": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
+            "default": "mistral-large-latest"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "description": "Controls randomness in the response (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt",
+            "description": "Instructions for the AI model",
+            "default": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses."
+          },
+          "api_key": {
+            "type": "string",
+            "title": "API Key",
+            "description": "API key for accessing the AI model",
+            "format": "password"
+          }
+        },
+        "required": ["model", "api_key"]
+      },
+      "styling": {
+        "type": "object",
+        "title": "Styling",
+        "properties": {
+          "primary_color": {
+            "type": "string",
+            "title": "Primary Color",
+            "description": "Main color for buttons and accents",
+            "format": "color",
+            "default": "#1a56db"
+          },
+          "secondary_color": {
+            "type": "string",
+            "title": "Secondary Color",
+            "description": "Secondary color for highlights",
+            "format": "color",
+            "default": "#4f46e5"
+          },
+          "background_color": {
+            "type": "string",
+            "title": "Background Color",
+            "description": "Background color of the page",
+            "format": "color",
+            "default": "#f9fafb"
+          },
+          "text_color": {
+            "type": "string",
+            "title": "Text Color",
+            "description": "Main text color",
+            "format": "color",
+            "default": "#111827"
+          },
+          "light_bg_color": {
+            "type": "string",
+            "title": "Light Background Color",
+            "description": "Light background color for sections",
+            "format": "color",
+            "default": "#f0f7ff"
+          },
+          "border_color": {
+            "type": "string",
+            "title": "Border Color",
+            "description": "Color for borders",
+            "format": "color",
+            "default": "#e5e7eb"
+          },
+          "font_family": {
+            "type": "string",
+            "title": "Font Family",
+            "description": "Font family for the app",
+            "enum": [
+              "Arial, sans-serif",
+              "Helvetica, Arial, sans-serif",
+              "Georgia, serif",
+              "Verdana, sans-serif",
+              "Tahoma, sans-serif",
+              "system-ui, sans-serif"
+            ],
+            "default": "system-ui, sans-serif"
+          },
+          "font_size_small": {
+            "type": "string",
+            "title": "Small Font Size",
+            "description": "Size for small text",
+            "enum": ["12px", "13px", "14px"],
+            "default": "14px"
+          },
+          "font_size_medium": {
+            "type": "string",
+            "title": "Medium Font Size",
+            "description": "Size for medium text",
+            "enum": ["15px", "16px", "17px"],
+            "default": "16px"
+          },
+          "font_size_large": {
+            "type": "string",
+            "title": "Large Font Size",
+            "description": "Size for large text",
+            "enum": ["18px", "20px", "22px", "24px"],
+            "default": "22px"
+          },
+          "border_radius": {
+            "type": "string",
+            "title": "Border Radius",
+            "description": "Roundness of corners",
+            "enum": ["0px", "4px", "8px", "12px", "16px", "24px"],
+            "enumNames": ["None", "Slight", "Standard", "Medium", "Rounded", "Very Rounded"],
+            "default": "8px"
+          }
+        }
+      }
+    },
+    "required": ["app_settings", "ai_settings"]
+  },
+  "default_values": {
+    "app_settings": {
+      "app_title": "Intelligent Chatbot",
+      "app_description": "An advanced chatbot solution that understands context and nuances. Perfect for customer support and automated conversations.",
+      "language": "en"
+    },
+    "content": {
+      "content_title": "Try it yourself",
+      "welcome_message": "Hello! I'm here to help you. What would you like to know?",
+      "input_placeholder": "Type your question here...",
+      "send_button_text": "Send",
+      "demo_button_text": "Live Demo",
+      "typing_indicator_text": "Thinking...",
+      "error_message": "Sorry, I encountered an error. Please try again.",
+      "no_response_text": "No response received. Please try again."
+    },
+    "navigation": {
+      "tab1_text": "Intelligent Chatbot",
+      "tab2_text": "Process Documents",
+      "tab3_text": "Create Reports"
+    },
+    "quick_actions": {
+      "quick_action1": "Explain quantum physics simply",
+      "quick_action2": "Help me write a poem",
+      "quick_action3": "Summarize Swedish history",
+      "quick_action4": "Tips on healthy eating",
+      "quick_action5": "Explain blockchain"
+    },
+    "features": {
+      "features_title": "Key Features",
+      "feature1": "Natural language understanding",
+      "feature2": "24/7 automated customer support",
+      "feature3": "Integration with existing systems",
+      "feature4": "Customizable responses and tone"
+    },
+    "ai_settings": {
+      "model": "mistral-large-latest",
+      "temperature": 0.7,
+      "system_prompt": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses."
+    },
+    "styling": {
+      "primary_color": "#1a56db",
+      "secondary_color": "#4f46e5",
+      "background_color": "#f9fafb",
+      "text_color": "#111827",
+      "light_bg_color": "#f0f7ff",
+      "border_color": "#e5e7eb",
+      "font_family": "system-ui, sans-serif",
+      "font_size_small": "14px",
+      "font_size_medium": "16px",
+      "font_size_large": "22px",
+      "border_radius": "8px"
+    }
+  }
+}

@@ -30,14 +30,14 @@ const BannerContainer = styled(Paper)(({ theme }) => ({
   width: '100%',
   zIndex: 2, // Slightly higher z-index to ensure it's above content
   borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(1.5, 2),
+  padding: theme.spacing(1, 1.5),
   display: 'flex',
   alignItems: 'flex-start', // Align to top for better mobile layout
   justifyContent: 'space-between',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  marginBottom: theme.spacing(3),
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  marginBottom: theme.spacing(2),
   [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(1.5, 3),
+    padding: theme.spacing(1, 2),
     alignItems: 'center',
   },
 }));
@@ -88,11 +88,12 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, flexWrap: 'wrap' }}>
           <Typography
-            variant="body1"
+            variant="body2"
             sx={{
               fontWeight: 500,
               mr: 2,
-              mb: { xs: ctaText ? 1 : 0, sm: 0 }
+              mb: { xs: ctaText ? 1 : 0, sm: 0 },
+              fontSize: '0.8125rem',
             }}
           >
             {message}

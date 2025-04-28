@@ -20,6 +20,9 @@ import {
   FormControlLabel,
   Checkbox,
   Link,
+  FormControlLabel,
+  Checkbox,
+  Link,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { LoginCredentials, RegisterCredentials } from '../types/auth';
@@ -114,9 +117,13 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
       setIsLoading(true);
 
       if (mode === 'login') {
-        await login(credentials);
+        const result = await login(credentials);
+        console.log('Login successful:', result);
+        console.log('Token:', localStorage.getItem('access_token'));
       } else {
-        await register(credentials);
+        const result = await register(credentials);
+        console.log('Registration successful:', result);
+        console.log('Token:', localStorage.getItem('access_token'));
       }
 
       navigate('/dashboard');
@@ -133,9 +140,27 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
   };
 
   const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: AuthMode) => {
+  const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: AuthMode) => {
     if (newMode !== null) {
       setMode(newMode);
       setError(null);
+
+      // Update the URL to match the selected mode
+      if (newMode === 'login') {
+        // If there's a referral code, include it in the URL
+        if (urlReferralCode) {
+          navigate(`/login/${urlReferralCode}`, { replace: true });
+        } else {
+          navigate('/login', { replace: true });
+        }
+      } else {
+        // If there's a referral code, include it in the register URL too
+        if (urlReferralCode) {
+          navigate(`/register/${urlReferralCode}`, { replace: true });
+        } else {
+          navigate('/register', { replace: true });
+        }
+      }
 
       // Update the URL to match the selected mode
       if (newMode === 'login') {

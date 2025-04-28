@@ -25,6 +25,7 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
+import { PageContainer } from '../components/ui';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -116,10 +117,14 @@ const ApiKeys: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+      // Also invalidate default API key if it might have changed
+      queryClient.invalidateQueries({ queryKey: ['default-api-key'] });
       toast.success('API key deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to delete API key');
+    onError: (error: any) => {
+      console.error('Error deleting API key:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to delete API key';
+      toast.error(errorMessage);
     },
   });
 
@@ -203,18 +208,18 @@ const ApiKeys: React.FC = () => {
 
   if (error) {
     return (
-      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
+      <PageContainer>
         <Alert severity="error">
           Error loading API keys. Please try again later.
         </Alert>
-      </Box>
+      </PageContainer>
     );
   }
 
   const keys = apiKeys || [];
 
   return (
-    <Box p={{ xs: 2, sm: 3 }} sx={{ width: '100%', minWidth: '100%' }}>
+    <PageContainer>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
@@ -222,14 +227,9 @@ const ApiKeys: React.FC = () => {
         spacing={{ xs: 2, sm: 0 }}
         mb={3}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            API Keys
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            {keys.length} {keys.length === 1 ? 'key' : 'keys'} total
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {keys.length} {keys.length === 1 ? 'key' : 'keys'} total
+        </Typography>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh API keys" arrow>
             <IconButton onClick={() => refetch()}>
@@ -487,7 +487,7 @@ const ApiKeys: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 };
 

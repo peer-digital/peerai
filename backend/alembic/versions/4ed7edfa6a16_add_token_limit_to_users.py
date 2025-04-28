@@ -17,10 +17,12 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add token_limit column to users table with default value of 10000
-    op.add_column('users', sa.Column('token_limit', sa.Integer(), nullable=False, server_default='10000'))
+    # Add token_limit column to users table if it does not exist, with default value of 10000
+    op.execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_limit INTEGER DEFAULT 10000 NOT NULL"
+    )
 
 
 def downgrade() -> None:
-    # Remove token_limit column from users table
-    op.drop_column('users', 'token_limit')
+    # Remove token_limit column from users table if it exists
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS token_limit")

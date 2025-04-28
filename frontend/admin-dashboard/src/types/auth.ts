@@ -1,4 +1,4 @@
-import { Role } from './rbac';
+import { Role, Permission } from './rbac';
 
 export interface User {
   id: string;
@@ -7,6 +7,9 @@ export interface User {
   role: Role;
   name?: string;
   token_limit: number;  // Default is 2500
+  permissions?: Permission[];
+  default_api_key_id?: number;
+  default_api_key?: string;
 }
 
 export interface AuthResponse {

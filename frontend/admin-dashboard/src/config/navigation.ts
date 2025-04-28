@@ -8,6 +8,9 @@ import {
   Group as TeamIcon,
   Person as UserIcon,
   SmartToy as ModelIcon,
+  Apps as AppsIcon,
+  Security as SecurityIcon,
+  LockPerson as LockPersonIcon,
 } from '@mui/icons-material';
 import { Permission } from '../types/rbac';
 
@@ -16,6 +19,8 @@ export interface NavItem {
   path: string;
   icon: React.ComponentType;
   requiredPermissions?: Permission[];
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
 export const navigation: NavItem[] = [
@@ -24,6 +29,19 @@ export const navigation: NavItem[] = [
     path: '/dashboard',
     icon: DashboardIcon,
     requiredPermissions: [Permission.VIEW_DASHBOARD],
+  },
+  {
+    title: 'My Apps',
+    path: '/my-apps',
+    icon: AppsIcon,
+    requiredPermissions: [Permission.USE_APP_STORE],
+  },
+  {
+    title: 'App Library',
+    path: '/app-library',
+    icon: CodeIcon,
+    requiredPermissions: [Permission.DEPLOY_APPS],
+    adminOnly: true,
   },
   {
     title: 'API Keys',
@@ -55,12 +73,21 @@ export const navigation: NavItem[] = [
     path: '/users',
     icon: UserIcon,
     requiredPermissions: [Permission.MANAGE_USERS],
+    superAdminOnly: true,
   },
   {
     title: 'Models',
     path: '/models',
     icon: ModelIcon,
     requiredPermissions: [Permission.MANAGE_MODELS],
+    superAdminOnly: true,
+  },
+  {
+    title: 'App Templates',
+    path: '/app-templates-management',
+    icon: AppsIcon,
+    requiredPermissions: [Permission.MANAGE_APP_STORE],
+    superAdminOnly: true,
   },
   {
     title: 'Developer Docs',
@@ -68,4 +95,4 @@ export const navigation: NavItem[] = [
     icon: CodeIcon,
     requiredPermissions: [Permission.VIEW_DOCS],
   },
-]; 
+];

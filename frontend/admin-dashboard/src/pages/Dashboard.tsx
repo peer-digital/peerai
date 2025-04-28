@@ -19,6 +19,7 @@ import {
   Snackbar,
   IconButton,
 } from '@mui/material';
+import { PageContainer, SectionContainer } from '../components/ui';
 import {
   BarChart,
   Bar,
@@ -224,10 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   };
 
   return (
-    <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' }, mb: 4 }}>
-        {getDashboardTitle()}
-      </Typography>
+    <PageContainer>
 
       {/* Token Status Alert */}
       {stats && user && tokenUsagePercentage >= 100 && (
@@ -334,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
         <Grid container spacing={3} sx={{ width: '100%', minWidth: '100%' }}>
           {/* Usage Trends */}
           <Grid item xs={12} lg={8}>
-            <Paper sx={{ p: 3, height: '100%' }}>
+            <SectionContainer sx={{ height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Usage Trends
               </Typography>
@@ -385,12 +383,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                   <EmptyState />
                 )}
               </Box>
-            </Paper>
+            </SectionContainer>
           </Grid>
 
           {/* Model Usage Distribution */}
           <Grid item xs={12} lg={4}>
-            <Paper sx={{ p: 3, height: '100%' }}>
+            <SectionContainer sx={{ height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Model Usage Distribution
               </Typography>
@@ -424,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
                   <EmptyState />
                 )}
               </Box>
-            </Paper>
+            </SectionContainer>
           </Grid>
         </Grid>
       </TabPanel>
@@ -456,7 +454,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
           <EmptyState />
         </TabPanel>
       )}
-    </Box>
+    </PageContainer>
   );
 };
 

@@ -38,6 +38,7 @@ import { Permission } from '../types/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 import { apiClient } from '../api/client';
 import { toast } from 'react-toastify';
+import { PageContainer, SectionContainer, SearchField, FilterBar } from '../components/ui';
 
 interface ModelProvider {
   id: number;
@@ -305,13 +306,18 @@ const ModelManagement: React.FC = () => {
     return provider ? provider.display_name : `Provider ${providerId}`;
   };
 
+  // Clear all filters
+  const clearFilters = () => {
+    setNameFilter('');
+    setProviderFilter('');
+    setTypeFilter('');
+    setStatusFilter('');
+  };
+
   return (
     <PermissionGuard requiredPermissions={[Permission.SYSTEM_CONFIGURATION]}>
-      <Box p={3} sx={{ width: '100%', minWidth: '100%' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Model Management
-          </Typography>
+      <PageContainer>
+        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
           <Box>
             <Tooltip title="Refresh Models" arrow>
               <IconButton onClick={fetchModels} disabled={loading}>
@@ -364,29 +370,22 @@ const ModelManagement: React.FC = () => {
         )}
 
         {/* Filter Bar */}
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Grid container spacing={2} alignItems="center">
+        <FilterBar
+          onClearAll={clearFilters}
+          activeFiltersCount={
+            (nameFilter ? 1 : 0) +
+            (providerFilter ? 1 : 0) +
+            (typeFilter ? 1 : 0) +
+            (statusFilter ? 1 : 0)
+          }
+          title="Filter Models"
+        >
               <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  fullWidth
-                  label="Search by Name"
+                <SearchField
+                  placeholder="Search by Name"
                   value={nameFilter}
                   onChange={(e) => setNameFilter(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                    endAdornment: nameFilter ? (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setNameFilter('')}>
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                  }}
+                  onClear={() => setNameFilter('')}
                   size="small"
                 />
               </Grid>
@@ -397,10 +396,16 @@ const ModelManagement: React.FC = () => {
                     value={providerFilter}
                     onChange={(e) => {
                       const newValue = e.target.value as number | '';
-                      console.log('Setting provider filter to:', newValue);
                       setProviderFilter(newValue);
                     }}
                     label="Provider"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Providers</MenuItem>
                     {providers.map((provider) => (
@@ -418,6 +423,13 @@ const ModelManagement: React.FC = () => {
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                     label="Type"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Types</MenuItem>
                     {Array.from(new Set(models.map(model => model.model_type))).map(type => (
@@ -435,6 +447,13 @@ const ModelManagement: React.FC = () => {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     label="Status"
+                    sx={{
+                      height: 40,
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      }
+                    }}
                   >
                     <MenuItem value="">All Statuses</MenuItem>
                     <MenuItem value="active">Active</MenuItem>
@@ -445,25 +464,10 @@ const ModelManagement: React.FC = () => {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={12} md={2} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ClearIcon />}
-                  onClick={() => {
-                    setNameFilter('');
-                    setProviderFilter('');
-                    setTypeFilter('');
-                    setStatusFilter('');
-                  }}
-                  size="small"
-                >
-                  Clear Filters
-                </Button>
               </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+        </FilterBar>
 
-        <Paper>
+        <SectionContainer>
           {/* Define columns for the DataGrid */}
           {(() => {
             // Filter models based on filter criteria
@@ -587,7 +591,7 @@ const ModelManagement: React.FC = () => {
               />
             );
           })()}
-        </Paper>
+        </SectionContainer>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -862,7 +866,7 @@ const ModelManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      </PageContainer>
     </PermissionGuard>
   );
 };

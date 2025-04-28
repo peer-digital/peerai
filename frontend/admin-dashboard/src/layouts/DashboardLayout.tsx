@@ -44,6 +44,20 @@ import {
   Science as ScienceIcon,
   Share as ShareIcon,
   PersonAdd as PersonAddIcon,
+  Apps as AppsIcon,
+  AppShortcut as AppShortcutIcon,
+  DesignServices as DesignServicesIcon,
+  Storage as StorageIcon,
+  Api as ApiIcon,
+  Terminal as TerminalIcon,
+  Article as ArticleIcon,
+  Group as GroupIcon,
+  Settings as SettingsIcon,
+  SmartToy as SmartToyIcon,
+  GridView as GridViewIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Security as SecurityIcon,
+  LockPerson as LockPersonIcon,
   Article as ArticleIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
@@ -55,7 +69,7 @@ import { AnnouncementBanner } from '../components/ui';
 import ReferralModal from '../components/ReferralModal';
 
 // Responsive drawer width
-const drawerWidth = 260;
+const drawerWidth = 220; // Reduced for more compact layout
 const mobileDrawerWidth = '100%';
 
 interface MenuItem {
@@ -64,6 +78,13 @@ interface MenuItem {
   path: string;
   requiredPermissions?: Permission[];
   guestAccessible?: boolean;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+}
+
+interface MenuGroup {
+  title?: string;
+  items: MenuItem[];
 }
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
@@ -128,7 +149,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   padding: theme.spacing(0, 1),
-  ...theme.mixins.toolbar,
+  minHeight: '56px',
   justifyContent: 'space-between',
 }));
 
@@ -139,8 +160,8 @@ const LogoContainer = styled(Box)(({ theme }) => ({
 }));
 
 const Logo = styled('img')({
-  height: 32,
-  marginRight: 8,
+  height: 24,
+  marginRight: 6,
 });
 
 const MenuSection = styled(Box)(({ theme }) => ({
@@ -200,6 +221,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     if (!user) return false;
     return hasAnyPermission(user, requiredPermissions);
   };
+
+  // Check if user has admin or super admin role
+  const isAdmin = user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+  const isSuperAdmin = user?.role === Role.SUPER_ADMIN;
 
   // Close drawer on mobile by default
   useEffect(() => {
@@ -298,20 +323,67 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     setHelpMenuOpen(!helpMenuOpen);
   };
 
-  // @important: Menu items with required permissions
-  const menuItems: MenuItem[] = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
-    { text: 'Documentation', icon: <MenuBookIcon />, path: '/docs' },
-    { text: 'Playground', icon: <ScienceIcon />, path: '/playground' },
-    // Analytics and Settings menu items removed
-    // Only show these items for super admins
-    ...(user?.role === Role.SUPER_ADMIN ? [
-      { text: 'Users', icon: <PeopleIcon />, path: '/users' },
-      { text: 'Teams', icon: <PeopleIcon />, path: '/teams' },
-      { text: 'Models', icon: <ScienceIcon />, path: '/models' },
-    ] : []),
+  // @important: Menu items with required permissions grouped by category
+  const menuGroups: MenuGroup[] = [
+    {
+      title: 'Main',
+      items: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' }
+      ]
+    },
+    {
+      title: 'Apps',
+      items: [
+        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
+        ...(user?.role === Role.SUPER_ADMIN ? [
+          {
+            text: 'App Templates',
+            icon: <AppShortcutIcon />,
+            path: '/app-templates-management',
+            requiredPermissions: [Permission.MANAGE_APP_STORE],
+            superAdminOnly: true
+          }
+        ] : [])
+      ]
+    },
+    {
+      title: 'Development',
+      items: [
+        { text: 'API Keys', icon: <ApiKeyIcon />, path: '/api-keys' },
+        { text: 'API Playground', icon: <TerminalIcon />, path: '/playground' },
+        { text: 'Documentation', icon: <ArticleIcon />, path: '/docs' }
+      ]
+    },
+    {
+      title: 'Administration',
+      items: [
+        ...(user?.role === Role.SUPER_ADMIN ? [
+          {
+            text: 'Users',
+            icon: <PeopleIcon />,
+            path: '/users',
+            superAdminOnly: true
+          },
+          {
+            text: 'Teams',
+            icon: <GroupIcon />,
+            path: '/teams',
+            superAdminOnly: true
+          },
+          {
+            text: 'Models',
+            icon: <SmartToyIcon />,
+            path: '/models',
+            superAdminOnly: true
+          }
+        ] : [])
+      ]
+    }
   ];
+
+  // Flatten menu items for use in page title lookup
+  const menuItems: MenuItem[] = menuGroups.flatMap(group => group.items);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -333,12 +405,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {/* Add logo to AppBar when drawer is closed */}
           {!open && (
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 24, marginRight: 6 }} />
             </Box>
           )}
 
-          {/* Page title based on current route */}
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          {/* Page title based on current route - more compact */}
+          <Typography
+            variant="subtitle1"
+            noWrap
+            component="div"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 500,
+              fontSize: '1rem',
+              letterSpacing: '0.01em'
+            }}
+          >
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
 
@@ -381,10 +463,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 >
                   <Avatar
                     sx={{
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',
+                      fontSize: '0.875rem',
                     }}
                   >
                     {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
@@ -456,6 +539,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           '& .MuiDrawer-paper': {
             width: { xs: '85%', sm: drawerWidth },
             boxSizing: 'border-box',
+            backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
           },
           // Fix for the persistent overlay issue
           '& .MuiModal-root': {
@@ -494,53 +578,153 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <ChevronLeftIcon />
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-            <img src={logoSrc} alt="PeerAI Logo" style={{ height: 28, marginRight: 8 }} />
+            <img src={logoSrc} alt="PeerAI Logo" style={{ height: 24, marginRight: 6 }} />
           </Box>
         </DrawerHeader>
         <Divider />
-        <List>
-          {menuItems.map((item) => {
-            // Skip menu items that require permissions the user doesn't have
-            if (item.requiredPermissions && !hasRequiredPermissions(item.requiredPermissions)) {
-              return null;
-            }
-            // Skip menu items that aren't guest accessible in guest mode
-            if (isGuestMode && !item.guestAccessible) {
+        <Box sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 64px)' }}>
+          {menuGroups.map((group, groupIndex) => {
+            // Filter items based on permissions
+            const visibleItems = group.items.filter(item => {
+              // Skip items that require permissions the user doesn't have
+              if (item.requiredPermissions && !hasRequiredPermissions(item.requiredPermissions)) {
+                return false;
+              }
+              // Skip items that aren't guest accessible in guest mode
+              if (isGuestMode && !item.guestAccessible) {
+                return false;
+              }
+              // Skip admin-only items if user is not an admin
+              if (item.adminOnly && !isAdmin) {
+                return false;
+              }
+              // Skip super-admin-only items if user is not a super admin
+              if (item.superAdminOnly && !isSuperAdmin) {
+                return false;
+              }
+              return true;
+            });
+
+            // Skip empty groups
+            if (visibleItems.length === 0) {
               return null;
             }
 
             return (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  selected={location.pathname === item.path}
-                  onClick={() => {
-                    // Only navigate if we're not already on this path
-                    if (location.pathname !== item.path) {
-                      // Update the ref before navigation to prevent the useEffect from closing the drawer
-                      prevPathnameRef.current = item.path;
+              <React.Fragment key={`group-${groupIndex}`}>
+                {/* Add divider between groups (but not before the first group) */}
+                {groupIndex > 0 && <Divider sx={{ my: 0.75 }} />}
 
-                      // Navigate to the new path
-                      navigate(item.path);
+                {/* Group title */}
+                {group.title && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      px: 2,
+                      py: 0.5,
+                      mt: 0.5,
+                      mb: 0.25,
+                      display: 'block',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {group.title}
+                  </Typography>
+                )}
 
-                      // Close the drawer on mobile after a short delay
-                      if (isMobile) {
-                        setTimeout(() => {
-                          handleDrawerClose();
-                        }, 150);
-                      }
-                    } else if (isMobile) {
-                      // If we're already on this path, just close the drawer
-                      handleDrawerClose();
-                    }
-                  }}
-                >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
+                {/* Group items */}
+                <List sx={{ py: 0, mb: 0.5 }}>
+                  {visibleItems.map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton
+                        selected={location.pathname === item.path}
+                        sx={{
+                          py: 0.5,
+                          px: 1.5,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          '&.Mui-selected': {
+                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                          },
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                          }
+                        }}
+                        onClick={() => {
+                          // Only navigate if we're not already on this path
+                          if (location.pathname !== item.path) {
+                            // Update the ref before navigation to prevent the useEffect from closing the drawer
+                            prevPathnameRef.current = item.path;
+
+                            // Navigate to the new path
+                            navigate(item.path);
+
+                            // Close the drawer on mobile after a short delay
+                            if (isMobile) {
+                              setTimeout(() => {
+                                handleDrawerClose();
+                              }, 150);
+                            }
+                          } else if (isMobile) {
+                            // If we're already on this path, just close the drawer
+                            handleDrawerClose();
+                          }
+                        }}
+                      >
+                        <ListItemIcon sx={{
+                          minWidth: 32,
+                          color: location.pathname === item.path ? 'primary.main' : 'inherit',
+                          '& .MuiSvgIcon-root': {
+                            fontSize: '1.1rem'
+                          }
+                        }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.text}
+                          primaryTypographyProps={{
+                            fontSize: '0.8125rem',
+                            fontWeight: location.pathname === item.path ? 500 : 400
+                          }}
+                        />
+                        {(item.superAdminOnly || item.adminOnly) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                            {item.superAdminOnly && (
+                              <Tooltip title="Super Admin only" arrow placement="right">
+                                <SecurityIcon
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    opacity: 0.5,
+                                    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                            {item.adminOnly && (
+                              <Tooltip title="Admin only" arrow placement="right">
+                                <LockPersonIcon
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    opacity: 0.5,
+                                    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)'
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        )}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </React.Fragment>
             );
           })}
-        </List>
+        </Box>
       </Drawer>
 
       <Main open={open} className="always-show-scrollbar">
@@ -548,22 +732,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         {/* Content container with centered layout on larger screens */}
         <Box sx={{
           width: '100%',
-          padding: { xs: 2, sm: 3 },
+          padding: { xs: 1.5, sm: 2 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center', // Center horizontally
           [theme.breakpoints.up('lg')]: {
-            width: '80%',
-            maxWidth: '1400px',
+            width: '98%',
+            maxWidth: '1800px',
             margin: '0 auto',
           },
           [theme.breakpoints.up('xl')]: {
-            width: '70%',
-            maxWidth: '1600px',
+            width: '95%',
+            maxWidth: '2000px',
           },
         }}>
           {/* Show announcement banner if enabled or if announcementProps is provided */}
-          <Box sx={{ width: '100%', mb: 2 }}>
+          <Box sx={{ width: '100%', mb: 1.5 }}>
             {(announcementProps?.enabled !== false && announcementProps?.message) ? (
               <AnnouncementBanner
                 message={announcementProps.message}
@@ -603,21 +787,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               component="footer"
               sx={{
                 mt: 'auto',
-                py: 3,
+                py: 2,
                 textAlign: 'center',
                 borderTop: 1,
                 borderColor: 'divider'
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 © {new Date().getFullYear()} Peer Digital Sweden AB
               </Typography>
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 0.5 }}>
                 <Link
                   component={RouterLink}
                   to="/policy"
                   color="text.secondary"
-                  sx={{ mx: 1, fontSize: '0.875rem' }}
+                  sx={{ mx: 1, fontSize: '0.75rem' }}
                 >
                   Terms of Use
                 </Link>
@@ -625,7 +809,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   component={RouterLink}
                   to="/policy?tab=1"
                   color="text.secondary"
-                  sx={{ mx: 1, fontSize: '0.875rem' }}
+                  sx={{ mx: 1, fontSize: '0.75rem' }}
                 >
                   Privacy Policy
                 </Link>

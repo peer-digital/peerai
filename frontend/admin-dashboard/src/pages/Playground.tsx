@@ -23,6 +23,7 @@ import {
   Alert,
   Link,
 } from '@mui/material';
+import { PageContainer } from '../components/ui';
 import {
   ContentCopy as ContentCopyIcon,
   Send as SendIcon,
@@ -41,6 +42,7 @@ import { apiClient } from '../api/client';
 import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../api/config';
+import ApiKeySelector from '../components/common/ApiKeySelector';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -157,22 +159,9 @@ function Playground() {
   const [error, setError] = useState<string | null>(null);
   const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
-  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
+  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(true);
 
-  // Fetch user's API keys
-  const { data: userApiKeys, isLoading: isLoadingKeys } = useQuery<ApiKey[]>({
-    queryKey: ['api-keys'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/auth/api-keys');
-        return response.data;
-      } catch (error) {
-        console.error('Error fetching API keys:', error);
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // We'll use the ApiKeySelector component instead of fetching API keys directly
 
   const formatResponse = (data: any) => {
     // For health check and error responses, just return as is
@@ -297,41 +286,59 @@ function Playground() {
 
       // Validate API key
       if (!apiKey) {
+        setIsApiKeyValid(false);
         throw new Error('API key is required');
       }
 
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        setIsApiKeyValid(false);
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
       }
 
-      const response = await apiClient.get('/api/v1/llm/models', {
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
+      try {
+        const response = await apiClient.get('/api/v1/llm/models', {
+          headers: {
+            'X-API-Key': apiKey,
+          },
+        });
 
-      const models = response.data;
+        const models = response.data;
 
-      if (!Array.isArray(models)) {
-        throw new Error('Invalid response format: models data is not an array');
-      }
+        if (!Array.isArray(models)) {
+          throw new Error('Invalid response format: models data is not an array');
+        }
 
-      setAvailableModels(models);
+        // API key is valid if we got a successful response
+        setIsApiKeyValid(true);
+        setAvailableModels(models);
 
-      // Update the supportedModels for the completions endpoint
-      const modelNames = models.map((model: any) => model.name);
-      setEndpointConfigs({
-        ...endpointConfigs,
-        completions: {
-          ...endpointConfigs.completions,
-          supportedModels: modelNames,
-        },
-      });
+        // Update the supportedModels for the completions endpoint
+        const modelNames = models.map((model: any) => model.name);
+        setEndpointConfigs({
+          ...endpointConfigs,
+          completions: {
+            ...endpointConfigs.completions,
+            supportedModels: modelNames,
+          },
+        });
 
-      // If the current selected model is not in the list, select the first available model
-      if (modelNames.length > 0 && !modelNames.includes(selectedModel)) {
-        setSelectedModel(modelNames[0]);
-        updateRequestBody(modelNames[0], mockMode);
+        // If the current selected model is not in the list, select the first available model
+        if (modelNames.length > 0 && !modelNames.includes(selectedModel)) {
+          setSelectedModel(modelNames[0]);
+          updateRequestBody(modelNames[0], mockMode);
+        }
+      } catch (apiError) {
+        console.error('API error:', apiError);
+
+        // Check if this is an authentication error (401)
+        if (apiError.response && apiError.response.status === 401) {
+          setIsApiKeyValid(false);
+          throw new Error('Invalid API key. Please use a valid API key from your account.');
+        } else {
+          // For other errors, the API key might still be valid
+          setIsApiKeyValid(true);
+          throw apiError;
+        }
       }
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -344,44 +351,18 @@ function Playground() {
     }
   };
 
-  // Validate if the current API key exists in the user's API keys
-  const validateApiKey = (key: string) => {
-    if (!key || !userApiKeys || userApiKeys.length === 0) {
-      setIsApiKeyValid(null);
-      return false;
-    }
+  // The ApiKeySelector component handles validation internally
 
-    // Check if the key exists in the user's API keys
-    const isValid = userApiKeys.some(userKey => userKey.key === key && userKey.is_active);
-    setIsApiKeyValid(isValid);
-    return isValid;
-  };
-
-  // Load API key from localStorage on component mount
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('apiKey');
-    if (storedApiKey) {
-      // Validate that the API key is a simple string without special characters
-      if (/^[a-zA-Z0-9_-]+$/.test(storedApiKey)) {
-        setApiKey(storedApiKey);
-      } else {
-        // If invalid, clear it from localStorage
-        localStorage.removeItem('apiKey');
-        console.error('Invalid API key format in localStorage');
-      }
-    }
-  }, []);
-
-  // Validate API key when it changes or when user's API keys are loaded
+  // Fetch models when API key changes
   useEffect(() => {
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
-      localStorage.setItem('apiKey', apiKey); // Save API key to localStorage
-      validateApiKey(apiKey);
+      console.log('API key changed, fetching models with key:', apiKey);
       fetchAvailableModels();
-    } else {
-      setIsApiKeyValid(null);
+    } else if (apiKey) {
+      console.warn('Invalid API key format:', apiKey);
+      setIsApiKeyValid(false);
     }
-  }, [apiKey, userApiKeys]);
+  }, [apiKey]);
 
   // Initialize with empty model if no models are available
   useEffect(() => {
@@ -399,16 +380,13 @@ function Playground() {
     try {
       // Validate API key
       if (!apiKey) {
+        setIsApiKeyValid(false);
         throw new Error('API key is required');
       }
 
       if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+        setIsApiKeyValid(false);
         throw new Error('Invalid API key format. API keys should only contain letters, numbers, hyphens, and underscores.');
-      }
-
-      // Check if API key is valid
-      if (!isApiKeyValid) {
-        throw new Error('Invalid API key. Please use a valid API key from your account.');
       }
 
       const headers: Record<string, string> = {
@@ -419,14 +397,30 @@ function Playground() {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await apiClient({
-        method: endpoint.method,
-        url: endpoint.path,
-        headers,
-        data: endpoint.requiresBody ? JSON.parse(requestBody) : undefined,
-      });
+      try {
+        const response = await apiClient({
+          method: endpoint.method,
+          url: endpoint.path,
+          headers,
+          data: endpoint.requiresBody ? JSON.parse(requestBody) : undefined,
+        });
 
-      setResponse(formatResponse(response.data));
+        // If we get here, the API key is valid
+        setIsApiKeyValid(true);
+        setResponse(formatResponse(response.data));
+      } catch (apiError) {
+        console.error('API error:', apiError);
+
+        // Check if this is an authentication error (401)
+        if (apiError.response && apiError.response.status === 401) {
+          setIsApiKeyValid(false);
+          throw new Error('Invalid API key. Please use a valid API key from your account.');
+        } else {
+          // For other errors, the API key might still be valid
+          setIsApiKeyValid(true);
+          throw apiError;
+        }
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       setError(errorMessage);
@@ -465,15 +459,12 @@ function Playground() {
   }, []);
 
   return (
-    <Box sx={{
-      p: { xs: 2, sm: 3 },
+    <PageContainer sx={{
       height: { xs: 'auto', sm: 'calc(100vh - 88px)' },
       display: 'flex',
       flexDirection: 'column',
       mb: { xs: 4, sm: 0 }, // Add bottom margin on mobile
       overflow: 'hidden', // Prevent overflow
-      width: '100%', // Take full width
-      minWidth: '100%', // Ensure minimum width is also 100%
       maxWidth: '100vw', // Limit width to viewport
       boxSizing: 'border-box', // Include padding in width calculation
       touchAction: 'manipulation', // Ensure touch scrolling works on mobile
@@ -482,16 +473,6 @@ function Playground() {
         touchAction: 'manipulation' // Apply to all children
       }
     }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            API Playground
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
-            Test and explore the PeerAI API endpoints
-          </Typography>
-        </Box>
-      </Stack>
 
       <Box sx={{
         display: 'flex',
@@ -597,67 +578,14 @@ function Playground() {
                 </Alert>
               )}
 
-              <TextField
+              <ApiKeySelector
+                value={apiKey}
+                onChange={setApiKey}
+                error={!isApiKeyValid || (apiKey !== '' && !/^[a-zA-Z0-9_-]+$/.test(apiKey))}
+                helperText={!isApiKeyValid ? "Invalid API key. Please select a valid API key." : null}
+                required
                 fullWidth
                 size="small"
-                label="API Key"
-                value={apiKey}
-                onChange={(e) => {
-                  // Only allow alphanumeric characters, hyphens, and underscores
-                  const newValue = e.target.value;
-                  if (newValue === '' || /^[a-zA-Z0-9_-]+$/.test(newValue)) {
-                    setApiKey(newValue);
-                  }
-                }}
-                type="password"
-                placeholder="Enter your API key"
-                InputProps={{
-                  endAdornment: apiKey ? (
-                    isApiKeyValid === true ? (
-                      <Tooltip title="Valid API key" arrow>
-                        <CheckCircleIcon color="success" fontSize="small" />
-                      </Tooltip>
-                    ) : isApiKeyValid === false ? (
-                      <Tooltip title="Invalid API key" arrow>
-                        <ErrorIcon color="error" fontSize="small" />
-                      </Tooltip>
-                    ) : null
-                  ) : (
-                    <Tooltip title="API key is required" arrow>
-                      <KeyIcon color="action" fontSize="small" sx={{ opacity: 0.5 }} />
-                    </Tooltip>
-                  )
-                }}
-                helperText={
-                  <>
-                    {apiKey && isApiKeyValid === false ? (
-                      <Typography variant="caption" color="error">
-                        Invalid API key. <Link component={RouterLink} to="/api-keys">Manage your API keys</Link>
-                      </Typography>
-                    ) : apiKey && isApiKeyValid === true ? (
-                      <Typography variant="caption" color="success.main">
-                        Valid API key
-                      </Typography>
-                    ) : apiKey ? (
-                      <Typography variant="caption">
-                        API keys should only contain letters, numbers, hyphens, and underscores
-                      </Typography>
-                    ) : (
-                      <Typography variant="caption">
-                        Please enter an API key from your <Link component={RouterLink} to="/api-keys">API Keys</Link> page
-                      </Typography>
-                    )}
-                  </>
-                }
-                error={apiKey !== '' && (!/^[a-zA-Z0-9_-]+$/.test(apiKey) || isApiKeyValid === false)}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    fontSize: { xs: '0.875rem', sm: '1rem' }
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                  }
-                }}
               />
 
               {endpointConfigs[selectedEndpoint].requiresBody && selectedEndpoint === 'completions' && (
@@ -945,7 +873,7 @@ function Playground() {
           </Card>
         </Box>
       </Box>
-    </Box>
+    </PageContainer>
   );
 }
 

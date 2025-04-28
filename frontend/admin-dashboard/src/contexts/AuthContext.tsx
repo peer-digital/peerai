@@ -3,7 +3,7 @@ import { AuthContextType, LoginCredentials, RegisterCredentials, User } from '..
 import { authService } from '../services/auth.service';
 import { MobileLoadingIndicator } from '../components/ui';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

@@ -52,11 +52,14 @@ class User(Base):
     email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String, unique=True, nullable=True)
     email_verification_sent_at = Column(DateTime, nullable=True)
+    default_api_key_id = Column(Integer, ForeignKey("api_keys.id"), nullable=True)
 
     # Relationships
     api_keys = relationship(
-        "APIKey", back_populates="user", cascade="all, delete-orphan"
+        "APIKey", back_populates="user", cascade="all, delete-orphan",
+        foreign_keys="[APIKey.user_id]"
     )
+    default_api_key = relationship("APIKey", foreign_keys=[default_api_key_id])
     usage_records = relationship("UsageRecord", back_populates="user")
     team = relationship("Team", back_populates="members", foreign_keys=[team_id])
 
@@ -88,7 +91,7 @@ class APIKey(Base):
     last_used_at = Column(DateTime, nullable=True)
 
     # Relationships
-    user = relationship("User", back_populates="api_keys")
+    user = relationship("User", back_populates="api_keys", foreign_keys=[user_id])
     usage_records = relationship("UsageRecord", back_populates="api_key")
 
 
