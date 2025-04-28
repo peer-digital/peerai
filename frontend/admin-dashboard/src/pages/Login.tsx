@@ -172,8 +172,8 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
       }}>
         <AnnouncementBanner
           message={<>
-            Welcome to our Beta, the platform is still under development! Please <Link
-              href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+            Welcome to our Beta! Register now to try our platform, but please note that some features are still in development. <Link
+              href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Registration"
               target="_blank"
               rel="noopener"
               sx={{
@@ -182,10 +182,10 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
                 '&:hover': { textDecoration: 'underline' }
               }}
             >
-              contact us
-            </Link> to provide feedback or ask questions.
+              Contact us
+            </Link> with any questions.
           </>}
-          bannerId="welcome-beta-2023-en"
+          bannerId="welcome-beta-2024-login-en"
         />
       </Box>
 
