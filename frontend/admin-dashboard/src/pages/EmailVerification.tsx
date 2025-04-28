@@ -24,13 +24,13 @@ const EmailVerification: React.FC = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       if (hasAttemptedVerification) return; // Prevent multiple verification attempts
-      
+
       try {
-        const response = await api.get(`/api/v1/auth/verify-email/${token}`);
+        const response = await api.get(`/auth/verify-email/${token}`);
         setMessage(response.data.message);
         setStatus('success');
         setHasAttemptedVerification(true);
-        
+
         // Add a small delay before invalidating the cache to ensure the backend has updated
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -119,4 +119,4 @@ const EmailVerification: React.FC = () => {
   );
 };
 
-export default EmailVerification; 
+export default EmailVerification;

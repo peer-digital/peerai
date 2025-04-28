@@ -25,7 +25,8 @@ class EmailService:
     if ENVIRONMENT == "production":
         BASE_URL = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
     else:
-        BASE_URL = os.getenv("FE_URL") or os.getenv("VITE_API_BASE_URL") or "http://localhost:3000"
+        # Use the frontend URL for links in emails
+        BASE_URL = "http://localhost:3000"
 
     @classmethod
     def _get_gmail_service(cls):

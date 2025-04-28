@@ -134,12 +134,14 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             pass
 
     # Send verification email
-    # In production, use VITE_API_BASE_URL directly
+    # Always use the backend URL for verification links (it will redirect to frontend)
     import os
     if settings.ENVIRONMENT == "production":
         base_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
     else:
-        base_url = settings.FE_URL
+        # Use the backend URL which will handle the redirect
+        base_url = "http://localhost:8000"
+    # Generate the verification URL that will be sent in the email
     verification_url = f"{base_url}/verify-email/{verification_token}"
     print(f"Generated verification URL: {verification_url}")
     try:

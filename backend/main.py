@@ -145,6 +145,44 @@ for route in app.routes:
     if hasattr(route, 'path'):
         print(f"Path: {route.path}, Name: {route.name}, Methods: {getattr(route, 'methods', 'N/A')}")
 
+@app.get("/verify-email/{token}")
+async def redirect_verify_email(token: str):
+    """
+    Redirect the verification link to the frontend application.
+    This handles direct clicks on email verification links.
+    """
+    from fastapi.responses import RedirectResponse
+    import os
+
+    # Determine the frontend URL based on environment
+    if settings.ENVIRONMENT == "production":
+        frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+    else:
+        # Use the frontend URL (not the backend URL)
+        frontend_url = "http://localhost:3000"  # Frontend runs on port 3000 in dev
+
+    # Redirect to the frontend verification page
+    return RedirectResponse(url=f"{frontend_url}/verify-email/{token}")
+
+@app.get("/register/{referral_code}")
+async def redirect_register(referral_code: str):
+    """
+    Redirect the referral registration link to the frontend application.
+    This handles direct clicks on referral links in emails.
+    """
+    from fastapi.responses import RedirectResponse
+    import os
+
+    # Determine the frontend URL based on environment
+    if settings.ENVIRONMENT == "production":
+        frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+    else:
+        # Use the frontend URL (not the backend URL)
+        frontend_url = "http://localhost:3000"  # Frontend runs on port 3000 in dev
+
+    # Redirect to the frontend registration page with referral code
+    return RedirectResponse(url=f"{frontend_url}/register/{referral_code}")
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Peer AI API"}
