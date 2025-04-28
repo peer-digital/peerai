@@ -28,6 +28,7 @@ import { Role } from '../types/rbac';
 import { api } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { AnnouncementBanner } from '../components/ui';
 
 // Test users for development mode
 const TEST_USERS = [
@@ -157,16 +158,48 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
 
   return (
     <>
+      {/* Beta Banner */}
+      <Box sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        padding: { xs: '12px 16px', sm: 2 },
+        maxHeight: { xs: '80px', sm: '70px' },
+        overflow: 'visible'
+      }}>
+        <AnnouncementBanner
+          message={<>
+            Welcome to our Beta, the platform is still under development! Please <Link
+              href="mailto:info@peerdigital.se?subject=Peer%20AI%20Beta%20Feedback"
+              target="_blank"
+              rel="noopener"
+              sx={{
+                color: 'inherit',
+                textDecoration: 'underline',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
+              contact us
+            </Link> to provide feedback or ask questions.
+          </>}
+          bannerId="welcome-beta-2023-en"
+        />
+      </Box>
+
       <Container component="main" maxWidth="sm" sx={{
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 80px)', // Subtract banner height
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         py: 4,
         position: 'fixed',
         left: '50%',
-        top: '50%',
+        top: '55%', // Move down slightly to account for the banner
         transform: 'translate(-50%, -50%)',
+        pt: { xs: 8, sm: 10 }, // Add more padding at the top to prevent overlap
+        mt: { xs: '40px', sm: '30px' } // Add margin top based on screen size
       }}>
         <Box sx={{
           width: '100%',
