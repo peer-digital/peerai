@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     )
 
     # Frontend URL for email verification and other client-side links
+    # We'll use a validator to check for VITE_API_BASE_URL as a fallback
     FE_URL: str = Field(
         default="http://localhost:3000",
         description="Frontend URL for email verification and other client-side links",
@@ -103,6 +104,17 @@ class Settings(BaseSettings):
         """Set debug mode based on environment if not explicitly set."""
         if v is None:
             return values.get("ENVIRONMENT", "development") == "development"
+        return v
+
+    @validator("FE_URL", pre=True)
+    def set_fe_url_with_fallback(cls, v):
+        """Use VITE_API_BASE_URL as fallback for FE_URL if not explicitly set."""
+        import os
+        if not v or v == "http://localhost:3000":
+            # If FE_URL is not set or is the default value, check for VITE_API_BASE_URL
+            vite_url = os.getenv("VITE_API_BASE_URL")
+            if vite_url:
+                return vite_url
         return v
 
     def get_database_url(self) -> str:
