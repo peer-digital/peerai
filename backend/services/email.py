@@ -20,8 +20,12 @@ class EmailService:
         'https://www.googleapis.com/auth/gmail.compose'
     ]
     FROM_EMAIL = os.getenv("NOTIFICATION_EMAIL_ALIAS", "notifications@peerdigital.se")
-    # Try to get FE_URL first, then fall back to VITE_API_BASE_URL, then use localhost as last resort
-    BASE_URL = os.getenv("FE_URL") or os.getenv("VITE_API_BASE_URL") or "http://localhost:3000"
+    # In production, use VITE_API_BASE_URL directly
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    if ENVIRONMENT == "production":
+        BASE_URL = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+    else:
+        BASE_URL = os.getenv("FE_URL") or os.getenv("VITE_API_BASE_URL") or "http://localhost:3000"
 
     @classmethod
     def _get_gmail_service(cls):
