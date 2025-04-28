@@ -158,16 +158,17 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
 
   return (
     <>
-      {/* Beta Banner */}
+      {/* Beta Banner - Only shown on screens larger than 'sm' breakpoint */}
       <Box sx={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         zIndex: 1000,
-        padding: { xs: '12px 16px', sm: 2 },
-        maxHeight: { xs: '80px', sm: '70px' },
-        overflow: 'visible'
+        padding: 2,
+        maxHeight: '70px',
+        overflow: 'visible',
+        display: { xs: 'none', sm: 'block' } // Hide on mobile screens
       }}>
         <AnnouncementBanner
           message={<>
@@ -189,17 +190,17 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
       </Box>
 
       <Container component="main" maxWidth="sm" sx={{
-        minHeight: 'calc(100vh - 80px)', // Subtract banner height
+        minHeight: { xs: '100vh', sm: 'calc(100vh - 70px)' }, // Full height on mobile, subtract banner height on desktop
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         py: 4,
         position: 'fixed',
         left: '50%',
-        top: '55%', // Move down slightly to account for the banner
+        top: '50%', // Center on mobile, adjust for desktop
         transform: 'translate(-50%, -50%)',
-        pt: { xs: 8, sm: 10 }, // Add more padding at the top to prevent overlap
-        mt: { xs: '40px', sm: '30px' } // Add margin top based on screen size
+        pt: { xs: 2, sm: 8 }, // Less padding on mobile
+        mt: { xs: 0, sm: '30px' } // No margin on mobile, add for desktop
       }}>
         <Box sx={{
           width: '100%',
