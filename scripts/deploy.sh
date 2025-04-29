@@ -77,6 +77,7 @@ Environment="JWT_ALGORITHM=$JWT_ALGORITHM"
 Environment="VITE_API_BASE_URL=$VITE_API_BASE_URL"
 Environment="VITE_APP_ENV=$VITE_APP_ENV"
 Environment="VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED"
+Environment="FE_URL=$https://app.peerdigital.se"
 Environment="API_V1_PREFIX=/api/v1"
 # Ensure the python virtual environment path is correct
 ExecStart=$DEPLOY_DIR/.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT
