@@ -55,6 +55,8 @@ class AuthService {
           is_active: boolean;
           full_name?: string;
           token_limit?: number;
+          default_api_key_id?: number;
+          default_api_key?: string;
         };
       }>(
         '/auth/login',
@@ -245,6 +247,8 @@ class AuthService {
           is_active: boolean;
           full_name?: string;
           token_limit?: number;
+          default_api_key_id?: number;
+          default_api_key?: string;
         };
       }>(
         '/auth/register',
@@ -265,7 +269,9 @@ class AuthService {
           role: userRole,
           name: response.data.user.full_name,
           token_limit: response.data.user.token_limit ?? 10000,
-          permissions: getRolePermissions(userRole)
+          permissions: getRolePermissions(userRole),
+          default_api_key_id: response.data.user.default_api_key_id,
+          default_api_key: response.data.user.default_api_key
         };
       } else {
         // Otherwise get user data from validation endpoint

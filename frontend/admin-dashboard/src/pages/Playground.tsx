@@ -327,17 +327,17 @@ function Playground() {
           setSelectedModel(modelNames[0]);
           updateRequestBody(modelNames[0], mockMode);
         }
-      } catch (apiError) {
-        console.error('API error:', apiError);
+      } catch (error: any) {
+        console.error('API error:', error);
 
         // Check if this is an authentication error (401)
-        if (apiError.response && apiError.response.status === 401) {
+        if (error.response && error.response.status === 401) {
           setIsApiKeyValid(false);
           throw new Error('Invalid API key. Please use a valid API key from your account.');
         } else {
           // For other errors, the API key might still be valid
           setIsApiKeyValid(true);
-          throw apiError;
+          throw error;
         }
       }
     } catch (error) {
@@ -408,17 +408,17 @@ function Playground() {
         // If we get here, the API key is valid
         setIsApiKeyValid(true);
         setResponse(formatResponse(response.data));
-      } catch (apiError) {
-        console.error('API error:', apiError);
+      } catch (error: any) {
+        console.error('API error:', error);
 
         // Check if this is an authentication error (401)
-        if (apiError.response && apiError.response.status === 401) {
+        if (error.response && error.response.status === 401) {
           setIsApiKeyValid(false);
           throw new Error('Invalid API key. Please use a valid API key from your account.');
         } else {
           // For other errors, the API key might still be valid
           setIsApiKeyValid(true);
-          throw apiError;
+          throw error;
         }
       }
     } catch (error) {
