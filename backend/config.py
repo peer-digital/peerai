@@ -108,13 +108,17 @@ class Settings(BaseSettings):
 
     @validator("FE_URL", pre=True)
     def set_fe_url_with_fallback(cls, v):
-        """Use VITE_API_BASE_URL as fallback for FE_URL if not explicitly set."""
+        """Set FE_URL based on environment if not explicitly set."""
         import os
-        if not v or v == "http://localhost:3000":
-            # If FE_URL is not set or is the default value, check for VITE_API_BASE_URL
-            vite_url = os.getenv("VITE_API_BASE_URL")
-            if vite_url:
-                return vite_url
+        # Don't use VITE_API_BASE_URL as fallback since it points to the backend URL
+        # Instead, use explicit frontend URLs based on environment
+        if not v:
+            # If FE_URL is not set, use environment-specific defaults
+            environment = os.getenv("ENVIRONMENT", "development")
+            if environment == "production":
+                return "https://app.peerdigital.se"
+            else:
+                return "http://localhost:3000"  # Frontend runs on port 3000 in dev
         return v
 
     def get_database_url(self) -> str:

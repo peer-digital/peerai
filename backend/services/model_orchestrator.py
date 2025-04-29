@@ -14,8 +14,8 @@ from models.auth import APIKey
 
 # Configure logging
 logger = logging.getLogger(__name__)
-# Set logging level to DEBUG for development
-logger.setLevel(logging.DEBUG)
+# Set logging level to INFO for better performance and security
+logger.setLevel(logging.INFO)
 
 
 class ModelOrchestrator:
@@ -104,10 +104,8 @@ class ModelOrchestrator:
         mappings = self._get_parameter_mappings(model.id)
         provider = self._get_provider(model.provider_id)
 
-        # Log the input request data
-        logger.info(f"Original request data: {request_data}")
-        logger.debug(f"Model: {model.name}, Provider: {provider.name}")
-        logger.debug(f"Model config: {model.config}")
+        # Log only non-sensitive model information
+        logger.info(f"Processing request for model: {model.name}, Provider: {provider.name}")
 
         # Start with a clean request
         transformed_request = {}
@@ -131,9 +129,7 @@ class ModelOrchestrator:
                 ]
                 # Don't add prompt to the transformed request
                 request_data = {k: v for k, v in request_data.items() if k != "prompt"}
-                logger.info(
-                    f"Converted prompt to messages format: {transformed_request['messages']}"
-                )
+                logger.info("Converted prompt to messages format")
             elif "messages" in request_data:
                 # Use messages directly
                 transformed_request["messages"] = request_data["messages"]
@@ -141,9 +137,7 @@ class ModelOrchestrator:
                 request_data = {
                     k: v for k, v in request_data.items() if k != "messages"
                 }
-                logger.info(
-                    f"Using messages directly: {transformed_request['messages']}"
-                )
+                logger.info("Using messages format directly")
 
             # Add standard parameters
             if "temperature" in request_data:
@@ -180,10 +174,8 @@ class ModelOrchestrator:
 
                 transformed_request[provider_param] = value
 
-        # Log the transformed request
-        logger.info(
-            f"Transformed request for {provider.name} model {model.name}: {transformed_request}"
-        )
+        # Log only that the request was transformed
+        logger.info(f"Request transformed for {provider.name} model {model.name}")
 
         return transformed_request
 
@@ -261,8 +253,7 @@ class ModelOrchestrator:
                 # Use a generic error message that doesn't reveal whether the model exists or not
                 raise ValueError(f"Model '{model.name}' not found")
 
-            logger.debug(f"Selected model: {model.name}, provider: {provider.name}")
-            logger.debug(f"Model config: {model.config}")
+            logger.info(f"Selected model: {model.name}, provider: {provider.name}")
 
             # Transform the request
             transformed_request = self._transform_request(model, request_data)
@@ -272,8 +263,6 @@ class ModelOrchestrator:
 
             # Make the API call
             logger.info(f"Calling {provider.name} model {model.name}")
-            logger.debug(f"API URL: {provider.api_base_url}")
-            logger.debug(f"Request payload: {json.dumps(transformed_request)}")
 
             response = await self.http_client.post(
                 provider.api_base_url,
@@ -282,16 +271,8 @@ class ModelOrchestrator:
                 timeout=30.0,
             )
 
-            # Log the response status and headers
+            # Log only the response status
             logger.info(f"Response status: {response.status_code}")
-            logger.info(f"Response headers: {response.headers}")
-
-            # Log the response content
-            try:
-                response_content = response.text
-                logger.info(f"Response content: {response_content[:500]}...")  # Log first 500 chars
-            except Exception as e:
-                logger.error(f"Error logging response content: {str(e)}")
 
             response.raise_for_status()
             result = response.json()

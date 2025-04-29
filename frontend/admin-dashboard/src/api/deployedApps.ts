@@ -68,8 +68,6 @@ const deployedAppsApi = {
   // Get all deployed apps
   getDeployedApps: async (teamId?: number): Promise<DeployedApp[]> => {
     const url = teamId ? `/deployed-apps/?team_id=${teamId}` : '/deployed-apps/';
-    console.log(`Fetching deployed apps from: ${url}`);
-    console.log(`Using token: ${localStorage.getItem('access_token')?.substring(0, 10)}...`);
     const response: AxiosResponse<DeployedApp[]> = await api.get(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -86,8 +84,6 @@ const deployedAppsApi = {
 
   // Deploy a new app
   deployApp: async (app: DeployedAppCreate): Promise<DeployedApp> => {
-    console.log('Deploying app with data:', app);
-    console.log('Using token:', localStorage.getItem('access_token')?.substring(0, 10) + '...');
     const response: AxiosResponse<DeployedApp> = await api.post('/deployed-apps/', app, {
       headers: {
         'Content-Type': 'application/json',

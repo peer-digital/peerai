@@ -33,10 +33,6 @@ api.interceptors.request.use(
       if (config.method?.toLowerCase() === 'post') {
         config.headers['Content-Type'] = 'application/json';
       }
-      console.log(`Adding Authorization header for ${config.url}:`, `Bearer ${token.substring(0, 10)}...`);
-      console.log('Full headers:', config.headers);
-    } else {
-      console.warn(`No token found for request to ${config.url}`);
     }
     return config;
   },
@@ -48,21 +44,14 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log(`Response from ${response.config.url}:`, response);
     return response;
   },
   async (error) => {
-    console.error('API Error:', error);
     if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-      console.error('Response headers:', error.response.headers);
-
       // Handle specific error cases
       switch (error.response.status) {
         case 401:
-          console.error('Authentication error - token may be invalid or expired');
-          console.error('Current token:', localStorage.getItem('access_token'));
+          // Authentication error - don't show toast
           break;
         case 403:
           toast.error('You do not have permission to perform this action');
@@ -76,10 +65,9 @@ api.interceptors.response.use(
           }
       }
     } else if (error.request) {
-      console.error('No response received:', error.request);
       toast.error('Network error. Please check your connection.');
     } else {
-      console.error('Error setting up request:', error.message);
+      console.error('Error setting up request');
     }
     return Promise.reject(error);
   }

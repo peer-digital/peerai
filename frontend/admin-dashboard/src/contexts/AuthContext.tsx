@@ -28,7 +28,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (authService.getToken()) {
           // Validate the token and get user data
           const userData = await authService.validateToken();
-          console.log('Validated user data:', userData); // Debug log
           setUser(userData);
         }
       } catch (error) {
@@ -47,7 +46,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials) => {
     try {
       const { user } = await authService.login(credentials);
-      console.log('Logged in user:', user); // Debug log
       setUser(user);
     } catch (error) {
       console.error('Login failed:', error);
@@ -58,7 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (credentials: RegisterCredentials) => {
     try {
       const { user } = await authService.register(credentials);
-      console.log('Registered user:', user); // Debug log
       setUser(user);
     } catch (error) {
       console.error('Registration failed:', error);

@@ -12,13 +12,9 @@ from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
 from backend.database import get_db
 
-# Debug: Print all settings
-print("\nSettings:")
-print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
-print(f"ENVIRONMENT: {settings.ENVIRONMENT}")
-print(f"DEBUG: {settings.DEBUG}")
-print(f"PROJECT_NAME: {settings.PROJECT_NAME}")
-print(f"VERSION: {settings.VERSION}")
+# Only log non-sensitive settings in development mode
+if settings.ENVIRONMENT == "development":
+    print("\n[BACKEND] Environment: development")
 
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
@@ -61,24 +57,14 @@ app.add_middleware(
 # Add a middleware to log requests and handle authentication for debugging
 @app.middleware("http")
 async def request_logger_middleware(request: Request, call_next):
-    # Log the request details
-    print(f"Request: {request.method} {request.url.path}")
-    print(f"Headers: {request.headers}")
-
-    # Check for redirects that might lose the Authorization header
-    if request.url.path.endswith('/deployed-apps') and not request.url.path.endswith('/'):
-        print("Detected potential redirect that might lose Authorization header")
+    # Log only non-sensitive request details
+    print(f"[BACKEND] Request: {request.method} {request.url.path}")
 
     # Process the request
     response = await call_next(request)
 
     # Log the response status
-    print(f"Response status: {response.status_code}")
-
-    # If we're redirecting, ensure we preserve the Authorization header
-    if response.status_code in (307, 308) and 'Authorization' in request.headers:
-        print("Preserving Authorization header in redirect")
-        # This won't actually modify the client's request, but it's useful for debugging
+    print(f"[BACKEND] Response status: {response.status_code}")
 
     return response
 
@@ -127,15 +113,14 @@ async def health_check():
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
-    # Consider logging the exception details here
-    print(f"Global exception handler caught: {exc}") # Basic logging
+    # Log exception without sensitive details
+    print(f"[BACKEND] Global exception handler caught error: {type(exc).__name__}")
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import routers
 from backend.routes import inference, auth, admin, rbac, referral, admin_models
 
-# Debug: Print API prefix
-print(f"API_V1_PREFIX: {settings.API_V1_PREFIX}")
+# No need to print API prefix
 
 # Include all routes in the main app with appropriate prefixes
 app.include_router(auth.router)          # NO prefix
@@ -161,12 +146,7 @@ app.include_router(deployed_apps_router, prefix=f"{settings.API_V1_PREFIX}")
 from backend.routes.public_apps import router as public_apps_router
 app.include_router(public_apps_router, prefix=f"{settings.API_V1_PREFIX}")
 
-# Debug: Print all registered routes AFTER including all routers
-print("\nRegistered routes AFTER including all routers:")
-for route in app.routes:
-    # Filter out internal routes like static files or websocket if any
-    if hasattr(route, 'path'):
-        print(f"Path: {route.path}, Name: {route.name}, Methods: {getattr(route, 'methods', 'N/A')}")
+# No need to print all registered routes
 
 # Create database tables and seed the app store with sample apps
 try:

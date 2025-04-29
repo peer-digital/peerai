@@ -45,8 +45,6 @@ class AuthService {
       formData.append('username', credentials.email);
       formData.append('password', credentials.password);
 
-      console.log('Sending login request...'); // Debug log
-
       const response = await api.post<{
         access_token: string;
         token_type: string;
@@ -67,9 +65,6 @@ class AuthService {
           },
         }
       );
-
-      console.log('Login response:', response.data); // Debug log
-      console.log('User token limit from login:', response.data.user?.token_limit); // Add detailed token limit log
 
       // Store the access token
       localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
@@ -119,7 +114,6 @@ class AuthService {
 
   async validateToken(): Promise<User> {
     try {
-      console.log('Validating token:', this.getToken());
       const validateResponse = await api.get<{
         id: number;
         email: string;
@@ -130,27 +124,10 @@ class AuthService {
         default_api_key_id?: number;
         default_api_key?: string;
       }>('/auth/validate');
-      console.log('Token validation response:', validateResponse);
-
-      console.log('Token validation response:', {
-        rawData: validateResponse.data,
-        role: validateResponse.data.role,
-        roleType: typeof validateResponse.data.role,
-        roleMapping: ROLE_MAPPING,
-        mappedRole: ROLE_MAPPING[validateResponse.data.role as keyof typeof ROLE_MAPPING],
-        tokenLimit: validateResponse.data.token_limit,
-        defaultApiKeyId: validateResponse.data.default_api_key_id,
-        defaultApiKey: validateResponse.data.default_api_key ?
-          validateResponse.data.default_api_key.slice(0, 4) + '...' : null
-      });
 
       // Ensure we have the required fields
       if (!validateResponse.data?.email || !validateResponse.data?.role) {
-        console.error('Missing required fields:', {
-          hasEmail: !!validateResponse.data?.email,
-          hasRole: !!validateResponse.data?.role,
-          data: validateResponse.data
-        });
+        console.error('Missing required fields in user data');
         // Clear invalid auth state without making additional API calls
         this.clearAuthState();
         throw new Error('Invalid user data received from server');
@@ -169,7 +146,7 @@ class AuthService {
         default_api_key: validateResponse.data.default_api_key
       };
 
-      console.log('Mapped user data:', userData);
+
 
       this.currentUser = userData;
       this.setUser(userData);
@@ -213,7 +190,7 @@ class AuthService {
       if (!userData) return null;
 
       const parsedUser = JSON.parse(userData);
-      console.log('Retrieved user from storage:', parsedUser); // Add storage retrieval log
+
       // Map the role string to enum value without assuming case
       const userRole = ROLE_MAPPING[parsedUser.role as keyof typeof ROLE_MAPPING] || Role.USER;
       return {
@@ -233,7 +210,7 @@ class AuthService {
       ...user,
       role: user.role.toString()
     };
-    console.log('Storing user in localStorage:', userData); // Add storage log
+
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
 
@@ -258,8 +235,6 @@ class AuthService {
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      console.log('Sending registration request...'); // Debug log
-
       const response = await api.post<{
         access_token: string;
         token_type: string;
@@ -275,8 +250,6 @@ class AuthService {
         '/auth/register',
         credentials
       );
-
-      console.log('Registration response:', response.data); // Debug log
 
       // Store the access token
       localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
@@ -299,7 +272,7 @@ class AuthService {
         userData = await this.validateToken();
       }
 
-      console.log('Final user data:', userData); // Debug log
+
 
       // Store user data in memory and storage
       this.currentUser = userData;
