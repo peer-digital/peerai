@@ -20,6 +20,7 @@ import {
   Preview as PreviewIcon,
   Delete as DeleteIcon,
   Code as CodeIcon,
+  Storage as StorageIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedAppDetail } from '../api/deployedApps';
@@ -30,6 +31,7 @@ import validator from '@rjsf/validator-ajv8';
 import { replacePlaceholders } from '../utils/templateHelpers';
 import DevicePreview from '../components/preview/DevicePreview';
 import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
+import DocumentUploader from '../components/rag/DocumentUploader';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -301,7 +303,16 @@ const DeployedAppView: React.FC = () => {
               size="small"
               variant="outlined"
               sx={{ ml: 1 }}
-              onClick={() => window.open(app.public_url || '', '_blank')}
+              onClick={() => {
+                // In development, modify the URL to use localhost instead of production URL
+                let url = app.public_url || '';
+                if (import.meta.env.DEV && url.includes('peerai-be.onrender.com')) {
+                  // Replace the production domain with localhost:3000
+                  url = url.replace('https://peerai-be.onrender.com', 'http://localhost:3000');
+                  console.log('Development mode: Modified URL to', url);
+                }
+                window.open(url, '_blank');
+              }}
             >
               Open
             </Button>
@@ -331,6 +342,10 @@ const DeployedAppView: React.FC = () => {
         >
           <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
           <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
+          {/* Only show the Knowledge Base tab for Intelligent Chatbot apps with RAG enabled */}
+          {app.template.slug === 'intelligent-chatbot' &&
+           formData?.ai_settings?.enable_rag &&
+           <Tab icon={<StorageIcon />} label="Knowledge Base" id="tab-2" aria-controls="tabpanel-2" />}
         </Tabs>
 
         <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
@@ -348,6 +363,10 @@ const DeployedAppView: React.FC = () => {
 
           <TabPanel value={tabValue} index={1}>
             <PreviewComponent />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={2}>
+            <DocumentUploader appSlug={app.slug} />
           </TabPanel>
         </Box>
       </Box>

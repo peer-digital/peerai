@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
@@ -118,7 +119,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import routers
-from backend.routes import inference, auth, admin, rbac, referral, admin_models
+from backend.routes import inference, auth, admin, rbac, referral, admin_models, rag
 
 # No need to print API prefix
 
@@ -129,6 +130,7 @@ app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}")
 app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin")
 app.include_router(referral.router)      # NO prefix
 app.include_router(inference.router, prefix=f"{settings.API_V1_PREFIX}/llm") # ADDED LLM router here
+app.include_router(rag.router, prefix=f"{settings.API_V1_PREFIX}") # RAG router
 
 # App Store router (deprecated - kept for backward compatibility)
 from backend.routes.app_store import router as app_store_router
@@ -145,6 +147,13 @@ app.include_router(deployed_apps_router, prefix=f"{settings.API_V1_PREFIX}")
 # Public Apps router - no authentication required
 from backend.routes.public_apps import router as public_apps_router
 app.include_router(public_apps_router, prefix=f"{settings.API_V1_PREFIX}")
+
+# Mount static files directory
+import os
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # No need to print all registered routes
 

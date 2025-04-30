@@ -158,6 +158,7 @@
         .input-container {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .chat-input {
@@ -167,6 +168,7 @@
             border-radius: var(--border-radius);
             font-size: var(--font-size-medium);
             font-family: var(--font-family);
+            min-width: 200px;
         }
 
         .send-button {
@@ -178,6 +180,108 @@
             cursor: pointer;
             font-size: var(--font-size-medium);
             font-weight: bold;
+        }
+
+        /* File upload section */
+        .file-upload-container {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-upload-button {
+            background-color: var(--light-bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: var(--font-size-small);
+        }
+
+        .file-upload-button:hover {
+            background-color: var(--border-color);
+        }
+
+        .file-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .file-item {
+            background-color: var(--light-bg-color);
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            padding: 4px 8px;
+            font-size: var(--font-size-small);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .file-item-remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .rag-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: auto;
+        }
+
+        .rag-toggle-label {
+            font-size: var(--font-size-small);
+        }
+
+        .rag-toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .rag-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .rag-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .rag-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .rag-toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .rag-toggle-slider:before {
+            transform: translateX(20px);
         }
 
 
@@ -230,6 +334,22 @@
             <div class="input-container">
                 <input type="text" class="chat-input" id="user-input" placeholder="{{content.input_placeholder}}">
                 <button class="send-button" id="send-button">{{content.send_button_text}}</button>
+
+                <!-- File upload section (only visible if RAG is enabled) -->
+                <div class="file-upload-container" id="file-upload-container" style="display: {{ai_settings.enable_rag ? 'flex' : 'none'}};">
+                    <label class="file-upload-button">
+                        Upload Files
+                        <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.txt,.docx,.md">
+                    </label>
+                    <div class="file-list" id="file-list"></div>
+                    <div class="rag-toggle">
+                        <span class="rag-toggle-label">Use Knowledge Base</span>
+                        <label class="rag-toggle-switch">
+                            <input type="checkbox" id="rag-toggle" {{ai_settings.enable_rag ? 'checked' : ''}}>
+                            <span class="rag-toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -240,6 +360,8 @@
         // Configuration from template
         const API_KEY = '{{api_key}}';
         const MODEL = '{{ai_settings.model}}';
+        const ENABLE_RAG = {{ai_settings.enable_rag}};
+        const RAG_INDEX_ID = {{ai_settings.rag_index_id || 'null'}};
 
         // Dynamically determine the API base URL based on the current environment
         // 1. Check for server-url meta tag (added by the server)
@@ -277,14 +399,33 @@
         const apiBaseUrl = getApiBaseUrl();
         const isInIframe = window !== window.parent;
 
-        // Construct the full API URL
+        // Construct the API URLs
         const API_URL = `${apiBaseUrl}/api/v1/llm/completions`;
+        const RAG_API_URL = `${apiBaseUrl}/api/v1/rag`;
 
         // DOM elements
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
         const quickActions = document.querySelectorAll('.quick-action');
+        const fileUpload = document.getElementById('file-upload');
+        const fileList = document.getElementById('file-list');
+        const fileUploadContainer = document.getElementById('file-upload-container');
+        const ragToggle = document.getElementById('rag-toggle');
+
+        // RAG state
+        let ragEnabled = ENABLE_RAG;
+        let ragIndexId = RAG_INDEX_ID;
+        let uploadedFiles = [];
+
+        // Initialize RAG UI
+        if (ENABLE_RAG) {
+            fileUploadContainer.style.display = 'flex';
+            ragToggle.checked = true;
+        } else {
+            fileUploadContainer.style.display = 'none';
+            ragToggle.checked = false;
+        }
 
         // Add event listeners
         sendButton.addEventListener('click', sendMessage);
@@ -301,6 +442,130 @@
                 sendMessage();
             });
         });
+
+        // Add event listener for file upload
+        fileUpload.addEventListener('change', handleFileUpload);
+
+        // Add event listener for RAG toggle
+        ragToggle.addEventListener('change', function() {
+            ragEnabled = this.checked;
+            console.log('RAG enabled:', ragEnabled);
+        });
+
+        // Function to handle file upload
+        async function handleFileUpload() {
+            const files = fileUpload.files;
+            if (!files || files.length === 0) return;
+
+            // Create RAG index if needed
+            if (!ragIndexId) {
+                try {
+                    const indexResponse = await fetch(`${RAG_API_URL}/indexes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': API_KEY
+                        },
+                        credentials: isInIframe ? 'same-origin' : 'omit',
+                        body: JSON.stringify({
+                            name: 'Intelligent Chatbot Index',
+                            description: 'Index for the Intelligent Chatbot',
+                            embedding_model: 'mistral-embed'
+                        })
+                    });
+
+                    if (!indexResponse.ok) {
+                        throw new Error(`Failed to create RAG index: ${indexResponse.statusText}`);
+                    }
+
+                    const indexData = await indexResponse.json();
+                    ragIndexId = indexData.id;
+                    console.log('Created RAG index:', ragIndexId);
+                } catch (error) {
+                    console.error('Error creating RAG index:', error);
+                    addMessage('Error creating knowledge base. Please try again.', 'ai');
+                    return;
+                }
+            }
+
+            // Upload each file
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    // Show uploading message
+                    addMessage(`Uploading and processing ${file.name}...`, 'ai');
+
+                    // Upload file
+                    const uploadResponse = await fetch(`${RAG_API_URL}/indexes/${ragIndexId}/documents`, {
+                        method: 'POST',
+                        headers: {
+                            'X-API-Key': API_KEY
+                        },
+                        credentials: isInIframe ? 'same-origin' : 'omit',
+                        body: formData
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`Failed to upload file: ${uploadResponse.statusText}`);
+                    }
+
+                    const uploadData = await uploadResponse.json();
+                    console.log('Uploaded file:', uploadData);
+
+                    // Add file to list
+                    addFileToList(file.name, uploadData.id);
+
+                    // Add success message
+                    addMessage(`Successfully added ${file.name} to the knowledge base.`, 'ai');
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    addMessage(`Error uploading ${file.name}. Please try again.`, 'ai');
+                }
+            }
+
+            // Clear file input
+            fileUpload.value = '';
+        }
+
+        // Function to add file to list
+        function addFileToList(fileName, documentId) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                ${fileName}
+                <span class="file-item-remove" data-id="${documentId}">×</span>
+            `;
+
+            // Add event listener to remove button
+            const removeButton = fileItem.querySelector('.file-item-remove');
+            removeButton.addEventListener('click', function() {
+                const docId = this.getAttribute('data-id');
+                removeFile(docId, fileItem);
+            });
+
+            fileList.appendChild(fileItem);
+            uploadedFiles.push({ name: fileName, id: documentId });
+        }
+
+        // Function to remove file
+        async function removeFile(documentId, fileItem) {
+            try {
+                // Remove file from UI
+                fileList.removeChild(fileItem);
+
+                // Remove file from array
+                uploadedFiles = uploadedFiles.filter(file => file.id !== documentId);
+
+                console.log('Removed file:', documentId);
+            } catch (error) {
+                console.error('Error removing file:', error);
+            }
+        }
 
         // Function to send message
         async function sendMessage() {
@@ -324,7 +589,56 @@
                 // Scroll to bottom
                 chatContainer.scrollTop = chatContainer.scrollHeight;
 
-                // Prepare request body
+                // Check if we're in preview mode (iframe in admin dashboard)
+                // We need to be more careful about detecting preview mode
+                // 1. Check if we're in an iframe
+                // 2. Try to access parent location (may fail due to security)
+                // 3. Check if API_KEY is empty or placeholder (common in preview)
+                const isPreviewMode = isInIframe || API_KEY === '{{api_key}}' || API_KEY === '';
+
+                if (isPreviewMode) {
+                    console.log('Preview mode detected - simulating API response');
+
+                    // Simulate API delay
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    // Remove typing indicator
+                    const indicator = document.getElementById('typing-indicator');
+                    if (indicator) {
+                        chatContainer.removeChild(indicator);
+                    }
+
+                    // Generate a simulated response
+                    let simulatedResponse = `This is a preview response to: "${message}"\n\nIn the deployed app, this would be a real response from the AI model.`;
+
+                    // Add RAG simulation if enabled
+                    if (ragEnabled) {
+                        simulatedResponse += "\n\nThis response would be enhanced with your knowledge base documents.";
+
+                        // Add AI response to chat
+                        addMessage(simulatedResponse, 'ai');
+
+                        // Add RAG indicator
+                        const ragIndicator = document.createElement('div');
+                        ragIndicator.style.fontSize = 'var(--font-size-small)';
+                        ragIndicator.style.color = 'var(--secondary-color)';
+                        ragIndicator.style.fontStyle = 'italic';
+                        ragIndicator.style.marginTop = '5px';
+                        ragIndicator.style.textAlign = 'right';
+                        ragIndicator.textContent = '(Response enhanced with knowledge base)';
+                        chatContainer.appendChild(ragIndicator);
+
+                        // Scroll to bottom
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    } else {
+                        // Add AI response to chat
+                        addMessage(simulatedResponse, 'ai');
+                    }
+
+                    return;
+                }
+
+                // Prepare request body for real API call
                 const requestBody = {
                     messages: [
                         {role: 'system', content: '{{ai_settings.system_prompt}}'},
@@ -333,6 +647,13 @@
                     model: MODEL,
                     temperature: {{ai_settings.temperature}}
                 };
+
+                // Add RAG parameters if enabled and index exists
+                if (ragEnabled && ragIndexId) {
+                    requestBody.rag_enabled = true;
+                    requestBody.rag_index_id = ragIndexId;
+                    requestBody.rag_top_k = 3;
+                }
 
                 // Determine the appropriate fetch options based on the environment
                 const fetchOptions = {
@@ -380,6 +701,21 @@
 
                 // Add AI response to chat
                 addMessage(content || '{{content.no_response_text}}', 'ai');
+
+                // If RAG was used, add a small indicator
+                if (data.additional_data && data.additional_data.rag_used) {
+                    const ragIndicator = document.createElement('div');
+                    ragIndicator.style.fontSize = 'var(--font-size-small)';
+                    ragIndicator.style.color = 'var(--secondary-color)';
+                    ragIndicator.style.fontStyle = 'italic';
+                    ragIndicator.style.marginTop = '5px';
+                    ragIndicator.style.textAlign = 'right';
+                    ragIndicator.textContent = '(Response enhanced with knowledge base)';
+                    chatContainer.appendChild(ragIndicator);
+
+                    // Scroll to bottom
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
 
             } catch (error) {
                 console.error('Error:', error);

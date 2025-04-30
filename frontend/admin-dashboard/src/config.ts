@@ -1,8 +1,14 @@
 // @important: API base URL configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+// In development, use localhost; in production, use the production URL
+export const API_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:8000'
+  : (import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com');
 
 // Public API URL for deployed apps (may be different from admin API URL)
-export const PUBLIC_API_URL = import.meta.env.VITE_PUBLIC_API_URL || API_BASE_URL;
+// In development, use localhost:3000 for the frontend URL
+export const PUBLIC_API_URL = import.meta.env.DEV
+  ? 'http://localhost:3000'
+  : (import.meta.env.VITE_PUBLIC_API_URL || API_BASE_URL);
 
 // @important: Default API key for development (should be empty in production)
 export const DEFAULT_API_KEY = import.meta.env.VITE_DEFAULT_API_KEY || '';

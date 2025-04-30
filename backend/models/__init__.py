@@ -8,6 +8,7 @@ from .referral import Referral
 from .app_templates import AppTemplate
 from .deployed_apps import DeployedApp
 from .ai_apps import AIApp
+from .rag import RAGIndex, Document, DocumentChunk
 
 __all__ = [
     "Base",
@@ -24,4 +25,7 @@ __all__ = [
     "AppTemplate",
     "DeployedApp",
     "AIApp",
+    "RAGIndex",
+    "Document",
+    "DocumentChunk",
 ]

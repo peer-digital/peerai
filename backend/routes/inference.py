@@ -22,9 +22,11 @@ from sqlalchemy import func
 
 from backend.models.auth import APIKey, User, DBSystemSettings
 from backend.models.usage import UsageRecord
+from backend.models.rag import RAGIndex
 from backend.database import get_db
 from backend.config import settings
 from backend.services.model_orchestrator import ModelOrchestrator
+from backend.services.rag_service import RAGService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -43,6 +45,10 @@ class TextCompletionRequest(BaseModel):
     stop: Optional[Union[str, List[str]]] = None
     random_seed: Optional[int] = None
     model: Optional[str] = None  # Model name to use, or None for default
+    # RAG-specific parameters
+    rag_enabled: Optional[bool] = Field(default=False)
+    rag_index_id: Optional[int] = None
+    rag_top_k: Optional[int] = Field(default=3, ge=1, le=10)
     # mock_mode is only available in development environment
     mock_mode: Optional[bool] = Field(default=False, exclude=settings.ENVIRONMENT != "development")
 
@@ -56,6 +62,13 @@ class TextCompletionRequest(BaseModel):
             and values["messages"] is None
         ):
             raise ValueError("Either 'prompt' or 'messages' must be provided")
+        return v
+
+    @validator("rag_index_id")
+    def validate_rag(cls, v, values):
+        """Validate that rag_index_id is provided if rag_enabled is True."""
+        if values.get("rag_enabled") and v is None:
+            raise ValueError("rag_index_id must be provided when rag_enabled is True")
         return v
 
 
@@ -487,7 +500,48 @@ async def create_completion(
         if request.prompt:
             request_data["prompt"] = request.prompt
         elif request.messages:
-            request_data["messages"] = request.messages
+            request_data["messages"] = request.messages.copy()  # Make a copy to avoid modifying the original
+
+        # Handle RAG if enabled
+        if request.rag_enabled and request.rag_index_id:
+            try:
+                # Initialize RAG service
+                rag_service = RAGService(db)
+
+                # Check if the index exists
+                index = db.query(RAGIndex).filter(RAGIndex.id == request.rag_index_id).first()
+                if not index:
+                    raise ValueError(f"RAG index with ID {request.rag_index_id} not found")
+
+                # Augment the prompt or messages with retrieved context
+                if request.prompt:
+                    # For prompt-based requests
+                    augmented_prompt = await rag_service.augment_prompt(
+                        query=request.prompt,
+                        index_id=request.rag_index_id,
+                        top_k=request.rag_top_k or 3
+                    )
+                    request_data["prompt"] = augmented_prompt
+                elif request.messages:
+                    # For chat-based requests
+                    augmented_messages = await rag_service.augment_messages(
+                        messages=request_data["messages"],
+                        index_id=request.rag_index_id,
+                        top_k=request.rag_top_k or 3
+                    )
+                    request_data["messages"] = augmented_messages
+
+                # Add RAG metadata to the request
+                request_data["rag_metadata"] = {
+                    "index_id": request.rag_index_id,
+                    "top_k": request.rag_top_k or 3
+                }
+
+                logger.info(f"RAG enabled for request with index {request.rag_index_id}")
+            except Exception as rag_error:
+                logger.error(f"Error in RAG processing: {str(rag_error)}")
+                # Continue without RAG if there's an error
+                logger.info("Continuing without RAG due to error")
 
         # Add other parameters
         request_data["temperature"] = request.temperature
@@ -515,6 +569,13 @@ async def create_completion(
 
         # Convert to CompletionResponse
         response = CompletionResponse(**response_data)
+
+        # Add RAG info to additional_data if RAG was used
+        if request.rag_enabled and request.rag_index_id and not response.additional_data:
+            response.additional_data = {"rag_used": True, "rag_index_id": request.rag_index_id}
+        elif request.rag_enabled and request.rag_index_id and response.additional_data:
+            response.additional_data["rag_used"] = True
+            response.additional_data["rag_index_id"] = request.rag_index_id
 
         # Usage is already recorded by the orchestrator
         return response

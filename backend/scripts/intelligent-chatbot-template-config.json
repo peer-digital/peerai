@@ -140,6 +140,18 @@
             "title": "System Prompt",
             "description": "Instructions for the AI model",
             "default": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses."
+          },
+          "enable_rag": {
+            "type": "boolean",
+            "title": "Enable RAG",
+            "description": "Enable Retrieval Augmented Generation to enhance responses with uploaded documents",
+            "default": true
+          },
+          "rag_index_id": {
+            "type": "integer",
+            "title": "RAG Index ID",
+            "description": "The ID of the RAG index to use (leave empty to create a new one)",
+            "default": null
           }
         },
         "required": ["model"]
@@ -297,7 +309,9 @@
     "ai_settings": {
       "model": "mistral-large-latest",
       "temperature": 0.7,
-      "system_prompt": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses."
+      "system_prompt": "You are a helpful, friendly assistant. Provide concise, accurate, and helpful responses.",
+      "enable_rag": true,
+      "rag_index_id": null
     },
     "styling": {
       "primary_color": "#1a56db",
