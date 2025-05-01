@@ -5,7 +5,7 @@ export const completionsExample = {
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://peerai-be.onrender.com/api/v1/llm/completions \\
+curl -X POST http://localhost:8000/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -32,7 +32,7 @@ export const chatExample = {
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://peerai-be.onrender.com/api/v1/llm/completions \\
+curl -X POST http://localhost:8000/api/v1/llm/completions \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -61,7 +61,7 @@ export const visionExample = {
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://peerai-be.onrender.com/api/v1/llm/vision \\
+curl -X POST http://localhost:8000/api/v1/llm/vision \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -85,7 +85,7 @@ export const audioExample = {
 # export PEERAI_API_KEY=your-api-key
 # curl ... -H "X-API-Key: $PEERAI_API_KEY"
 
-curl -X POST https://peerai-be.onrender.com/api/v1/llm/audio \\
+curl -X POST http://localhost:8000/api/v1/llm/audio \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{

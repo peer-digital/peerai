@@ -19,7 +19,7 @@ if settings.ENVIRONMENT == "development":
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
     "https://peerai-fe.onrender.com",
-    "https://peerai-be.onrender.com",
+    "http://localhost:8000",
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.peerdigital.se",

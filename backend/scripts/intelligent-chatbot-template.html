@@ -269,7 +269,18 @@
                 }
             } catch (e) {
                 console.warn('Error determining API base URL:', e);
-                // Fallback to a default URL
+                // Fallback to a default URL based on environment
+                // In production, try to use the current window's origin
+                // In development, use localhost:8000
+                try {
+                    // Check if we're in a browser environment
+                    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+                        return window.location.origin;
+                    }
+                } catch (err) {
+                    console.warn('Could not determine window origin:', err);
+                }
+                // Final fallback
                 return 'http://localhost:8000';
             }
         };

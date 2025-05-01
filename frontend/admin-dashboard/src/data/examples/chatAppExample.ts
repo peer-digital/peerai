@@ -106,7 +106,7 @@ export const chatAppExample = {
 
     <script>
     const API_KEY = 'YOUR_API_KEY';  // Replace with secure key management in production
-    const API_URL = 'https://peerai-be.onrender.com/api/v1/llm/completions';
+    const API_URL = 'http://localhost:8000/api/v1/llm/completions';
 
     function showElement(id) {
         document.getElementById(id).classList.remove('hidden');

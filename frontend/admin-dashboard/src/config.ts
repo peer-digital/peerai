@@ -1,5 +1,5 @@
 // @important: API base URL configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://peerai-be.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Public API URL for deployed apps (may be different from admin API URL)
 export const PUBLIC_API_URL = import.meta.env.VITE_PUBLIC_API_URL || API_BASE_URL;

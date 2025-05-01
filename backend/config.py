@@ -11,7 +11,7 @@ DEFAULT_ORIGINS = [
     "http://localhost:5173",
     "https://app.peerdigital.se",
     "https://peerai-fe.onrender.com",
-    "https://peerai-be.onrender.com",
+    "http://localhost:8000",
 ]
 
 

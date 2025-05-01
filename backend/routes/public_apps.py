@@ -1,7 +1,6 @@
 """
 Public routes for accessing deployed AI apps.
 """
-from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.responses import HTMLResponse
@@ -53,7 +52,16 @@ async def get_public_app(
     # Add the server's base URL as a meta tag to help client-side scripts
     # determine the correct API endpoint
     from backend.config import settings
-    server_url = settings.FE_URL.rstrip('/')
+
+    # Determine the correct API URL based on environment
+    if settings.ENVIRONMENT == "development":
+        # In development, use localhost:8000 for the API
+        server_url = "http://localhost:8000"
+    else:
+        # In production, use the request's host URL or the configured FE_URL
+        # This ensures the API calls go to the same server that served the app
+        server_url = settings.FE_URL.rstrip('/')
+
     meta_tag = f'<meta name="server-url" content="{server_url}" />'
     html_content = html_content.replace('</head>', f'{meta_tag}\n</head>')
 
