@@ -401,15 +401,15 @@ async def remove_document_from_app(
     return None
 
 
-@router.get("/app/{app_slug}", response_model=List[DocumentResponse])
-async def list_public_app_documents(
+@router.get("/app/slug/{app_slug}", response_model=List[DocumentResponse])
+async def list_public_app_documents_by_slug(
     app_slug: str,
     db: Session = Depends(get_db),
     auth_header: str = Depends(api_key_header),
     x_api_key: str = Depends(x_api_key_header),
 ):
     """
-    List documents associated with a specific app for public access.
+    List documents associated with a specific app for public access using the app slug.
     This endpoint is used by the RAG chatbot to retrieve documents.
     """
     # Try to get API key from different headers
@@ -456,5 +456,64 @@ async def list_public_app_documents(
     )
 
     print(f"Found {len(documents)} documents for app {app.slug}")
+
+    return documents
+
+
+@router.get("/app/id/{app_id}", response_model=List[DocumentResponse])
+async def list_public_app_documents_by_id(
+    app_id: int,
+    db: Session = Depends(get_db),
+    auth_header: str = Depends(api_key_header),
+    x_api_key: str = Depends(x_api_key_header),
+):
+    """
+    List documents associated with a specific app for public access using the app ID.
+    This endpoint is used by the RAG chatbot to retrieve documents.
+    """
+    # Try to get API key from different headers
+    api_key = None
+
+    # Check Authorization header
+    if auth_header and auth_header.startswith("Bearer "):
+        api_key = auth_header.replace("Bearer ", "")
+
+    # If no API key in Authorization header, try X-API-Key header
+    if not api_key and x_api_key:
+        api_key = x_api_key
+
+    # Check if we have a valid API key
+    if not api_key or not api_key.startswith("pk_"):
+        print(f"Invalid API key format: {api_key}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+        )
+
+    # Find the app by ID
+    from backend.models.deployed_apps import DeployedApp
+    app = db.query(DeployedApp).filter(
+        DeployedApp.id == app_id,
+        DeployedApp.is_active.is_(True)
+    ).first()
+
+    if not app:
+        print(f"App not found: {app_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="App not found",
+        )
+
+    print(f"Found app: {app.id} ({app.slug})")
+
+    # Get documents associated with the app
+    documents = (
+        db.query(Document)
+        .join(AppDocument)
+        .filter(AppDocument.app_id == app_id, AppDocument.is_active.is_(True))
+        .all()
+    )
+
+    print(f"Found {len(documents)} documents for app {app_id}")
 
     return documents

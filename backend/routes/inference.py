@@ -588,23 +588,47 @@ async def create_rag_completion(
 
     # Check if app exists - support both app_id and app_slug
     app_documents = None
+    app_id_to_use = None
 
     # If app_id is provided, use it directly
     if request.app_id:
-        app_documents = db.query(AppDocument).filter(
-            AppDocument.app_id == request.app_id,
-            AppDocument.is_active.is_(True)
-        ).all()
+        app_id_to_use = request.app_id
+        print(f"Using provided app_id: {app_id_to_use}")
 
     # If app_slug is provided, look up the app by slug
     elif hasattr(request, 'app_slug') and request.app_slug:
         from backend.models.deployed_apps import DeployedApp
         app = db.query(DeployedApp).filter(DeployedApp.slug == request.app_slug).first()
         if app:
-            app_documents = db.query(AppDocument).filter(
-                AppDocument.app_id == app.id,
-                AppDocument.is_active.is_(True)
-            ).all()
+            app_id_to_use = app.id
+            print(f"Found app_id {app_id_to_use} for slug {request.app_slug}")
+            # Store the app_id for future use
+            request.app_id = app_id_to_use
+
+    # Try to extract app_id from app_slug if it's in the format "rag-chatbot-123"
+    if not app_id_to_use and hasattr(request, 'app_slug') and request.app_slug:
+        import re
+        match = re.search(r'(\d+)$', request.app_slug)
+        if match:
+            extracted_id = int(match.group(1))
+            print(f"Extracted app_id {extracted_id} from slug {request.app_slug}")
+
+            # Check if this ID exists in the database
+            from backend.models.deployed_apps import DeployedApp
+            app = db.query(DeployedApp).filter(DeployedApp.id == extracted_id).first()
+            if app:
+                app_id_to_use = extracted_id
+                print(f"Found app with extracted ID {app_id_to_use}")
+                # Store the app_id for future use
+                request.app_id = app_id_to_use
+
+    # Now get the app documents using the app_id we determined
+    if app_id_to_use:
+        app_documents = db.query(AppDocument).filter(
+            AppDocument.app_id == app_id_to_use,
+            AppDocument.is_active.is_(True)
+        ).all()
+        print(f"Found {len(app_documents)} documents for app_id {app_id_to_use}")
 
     if not app_documents or len(app_documents) == 0:
         raise HTTPException(
@@ -617,23 +641,15 @@ async def create_rag_completion(
         doc_processor = DocumentProcessor(db)
 
         # Get the app ID to use for searching
-        search_app_id = None
-
-        # If app_id is provided directly, use it
-        if request.app_id:
-            search_app_id = request.app_id
-        # If app_slug is provided, look up the app ID
-        elif hasattr(request, 'app_slug') and request.app_slug:
-            from backend.models.deployed_apps import DeployedApp
-            app = db.query(DeployedApp).filter(DeployedApp.slug == request.app_slug).first()
-            if app:
-                search_app_id = app.id
-
-        if not search_app_id:
+        # At this point, request.app_id should be set either directly or from the slug lookup
+        if not request.app_id:
             raise HTTPException(
                 status_code=400,
                 detail="Either app_id or app_slug must be provided"
             )
+
+        search_app_id = request.app_id
+        print(f"Using app_id {search_app_id} for document search")
 
         # Search for relevant document chunks
         relevant_chunks = await doc_processor.search_similar_chunks(

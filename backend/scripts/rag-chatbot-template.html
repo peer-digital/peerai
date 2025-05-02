@@ -347,9 +347,26 @@
                             APP_ID = storedAppId;
                             console.log('Using app ID from localStorage:', APP_ID);
                         } else {
-                            // Last resort: hardcode a default for testing
-                            APP_ID = '438'; // Use the app ID from your URL: rag-chatbot-438
-                            console.log('Using hardcoded default app ID for testing:', APP_ID);
+                            // Try to extract from URL path one more time
+                            const pathMatch = window.location.pathname.match(/rag-chatbot-(\d+)/);
+                            if (pathMatch && pathMatch[1]) {
+                                APP_ID = pathMatch[1];
+                                console.log('Using app ID extracted from URL path as fallback:', APP_ID);
+                            } else if (window !== window.parent) {
+                                // Try to extract from parent URL path
+                                try {
+                                    const parentPath = window.parent.location.pathname;
+                                    const parentMatch = parentPath.match(/rag-chatbot-(\d+)/);
+                                    if (parentMatch && parentMatch[1]) {
+                                        APP_ID = parentMatch[1];
+                                        console.log('Using app ID extracted from parent URL path as fallback:', APP_ID);
+                                    }
+                                } catch (e) {
+                                    console.warn('Error accessing parent URL path:', e);
+                                }
+                            } else {
+                                console.warn('Could not determine app ID from any source. RAG functionality may not work correctly.');
+                            }
                         }
                     }
                 }
@@ -407,9 +424,33 @@
         // Construct the documents API URL using the app ID
         let DOCUMENTS_API_URL;
 
-        if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
-            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/${APP_ID}`;
-            console.log('Documents API URL:', DOCUMENTS_API_URL);
+        // IMPORTANT: Try to extract app ID from URL path first
+        const urlPathForDocAPI = window.location.pathname;
+        const chatbotRegexForDocAPI = /rag-chatbot-(\d+)/;
+        const chatbotMatchForDocAPI = urlPathForDocAPI.match(chatbotRegexForDocAPI);
+
+        if (chatbotMatchForDocAPI && chatbotMatchForDocAPI[1]) {
+            // URL path extraction takes highest precedence
+            const extractedIdFromPath = chatbotMatchForDocAPI[1];
+            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${extractedIdFromPath}`;
+            console.log('Documents API URL (using app_id from URL path):', DOCUMENTS_API_URL);
+        } else if (window !== window.parent) {
+            // If in iframe, try to extract from parent URL path
+            try {
+                const parentPathForDocAPI = window.parent.location.pathname;
+                const parentMatchForDocAPI = parentPathForDocAPI.match(/rag-chatbot-(\d+)/);
+                if (parentMatchForDocAPI && parentMatchForDocAPI[1]) {
+                    const extractedIdFromParent = parentMatchForDocAPI[1];
+                    DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${extractedIdFromParent}`;
+                    console.log('Documents API URL (using app_id from parent URL path):', DOCUMENTS_API_URL);
+                }
+            } catch (e) {
+                console.warn('Error accessing parent URL path for document API:', e);
+            }
+        } else if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
+            // Use the app_id from template as fallback
+            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${APP_ID}`;
+            console.log('Documents API URL (using app_id from template):', DOCUMENTS_API_URL);
         } else {
             console.warn('No valid app ID available for document retrieval');
             DOCUMENTS_API_URL = null;
@@ -520,6 +561,40 @@
                 console.log('Current APP_ID from template:', APP_ID);
                 console.log('APP_ID type:', typeof APP_ID);
 
+                // IMPORTANT: Always prioritize extracting app ID from the URL path
+                const urlPath = window.location.pathname;
+                const chatbotRegex = /rag-chatbot-(\d+)/;
+                const chatbotMatch = urlPath.match(chatbotRegex);
+
+                if (chatbotMatch && chatbotMatch[1]) {
+                    const extractedId = parseInt(chatbotMatch[1], 10);
+                    console.log('Extracted numeric app ID from URL path:', extractedId);
+
+                    // Set APP_ID to the extracted numeric ID - this overrides any previous value
+                    APP_ID = extractedId.toString();
+                    console.log('Setting APP_ID to extracted value from URL path:', APP_ID);
+                }
+
+                // If in iframe, try to extract from parent URL
+                try {
+                    if (window !== window.parent) {
+                        const parentUrl = document.referrer;
+                        console.log('Parent URL:', parentUrl);
+
+                        const parentMatch = parentUrl.match(/rag-chatbot-(\d+)/);
+                        if (parentMatch && parentMatch[1]) {
+                            const extractedId = parseInt(parentMatch[1], 10);
+                            console.log('Extracted numeric app ID from parent URL:', extractedId);
+
+                            // Set APP_ID to the extracted numeric ID
+                            APP_ID = extractedId.toString();
+                            console.log('Setting APP_ID to extracted value from parent URL:', APP_ID);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error accessing parent URL:', e);
+                }
+
                 // IMPORTANT DEBUG: Log all configuration values to see what's being passed
                 console.log('All template variables:');
                 console.log('- API_KEY:', API_KEY ? (API_KEY.substring(0, 4) + '...') : 'none');
@@ -548,9 +623,15 @@
                             numericAppId = parseInt(userInput, 10);
                             console.log('Using manually entered app ID:', numericAppId);
                         } else {
-                            // Absolute last resort - use a default
-                            numericAppId = 438; // Default fallback
-                            console.warn('Using default app ID:', numericAppId);
+                            // Don't use a hardcoded default - extract from URL path
+                            const pathMatch = window.location.pathname.match(/rag-chatbot-(\d+)/);
+                            if (pathMatch && pathMatch[1]) {
+                                numericAppId = parseInt(pathMatch[1], 10);
+                                console.log('Using app ID extracted from URL path as fallback:', numericAppId);
+                            } else {
+                                // Absolute last resort - use a default but log a warning
+                                console.warn('Could not determine app ID from any source. RAG functionality may not work correctly.');
+                            }
                         }
                     }
                 }
@@ -610,17 +691,42 @@
                     }
                 }
 
-                // If we still have 'srcdoc' as the slug, use a hardcoded default for testing
+                // If we still have 'srcdoc' as the slug, try to extract from the parent URL path
                 if (!appSlug || appSlug === 'srcdoc') {
-                    // Prompt the user for the app slug
-                    const userInput = prompt('Please enter your app slug (e.g., rag-chatbot-845):');
-                    if (userInput) {
-                        appSlug = userInput;
-                        console.log('Using manually entered app slug:', appSlug);
-                    } else {
-                        // Last resort - use a default
-                        appSlug = 'rag-chatbot-828';
-                        console.log('Using default app slug:', appSlug);
+                    try {
+                        // Try to get the parent URL path
+                        if (window !== window.parent && window.parent.location.pathname) {
+                            const parentPath = window.parent.location.pathname;
+                            console.log('Parent URL path:', parentPath);
+
+                            // Try to extract using regex to find rag-chatbot-XXX pattern
+                            const chatbotRegex = /rag-chatbot-\d+/;
+                            const chatbotMatch = parentPath.match(chatbotRegex);
+
+                            if (chatbotMatch) {
+                                appSlug = chatbotMatch[0];
+                                console.log('Extracted app slug from parent URL path:', appSlug);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error accessing parent URL path:', e);
+                    }
+
+                    // If we still don't have a valid app slug, prompt the user
+                    if (!appSlug || appSlug === 'srcdoc') {
+                        const userInput = prompt('Please enter your app slug (e.g., rag-chatbot-845):');
+                        if (userInput) {
+                            appSlug = userInput;
+                            console.log('Using manually entered app slug:', appSlug);
+                        } else {
+                            // Use the app ID we extracted earlier if available
+                            if (numericAppId && !isNaN(numericAppId)) {
+                                appSlug = `rag-chatbot-${numericAppId}`;
+                                console.log('Using app slug constructed from numeric app ID:', appSlug);
+                            } else {
+                                console.warn('Could not determine app slug from any source. RAG functionality may not work correctly.');
+                            }
+                        }
                     }
                 }
 
@@ -638,16 +744,70 @@
                     similarity_threshold: 0.7
                 };
 
-                // Use app_slug by default, but allow override with app_id for testing
-                if (urlAppId) {
+                // Extract app ID from app slug if we have one
+                if (appSlug && appSlug.match(/rag-chatbot-(\d+)/)) {
+                    const extractedId = parseInt(appSlug.match(/rag-chatbot-(\d+)/)[1], 10);
+                    console.log('Extracted numeric app ID from app slug:', extractedId);
+
+                    // Set numericAppId to the extracted ID if we don't already have one
+                    if (!numericAppId || isNaN(numericAppId)) {
+                        numericAppId = extractedId;
+                        console.log('Setting numericAppId to extracted value from app slug:', numericAppId);
+                    }
+                }
+
+                // IMPORTANT: Always prioritize the app ID extracted from the URL path
+                // This ensures the app ID in the request matches the app being accessed
+
+                // First, try to extract from URL path directly
+                const urlPathForRequest = window.location.pathname;
+                const chatbotRegexForRequest = /rag-chatbot-(\d+)/;
+                const chatbotMatchForRequest = urlPathForRequest.match(chatbotRegexForRequest);
+
+                if (chatbotMatchForRequest && chatbotMatchForRequest[1]) {
+                    // URL path extraction takes highest precedence
+                    const extractedIdFromPath = parseInt(chatbotMatchForRequest[1], 10);
+                    ragRequestBody.app_id = extractedIdFromPath;
+                    console.log('Using app_id extracted directly from URL path for request:', ragRequestBody.app_id);
+                } else if (window !== window.parent) {
+                    // If in iframe, try to extract from parent URL path
+                    try {
+                        const parentPathForRequest = window.parent.location.pathname;
+                        const parentMatchForRequest = parentPathForRequest.match(/rag-chatbot-(\d+)/);
+                        if (parentMatchForRequest && parentMatchForRequest[1]) {
+                            const extractedIdFromParent = parseInt(parentMatchForRequest[1], 10);
+                            ragRequestBody.app_id = extractedIdFromParent;
+                            console.log('Using app_id extracted from parent URL path for request:', ragRequestBody.app_id);
+                        }
+                    } catch (e) {
+                        console.warn('Error accessing parent URL path for request:', e);
+                    }
+                } else if (urlAppId) {
+                    // URL parameter takes precedence after path extraction
                     ragRequestBody.app_id = parseInt(urlAppId, 10);
                     console.log('Using app_id from URL parameter:', ragRequestBody.app_id);
+                } else if (numericAppId && !isNaN(numericAppId)) {
+                    // Use the numeric app ID we parsed earlier
+                    ragRequestBody.app_id = numericAppId;
+                    console.log('Using app_id from template or extraction:', ragRequestBody.app_id);
                 } else if (urlAppSlug) {
+                    // Fall back to app_slug from URL parameter
                     ragRequestBody.app_slug = urlAppSlug;
                     console.log('Using app_slug from URL parameter:', ragRequestBody.app_slug);
+                } else if (appSlug) {
+                    // Extract app ID from app slug
+                    const slugMatch = appSlug.match(/rag-chatbot-(\d+)/);
+                    if (slugMatch && slugMatch[1]) {
+                        const extractedId = parseInt(slugMatch[1], 10);
+                        ragRequestBody.app_id = extractedId;
+                        console.log('Using app_id extracted from app slug:', ragRequestBody.app_id);
+                    } else {
+                        // Last resort: use app_slug from path
+                        ragRequestBody.app_slug = appSlug;
+                        console.log('Using app_slug from URL path:', ragRequestBody.app_slug);
+                    }
                 } else {
-                    ragRequestBody.app_slug = appSlug;
-                    console.log('Using app_slug from URL path:', ragRequestBody.app_slug);
+                    console.warn('No app ID or app slug available. RAG functionality may not work correctly.');
                 }
 
                 // Make API request

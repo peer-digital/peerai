@@ -222,6 +222,8 @@ class DocumentProcessor:
         # Placeholder: Return some chunks from the app's documents
         from backend.models.documents import AppDocument
 
+        print(f"Searching for documents with app_id={app_id}")
+
         app_documents = (
             self.db.query(Document)
             .join(AppDocument)
@@ -229,11 +231,16 @@ class DocumentProcessor:
             .all()
         )
 
+        print(f"Found {len(app_documents)} documents for app_id={app_id}")
+
         results = []
         for document in app_documents:
+            print(f"Processing document {document.id}: {document.filename}")
             chunks = self.db.query(DocumentChunk).filter(
                 DocumentChunk.document_id == document.id
             ).limit(top_k).all()
+
+            print(f"Found {len(chunks)} chunks for document {document.id}")
 
             for chunk in chunks:
                 results.append({

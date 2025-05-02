@@ -26,7 +26,7 @@ class RAGCompletionRequest(BaseModel):
         schema_extra = {
             "example": {
                 "query": "Summarize the key points",
-                "app_slug": "rag-chatbot-845",
+                "app_id": 845,  # Prefer using app_id over app_slug
                 "temperature": 0.7,
                 "model": "mistral-large-latest"
             }
