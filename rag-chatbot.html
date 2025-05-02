@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="{{app_settings.language}}">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{app_settings.app_title}}</title>
+    <title>RAG Chatbot</title>
     <style>
         :root {
-            --primary-color: {{styling.primary_color}};
-            --secondary-color: {{styling.secondary_color}};
-            --background-color: {{styling.background_color}};
-            --text-color: {{styling.text_color}};
-            --light-bg-color: {{styling.light_bg_color}};
-            --border-color: {{styling.border_color}};
-            --font-family: {{styling.font_family}};
-            --font-size-small: {{styling.font_size_small}};
-            --font-size-medium: {{styling.font_size_medium}};
-            --font-size-large: {{styling.font_size_large}};
-            --border-radius: {{styling.border_radius}};
+            --primary-color: #1a56db;
+            --secondary-color: #4f46e5;
+            --background-color: #f9fafb;
+            --text-color: #111827;
+            --light-bg-color: #f0f7ff;
+            --border-color: #e5e7eb;
+            --font-family: system-ui, sans-serif;
+            --font-size-small: 14px;
+            --font-size-medium: 16px;
+            --font-size-large: 22px;
+            --border-radius: 8px;
         }
 
         * {
@@ -196,52 +196,53 @@
             }
         }
     </style>
+<meta name="server-url" content="http://localhost:8000" />
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div>
-                <div class="app-title">{{app_settings.app_title}}</div>
-                <div class="app-description">{{app_settings.app_description}}</div>
+                <div class="app-title">RAG Chatbot</div>
+                <div class="app-description">An advanced chatbot solution that can answer questions based on your uploaded documents.</div>
             </div>
         </div>
 
         <!-- Content section -->
         <div class="content">
             <div class="content-header">
-                <div class="content-title">{{content.content_title}}</div>
+                <div class="content-title">Try it yourself</div>
             </div>
 
             <!-- Quick actions -->
             <div class="quick-actions">
-                <button class="quick-action">{{quick_actions.quick_action1}}</button>
-                <button class="quick-action">{{quick_actions.quick_action2}}</button>
-                <button class="quick-action">{{quick_actions.quick_action3}}</button>
-                <button class="quick-action">{{quick_actions.quick_action4}}</button>
-                <button class="quick-action">{{quick_actions.quick_action5}}</button>
+                <button class="quick-action">What are the main topics in my documents?</button>
+                <button class="quick-action">Summarize the key points</button>
+                <button class="quick-action">Find information about...</button>
+                <button class="quick-action">Compare and contrast...</button>
+                <button class="quick-action">Explain the concept of...</button>
             </div>
 
             <!-- Chat container -->
             <div class="chat-container" id="chat-container">
                 <div class="message ai-message">
-                    {{content.welcome_message}}
+                    Hello! I'm here to help you. What would you like to know about your documents?
                 </div>
             </div>
 
             <!-- Input section -->
             <div class="input-container">
-                <input type="text" class="chat-input" id="user-input" placeholder="{{content.input_placeholder}}">
-                <button class="send-button" id="send-button">{{content.send_button_text}}</button>
+                <input type="text" class="chat-input" id="user-input" placeholder="Type your question here...">
+                <button class="send-button" id="send-button">Send</button>
             </div>
         </div>
     </div>
 
     <script>
         // Configuration from template
-        let API_KEY = '{{api_key}}';
-        const MODEL = '{{ai_settings.model}}';
-        const TEMPERATURE = {{ai_settings.temperature}};
-        const SYSTEM_PROMPT = `{{ai_settings.system_prompt}}`;
+        let API_KEY = 'pk_VBAxUh2HZZyIjC4alk7aLU5-vh8OsNlt79LFfXqGvUE';
+        const MODEL = 'mistral-large-latest';
+        const TEMPERATURE = 0.7;
+        const SYSTEM_PROMPT = `You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge.`;
 
         // Helper function to determine API base URL
         const getApiBaseUrl = () => {
@@ -296,11 +297,11 @@
         };
 
         // Get the app ID from the template
-        let APP_ID = '{{app_id}}';
+        let APP_ID = '56';
         console.log('App ID from template:', APP_ID);
 
         // If the app_id is still a template placeholder (not replaced), get it from the URL
-        if (APP_ID === '{{app_id}}' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
+        if (APP_ID === '56' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
             console.log('App ID is a template placeholder, trying to get it from URL');
 
             // Try to extract from URL path
@@ -341,7 +342,7 @@
                     }
 
                     // If still no valid app ID, try localStorage
-                    if (APP_ID === '{{app_id}}' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
+                    if (APP_ID === '56' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
                         const storedAppId = localStorage.getItem('rag_app_id');
                         if (storedAppId && !isNaN(parseInt(storedAppId, 10))) {
                             APP_ID = storedAppId;
@@ -356,7 +357,7 @@
             }
 
             // Store in localStorage for future use
-            if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
+            if (APP_ID && APP_ID !== '56' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
                 localStorage.setItem('rag_app_id', APP_ID);
             }
         }
@@ -366,7 +367,7 @@
 
         // If no API key is available or it's still a template placeholder, try to get it from localStorage
         if (!API_KEY ||
-            API_KEY === '{{api_key}}' ||
+            API_KEY === 'pk_VBAxUh2HZZyIjC4alk7aLU5-vh8OsNlt79LFfXqGvUE' ||
             API_KEY.includes('{{') ||
             API_KEY.includes('}}')) {
 
@@ -391,14 +392,22 @@
         console.log('- App ID:', APP_ID);
         console.log('- Model:', MODEL);
         console.log('- API Key available:', !!API_KEY &&
-                                    API_KEY !== '{{api_key}}' &&
+                                    API_KEY !== 'pk_VBAxUh2HZZyIjC4alk7aLU5-vh8OsNlt79LFfXqGvUE' &&
                                     !API_KEY.includes('{{') &&
                                     !API_KEY.includes('}}'));
 
-        // CRITICAL FIX: Always use the backend server directly for API calls
-        // This ensures RAG functionality works correctly in all scenarios
-        const apiBaseUrl = 'http://localhost:8000';
-        console.log('IMPORTANT: Forcing API calls to backend server:', apiBaseUrl);
+        // Force the API base URL to be the backend server
+        let apiBaseUrl = getApiBaseUrl();
+        const isInIframe = window !== window.parent;
+
+        // IMPORTANT: Make sure we're using the backend server (port 8000) for API calls
+        // This is a critical fix for the RAG functionality
+        if (apiBaseUrl.includes('localhost:3000')) {
+            console.log('Detected frontend server URL, switching to backend server');
+            apiBaseUrl = 'http://localhost:8000';
+        }
+
+        console.log('Using API base URL:', apiBaseUrl);
 
         // Construct the API URLs
         const COMPLETIONS_API_URL = `${apiBaseUrl}/api/v1/llm/completions`;
@@ -407,7 +416,7 @@
         // Construct the documents API URL using the app ID
         let DOCUMENTS_API_URL;
 
-        if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
+        if (APP_ID && APP_ID !== '56' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
             DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/${APP_ID}`;
             console.log('Documents API URL:', DOCUMENTS_API_URL);
         } else {
@@ -459,7 +468,7 @@
                 const typingIndicator = document.createElement('div');
                 typingIndicator.className = 'message ai-message';
                 typingIndicator.id = 'typing-indicator';
-                typingIndicator.textContent = '{{content.typing_indicator_text}}';
+                typingIndicator.textContent = 'Thinking...';
                 chatContainer.appendChild(typingIndicator);
 
                 // Scroll to bottom
@@ -470,7 +479,7 @@
                 try {
                     // Only try to fetch documents if we have a valid API key and a valid documents URL
                     if (API_KEY &&
-                        API_KEY !== '{{api_key}}' &&
+                        API_KEY !== 'pk_VBAxUh2HZZyIjC4alk7aLU5-vh8OsNlt79LFfXqGvUE' &&
                         !API_KEY.includes('{{') &&
                         !API_KEY.includes('}}') &&
                         DOCUMENTS_API_URL) {
@@ -498,7 +507,7 @@
                                 // For now, we'll just indicate that documents are available
                                 documentContext = "The user has uploaded documents. Please use them to answer the question.";
                             } else {
-                                documentContext = "{{content.no_documents_message}}";
+                                documentContext = "No documents have been uploaded yet. Please upload documents in the admin panel to enable document-based answers.";
                             }
                         } else {
                             console.warn(`Error fetching documents: ${documentsResponse.status}`);
@@ -557,98 +566,22 @@
 
                 console.log('Using numeric app ID for RAG request:', numericAppId);
 
-                // Get the app slug - handle both direct access and iframe scenarios
-                let appSlug;
-
-                // Check if we're in an iframe
-                if (window !== window.parent) {
-                    try {
-                        // Try to get the parent URL
-                        const parentUrl = document.referrer;
-                        console.log('Parent URL:', parentUrl);
-
-                        if (parentUrl) {
-                            // Extract the app slug from the parent URL
-                            const urlObj = new URL(parentUrl);
-                            const pathParts = urlObj.pathname.split('/');
-                            // Find the part that matches the rag-chatbot pattern
-                            for (const part of pathParts) {
-                                if (part.startsWith('rag-chatbot-')) {
-                                    appSlug = part;
-                                    break;
-                                }
-                            }
-
-                            // If we couldn't find it in the path parts, use the last part
-                            if (!appSlug) {
-                                appSlug = pathParts[pathParts.length - 1];
-                            }
-
-                            console.log('Extracted app slug from parent URL:', appSlug);
-                        }
-                    } catch (e) {
-                        console.warn('Error accessing parent URL:', e);
-                    }
-                }
-
-                // If we couldn't get the slug from the parent URL, try the current URL
-                if (!appSlug || appSlug === 'srcdoc') {
-                    const urlPath = window.location.pathname;
-                    console.log('Current URL path:', urlPath);
-
-                    // Try to extract using regex to find rag-chatbot-XXX pattern
-                    const chatbotRegex = /rag-chatbot-\d+/;
-                    const chatbotMatch = urlPath.match(chatbotRegex);
-
-                    if (chatbotMatch) {
-                        appSlug = chatbotMatch[0];
-                        console.log('Extracted app slug using regex:', appSlug);
-                    } else {
-                        // Fallback to the last part of the URL path
-                        appSlug = urlPath.split('/').pop();
-                        console.log('Using last part of URL path as app slug:', appSlug);
-                    }
-                }
-
-                // If we still have 'srcdoc' as the slug, use a hardcoded default for testing
-                if (!appSlug || appSlug === 'srcdoc') {
-                    // Prompt the user for the app slug
-                    const userInput = prompt('Please enter your app slug (e.g., rag-chatbot-845):');
-                    if (userInput) {
-                        appSlug = userInput;
-                        console.log('Using manually entered app slug:', appSlug);
-                    } else {
-                        // Last resort - use a default
-                        appSlug = 'rag-chatbot-828';
-                        console.log('Using default app slug:', appSlug);
-                    }
-                }
-
-                // Still allow override via URL parameter for testing
+                // IMPORTANT: For testing, use the app ID from the URL if available
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlAppId = urlParams.get('app_id');
-                const urlAppSlug = urlParams.get('app_slug');
+                const appIdToUse = urlAppId ? parseInt(urlAppId, 10) : numericAppId;
+
+                console.log('Final app ID to use in request:', appIdToUse);
 
                 // Prepare request body for RAG API
                 const ragRequestBody = {
                     query: message,
+                    app_id: appIdToUse,
                     temperature: TEMPERATURE,
                     model: MODEL,
                     top_k: 5,
                     similarity_threshold: 0.7
                 };
-
-                // Use app_slug by default, but allow override with app_id for testing
-                if (urlAppId) {
-                    ragRequestBody.app_id = parseInt(urlAppId, 10);
-                    console.log('Using app_id from URL parameter:', ragRequestBody.app_id);
-                } else if (urlAppSlug) {
-                    ragRequestBody.app_slug = urlAppSlug;
-                    console.log('Using app_slug from URL parameter:', ragRequestBody.app_slug);
-                } else {
-                    ragRequestBody.app_slug = appSlug;
-                    console.log('Using app_slug from URL path:', ragRequestBody.app_slug);
-                }
 
                 // Make API request
                 let response;
@@ -681,26 +614,27 @@
                     // IMPORTANT DEBUG: Show the exact JSON being sent
                     console.log('RAG Request JSON:', JSON.stringify(ragRequestBody, null, 2));
 
-                    // CRITICAL FIX: Always make the request directly to the backend server
-                    // This ensures RAG functionality works correctly in all scenarios
-                    console.log('Making RAG API request directly to backend server');
-
-                    // Use the backend URL directly
-                    const backendUrl = 'http://localhost:8000/api/v1/llm/rag';
-
+                    // Try to make the request to the current origin first
                     try {
-                        response = await fetch(backendUrl, {
+                        console.log('Attempting to call RAG API on current origin');
+                        response = await fetch(RAG_API_URL, {
                             method: 'POST',
                             headers: headers,
-                            body: JSON.stringify(ragRequestBody),
-                            // Important: Allow CORS for cross-origin requests
-                            mode: 'cors',
-                            credentials: 'include'
+                            body: JSON.stringify(ragRequestBody)
                         });
                         console.log('RAG API response status:', response.status);
                     } catch (fetchError) {
-                        console.error('Error calling backend directly:', fetchError);
-                        throw new Error('Failed to connect to backend server. Please make sure the server is running on port 8000.');
+                        console.error('Error calling RAG API on current origin:', fetchError);
+
+                        // If that fails, try the backend server directly
+                        console.log('Attempting to call RAG API on backend server directly');
+                        const backendUrl = 'http://localhost:8000/api/v1/llm/rag';
+                        response = await fetch(backendUrl, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify(ragRequestBody)
+                        });
+                        console.log('RAG API response status (backend):', response.status);
                     }
 
                     console.log('API response status:', response.status);
@@ -739,7 +673,7 @@
                     const aiMessage = data.choices[0].message.content;
                     addMessage(aiMessage, 'ai');
                 } else {
-                    addMessage('{{content.no_response_text}}', 'ai');
+                    addMessage('No response received. Please try again.', 'ai');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -751,7 +685,7 @@
                 }
 
                 // Show error message
-                addMessage('{{content.error_message}}', 'ai');
+                addMessage('Sorry, I encountered an error. Please try again.', 'ai');
             }
         }
 

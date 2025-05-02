@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Access to RAG Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .note {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Direct Access to RAG Chatbot</h1>
+        
+        <p>Click the button below to access the RAG chatbot directly:</p>
+        
+        <a href="http://localhost:8000/api/v1/public-apps/rag-chatbot-438" class="button" target="_blank">Open RAG Chatbot</a>
+        
+        <div class="note">
+            <p><strong>Note:</strong> This link bypasses the admin dashboard and accesses the chatbot directly from the backend server. This should resolve any iframe-related issues.</p>
+        </div>
+        
+        <h2>Alternative: Access with App ID Parameter</h2>
+        
+        <p>You can also try accessing with an explicit app ID parameter:</p>
+        
+        <a href="http://localhost:8000/api/v1/public-apps/rag-chatbot-438?app_id=438" class="button" target="_blank">Open with App ID Parameter</a>
+        
+        <h2>Troubleshooting</h2>
+        
+        <p>If you're still experiencing issues:</p>
+        
+        <ol>
+            <li>Make sure the backend server is running on port 8000</li>
+            <li>Verify that app ID 438 exists and has documents uploaded</li>
+            <li>Check the browser console for any errors</li>
+        </ol>
+    </div>
+</body>
+</html>

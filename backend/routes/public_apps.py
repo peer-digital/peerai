@@ -49,7 +49,10 @@ async def get_public_app(
     config = deployed_app.configuration or {}
 
     # Add app_id to the configuration so it can be used in the template
-    config['app_id'] = deployed_app.slug
+    # Use the numeric ID instead of the slug for RAG API calls
+    config['app_id'] = deployed_app.id
+    # Also add the slug for reference
+    config['app_slug'] = deployed_app.slug
 
     # Replace configuration placeholders in the HTML using the helper function
     html_content = replace_placeholders(html_content, config)

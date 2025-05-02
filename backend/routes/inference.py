@@ -586,9 +586,27 @@ async def create_rag_completion(
     # Check rate limits
     await check_rate_limits(api_key, db)
 
-    # Check if app exists
-    app = db.query(AppDocument).filter(AppDocument.app_id == request.app_id, AppDocument.is_active.is_(True)).first()
-    if not app:
+    # Check if app exists - support both app_id and app_slug
+    app_documents = None
+
+    # If app_id is provided, use it directly
+    if request.app_id:
+        app_documents = db.query(AppDocument).filter(
+            AppDocument.app_id == request.app_id,
+            AppDocument.is_active.is_(True)
+        ).all()
+
+    # If app_slug is provided, look up the app by slug
+    elif hasattr(request, 'app_slug') and request.app_slug:
+        from backend.models.deployed_apps import DeployedApp
+        app = db.query(DeployedApp).filter(DeployedApp.slug == request.app_slug).first()
+        if app:
+            app_documents = db.query(AppDocument).filter(
+                AppDocument.app_id == app.id,
+                AppDocument.is_active.is_(True)
+            ).all()
+
+    if not app_documents or len(app_documents) == 0:
         raise HTTPException(
             status_code=404,
             detail="No documents found for this app. Please upload documents first."
@@ -598,10 +616,29 @@ async def create_rag_completion(
         # Initialize document processor
         doc_processor = DocumentProcessor(db)
 
+        # Get the app ID to use for searching
+        search_app_id = None
+
+        # If app_id is provided directly, use it
+        if request.app_id:
+            search_app_id = request.app_id
+        # If app_slug is provided, look up the app ID
+        elif hasattr(request, 'app_slug') and request.app_slug:
+            from backend.models.deployed_apps import DeployedApp
+            app = db.query(DeployedApp).filter(DeployedApp.slug == request.app_slug).first()
+            if app:
+                search_app_id = app.id
+
+        if not search_app_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Either app_id or app_slug must be provided"
+            )
+
         # Search for relevant document chunks
         relevant_chunks = await doc_processor.search_similar_chunks(
             query=request.query,
-            app_id=request.app_id,
+            app_id=search_app_id,
             top_k=request.top_k or 5,
             threshold=request.similarity_threshold or 0.7
         )
