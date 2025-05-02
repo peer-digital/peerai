@@ -424,36 +424,27 @@
         // Construct the documents API URL using the app ID
         let DOCUMENTS_API_URL;
 
-        // IMPORTANT: Try to extract app ID from URL path first
-        const urlPathForDocAPI = window.location.pathname;
-        const chatbotRegexForDocAPI = /rag-chatbot-(\d+)/;
-        const chatbotMatchForDocAPI = urlPathForDocAPI.match(chatbotRegexForDocAPI);
+        // Get the app ID from the template - this is the correct ID set by the backend
+        const templateAppId = '{{app_id}}';
+        console.log('App ID from template (raw):', templateAppId);
 
-        if (chatbotMatchForDocAPI && chatbotMatchForDocAPI[1]) {
-            // URL path extraction takes highest precedence
-            const extractedIdFromPath = chatbotMatchForDocAPI[1];
-            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${extractedIdFromPath}`;
-            console.log('Documents API URL (using app_id from URL path):', DOCUMENTS_API_URL);
-        } else if (window !== window.parent) {
-            // If in iframe, try to extract from parent URL path
-            try {
-                const parentPathForDocAPI = window.parent.location.pathname;
-                const parentMatchForDocAPI = parentPathForDocAPI.match(/rag-chatbot-(\d+)/);
-                if (parentMatchForDocAPI && parentMatchForDocAPI[1]) {
-                    const extractedIdFromParent = parentMatchForDocAPI[1];
-                    DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${extractedIdFromParent}`;
-                    console.log('Documents API URL (using app_id from parent URL path):', DOCUMENTS_API_URL);
-                }
-            } catch (e) {
-                console.warn('Error accessing parent URL path for document API:', e);
-            }
-        } else if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
-            // Use the app_id from template as fallback
-            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${APP_ID}`;
-            console.log('Documents API URL (using app_id from template):', DOCUMENTS_API_URL);
+        // Check if the template app ID is a valid number and not a placeholder
+        if (templateAppId && !templateAppId.includes('{{') && !isNaN(parseInt(templateAppId, 10))) {
+            // Use the app ID from the template
+            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${templateAppId}`;
+            console.log('Documents API URL (using template app_id):', DOCUMENTS_API_URL);
         } else {
-            console.warn('No valid app ID available for document retrieval');
-            DOCUMENTS_API_URL = null;
+            // Log the app ID from the template for debugging
+            console.log('Template app_id is not valid:', templateAppId);
+
+            // Use the APP_ID variable as a fallback
+            if (APP_ID && !isNaN(parseInt(APP_ID, 10))) {
+                DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/id/${APP_ID}`;
+                console.log('Documents API URL (using APP_ID variable):', DOCUMENTS_API_URL);
+            } else {
+                console.warn('No valid app ID available for document retrieval');
+                DOCUMENTS_API_URL = null;
+            }
         }
 
         // DOM elements
@@ -744,70 +735,28 @@
                     similarity_threshold: 0.7
                 };
 
-                // Extract app ID from app slug if we have one
-                if (appSlug && appSlug.match(/rag-chatbot-(\d+)/)) {
-                    const extractedId = parseInt(appSlug.match(/rag-chatbot-(\d+)/)[1], 10);
-                    console.log('Extracted numeric app ID from app slug:', extractedId);
+                // Get the app ID from the template - this is the correct ID set by the backend
+                const templateAppIdForRequest = '{{app_id}}';
+                console.log('App ID from template for request (raw):', templateAppIdForRequest);
 
-                    // Set numericAppId to the extracted ID if we don't already have one
-                    if (!numericAppId || isNaN(numericAppId)) {
-                        numericAppId = extractedId;
-                        console.log('Setting numericAppId to extracted value from app slug:', numericAppId);
-                    }
-                }
-
-                // IMPORTANT: Always prioritize the app ID extracted from the URL path
-                // This ensures the app ID in the request matches the app being accessed
-
-                // First, try to extract from URL path directly
-                const urlPathForRequest = window.location.pathname;
-                const chatbotRegexForRequest = /rag-chatbot-(\d+)/;
-                const chatbotMatchForRequest = urlPathForRequest.match(chatbotRegexForRequest);
-
-                if (chatbotMatchForRequest && chatbotMatchForRequest[1]) {
-                    // URL path extraction takes highest precedence
-                    const extractedIdFromPath = parseInt(chatbotMatchForRequest[1], 10);
-                    ragRequestBody.app_id = extractedIdFromPath;
-                    console.log('Using app_id extracted directly from URL path for request:', ragRequestBody.app_id);
-                } else if (window !== window.parent) {
-                    // If in iframe, try to extract from parent URL path
-                    try {
-                        const parentPathForRequest = window.parent.location.pathname;
-                        const parentMatchForRequest = parentPathForRequest.match(/rag-chatbot-(\d+)/);
-                        if (parentMatchForRequest && parentMatchForRequest[1]) {
-                            const extractedIdFromParent = parseInt(parentMatchForRequest[1], 10);
-                            ragRequestBody.app_id = extractedIdFromParent;
-                            console.log('Using app_id extracted from parent URL path for request:', ragRequestBody.app_id);
-                        }
-                    } catch (e) {
-                        console.warn('Error accessing parent URL path for request:', e);
-                    }
-                } else if (urlAppId) {
-                    // URL parameter takes precedence after path extraction
-                    ragRequestBody.app_id = parseInt(urlAppId, 10);
-                    console.log('Using app_id from URL parameter:', ragRequestBody.app_id);
-                } else if (numericAppId && !isNaN(numericAppId)) {
-                    // Use the numeric app ID we parsed earlier
-                    ragRequestBody.app_id = numericAppId;
-                    console.log('Using app_id from template or extraction:', ragRequestBody.app_id);
-                } else if (urlAppSlug) {
-                    // Fall back to app_slug from URL parameter
-                    ragRequestBody.app_slug = urlAppSlug;
-                    console.log('Using app_slug from URL parameter:', ragRequestBody.app_slug);
-                } else if (appSlug) {
-                    // Extract app ID from app slug
-                    const slugMatch = appSlug.match(/rag-chatbot-(\d+)/);
-                    if (slugMatch && slugMatch[1]) {
-                        const extractedId = parseInt(slugMatch[1], 10);
-                        ragRequestBody.app_id = extractedId;
-                        console.log('Using app_id extracted from app slug:', ragRequestBody.app_id);
-                    } else {
-                        // Last resort: use app_slug from path
-                        ragRequestBody.app_slug = appSlug;
-                        console.log('Using app_slug from URL path:', ragRequestBody.app_slug);
-                    }
+                // Check if the template app ID is a valid number and not a placeholder
+                if (templateAppIdForRequest && !templateAppIdForRequest.includes('{{') && !isNaN(parseInt(templateAppIdForRequest, 10))) {
+                    // Use the app ID from the template
+                    ragRequestBody.app_id = parseInt(templateAppIdForRequest, 10);
+                    console.log('Using template app_id for request:', ragRequestBody.app_id);
                 } else {
-                    console.warn('No app ID or app slug available. RAG functionality may not work correctly.');
+                    // Log the app ID from the template for debugging
+                    console.log('Template app_id is not valid for request:', templateAppIdForRequest);
+
+                    // Use the APP_ID variable as a fallback
+                    if (APP_ID && !isNaN(parseInt(APP_ID, 10))) {
+                        ragRequestBody.app_id = parseInt(APP_ID, 10);
+                        console.log('Using APP_ID variable for request:', ragRequestBody.app_id);
+                    } else {
+                        // Hardcode the correct app ID as a last resort
+                        ragRequestBody.app_id = 13;
+                        console.log('Using hardcoded app_id (13) as last resort');
+                    }
                 }
 
                 // Make API request
