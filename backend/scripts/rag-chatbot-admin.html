@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chatbot Admin</title>
+    <style>
+        :root {
+            --primary-color: #1a56db;
+            --secondary-color: #4f46e5;
+            --background-color: #f9fafb;
+            --text-color: #111827;
+            --light-bg-color: #f0f7ff;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --font-family: system-ui, sans-serif;
+            --font-size-small: 14px;
+            --font-size-medium: 16px;
+            --font-size-large: 22px;
+            --border-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: var(--font-family);
+            font-size: var(--font-size-medium);
+        }
+
+        .file-upload {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary-color);
+            background-color: var(--light-bg-color);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: var(--font-size-medium);
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .document-list {
+            margin-top: 20px;
+        }
+
+        .document-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            background-color: white;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .document-meta {
+            font-size: var(--font-size-small);
+            color: #6b7280;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-processed {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-processing {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .alert-error {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #ef4444;
+        }
+
+        .alert-info {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #0ea5e9;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAG Chatbot Admin</h1>
+
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active" data-tab="documents">Documents</div>
+                <div class="tab" data-tab="settings">Settings</div>
+                <div class="tab" data-tab="preview">Preview</div>
+            </div>
+
+            <!-- Documents Tab -->
+            <div class="tab-content active" id="documents-tab">
+                <div class="flex justify-between items-center mb-4">
+                    <h2>Document Management</h2>
+                    <button class="btn" id="refresh-documents">Refresh</button>
+                </div>
+
+                <div class="alert" id="document-alert"></div>
+
+                <div class="file-upload" id="file-upload-area">
+                    <div class="file-upload-icon">📄</div>
+                    <h3>Upload Documents</h3>
+                    <p>Click or drag files here to upload</p>
+                    <p>Supported formats: PDF, TXT, DOCX, MD</p>
+                    <input type="file" id="file-input" multiple accept=".pdf,.txt,.docx,.md">
+                </div>
+
+                <div class="document-list" id="document-list">
+                    <div class="loading-documents">Loading documents...</div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <h2>RAG Settings</h2>
+
+                <div class="alert" id="settings-alert"></div>
+
+                <form id="rag-settings-form">
+                    <div class="form-group">
+                        <label for="embedding-model">Embedding Model</label>
+                        <select id="embedding-model" name="embedding_model">
+                            <option value="mistral-embed">Mistral Embed</option>
+                            <option value="openai-text-embedding-3-small">OpenAI Text Embedding 3 Small</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chunk-size">Chunk Size (characters)</label>
+                        <input type="number" id="chunk-size" name="chunk_size" min="100" max="2000" value="500">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chunk-overlap">Chunk Overlap (characters)</label>
+                        <input type="number" id="chunk-overlap" name="chunk_overlap" min="0" max="500" value="50">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="top-k">Top K Results</label>
+                        <input type="number" id="top-k" name="top_k" min="1" max="20" value="5">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="similarity-threshold">Similarity Threshold (0-1)</label>
+                        <input type="number" id="similarity-threshold" name="similarity_threshold" min="0" max="1" step="0.1" value="0.7">
+                    </div>
+
+                    <button type="submit" class="btn">Save Settings</button>
+                </form>
+            </div>
+
+            <!-- Preview Tab -->
+            <div class="tab-content" id="preview-tab">
+                <h2>Chat Preview</h2>
+                <p>This is a preview of how your RAG chatbot will appear to users. You can test it by asking questions about your uploaded documents.</p>
+
+                <div class="card" style="height: 500px; display: flex; flex-direction: column;">
+                    <div style="flex: 1; overflow-y: auto; padding: 15px;" id="preview-chat-container">
+                        <div class="message ai-message">
+                            Hello! I'm here to help you. What would you like to know about your documents?
+                        </div>
+                    </div>
+
+                    <div style="display: flex; padding: 15px; border-top: 1px solid var(--border-color);">
+                        <input type="text" id="preview-input" placeholder="Ask a question about your documents..." style="flex: 1; margin-right: 10px;">
+                        <button class="btn" id="preview-send">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_KEY = '{{api_key}}';
+        const APP_ID = '{{app_id}}';
+
+        // Helper function to determine API base URL
+        const getApiBaseUrl = () => {
+            // Check if we're in a production environment
+            if (window.location.hostname !== 'localhost') {
+                return window.location.origin;
+            }
+
+            try {
+                // In development, use localhost:8000
+                return 'http://localhost:8000';
+            } catch (e) {
+                console.warn('Error determining API base URL:', e);
+                // Fallback to a default URL
+                return 'http://localhost:8000';
+            }
+        };
+
+        const apiBaseUrl = getApiBaseUrl();
+
+        // API endpoints
+        const DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents`;
+        const APP_DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/${APP_ID}`;
+        const UPLOAD_API_URL = `${apiBaseUrl}/api/v1/documents/upload`;
+        const RAG_API_URL = `${apiBaseUrl}/api/v1/llm/rag`;
+
+        // DOM elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const fileUploadArea = document.getElementById('file-upload-area');
+        const fileInput = document.getElementById('file-input');
+        const documentList = document.getElementById('document-list');
+        const documentAlert = document.getElementById('document-alert');
+        const refreshButton = document.getElementById('refresh-documents');
+        const settingsForm = document.getElementById('rag-settings-form');
+        const settingsAlert = document.getElementById('settings-alert');
+        const previewInput = document.getElementById('preview-input');
+        const previewSendButton = document.getElementById('preview-send');
+        const previewChatContainer = document.getElementById('preview-chat-container');
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Update active content
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${tabId}-tab`) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+
+        // File upload handling
+        fileUploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = 'var(--primary-color)';
+            fileUploadArea.style.backgroundColor = 'var(--light-bg-color)';
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.style.borderColor = 'var(--border-color)';
+            fileUploadArea.style.backgroundColor = 'white';
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = 'var(--border-color)';
+            fileUploadArea.style.backgroundColor = 'white';
+
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFiles(fileInput.files);
+            }
+        });
+
+        async function handleFiles(files) {
+            for (const file of files) {
+                await uploadFile(file);
+            }
+
+            // Refresh document list
+            loadDocuments();
+        }
+
+        async function uploadFile(file) {
+            // Check file size
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                showAlert(documentAlert, 'File too large. Maximum size is 10MB.', 'error');
+                return;
+            }
+
+            // Check file type
+            const allowedTypes = ['.pdf', '.txt', '.docx', '.md'];
+            const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+            if (!allowedTypes.includes(fileExt)) {
+                showAlert(documentAlert, `File type ${fileExt} not supported. Allowed types: ${allowedTypes.join(', ')}`, 'error');
+                return;
+            }
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(UPLOAD_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                showAlert(documentAlert, `File "${file.name}" uploaded successfully.`, 'success');
+
+                // Associate document with app
+                await associateDocumentWithApp(data.document_id);
+
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showAlert(documentAlert, `Error uploading file: ${error.message}`, 'error');
+            }
+        }
+
+        async function associateDocumentWithApp(documentId) {
+            try {
+                const response = await fetch(`${DOCUMENTS_API_URL}/app-documents`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        app_id: APP_ID,
+                        document_id: documentId,
+                        is_active: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Association failed: ${response.status}`);
+                }
+
+                console.log('Document associated with app successfully');
+
+            } catch (error) {
+                console.error('Error associating document with app:', error);
+                showAlert(documentAlert, `Error associating document with app: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadDocuments() {
+            try {
+                documentList.innerHTML = '<div class="loading-documents">Loading documents...</div>';
+
+                const response = await fetch(APP_DOCUMENTS_API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load documents: ${response.status}`);
+                }
+
+                const documents = await response.json();
+
+                if (documents.length === 0) {
+                    documentList.innerHTML = '<p>No documents uploaded yet. Upload documents to get started.</p>';
+                    return;
+                }
+
+                let html = '';
+                for (const doc of documents) {
+                    let statusBadge = '';
+                    if (doc.is_processed === true) {
+                        statusBadge = '<span class="status-badge status-processed">Processed</span>';
+                    } else if (doc.is_processed === false && doc.processing_error) {
+                        statusBadge = '<span class="status-badge status-error">Error</span>';
+                    } else {
+                        statusBadge = '<span class="status-badge status-processing">Processing</span>';
+                    }
+
+                    html += `
+                        <div class="document-item" data-id="${doc.id}">
+                            <div class="document-info">
+                                <div class="document-name">${doc.filename} ${statusBadge}</div>
+                                <div class="document-meta">
+                                    ${formatFileSize(doc.size_bytes)} • ${new Date(doc.created_at).toLocaleString()}
+                                </div>
+                                ${doc.processing_error ? `<div class="document-meta" style="color: var(--error-color)">Error: ${doc.processing_error}</div>` : ''}
+                            </div>
+                            <div class="document-actions">
+                                ${doc.is_processed === false ? `<button class="btn process-document" data-id="${doc.id}">Process</button>` : ''}
+                                <button class="btn btn-danger delete-document" data-id="${doc.id}">Remove</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                documentList.innerHTML = html;
+
+                // Add event listeners to delete buttons
+                document.querySelectorAll('.delete-document').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const documentId = e.target.getAttribute('data-id');
+                        await removeDocumentFromApp(documentId);
+                    });
+                });
+
+                // Add event listeners to process buttons
+                document.querySelectorAll('.process-document').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const documentId = e.target.getAttribute('data-id');
+                        await processDocument(documentId);
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                documentList.innerHTML = `<p>Error loading documents: ${error.message}</p>`;
+            }
+        }
+
+        async function processDocument(documentId) {
+            try {
+                // Show processing message
+                showAlert(documentAlert, 'Processing document...', 'info');
+
+                const response = await fetch(`${DOCUMENTS_API_URL}/${documentId}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Processing failed: ${response.status}`);
+                }
+
+                showAlert(documentAlert, 'Document processed successfully.', 'success');
+                loadDocuments();
+
+            } catch (error) {
+                console.error('Error processing document:', error);
+                showAlert(documentAlert, `Error processing document: ${error.message}`, 'error');
+            }
+        }
+
+        async function removeDocumentFromApp(documentId) {
+            try {
+                const response = await fetch(`${DOCUMENTS_API_URL}/app-documents/${APP_ID}/${documentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Removal failed: ${response.status}`);
+                }
+
+                showAlert(documentAlert, 'Document removed successfully.', 'success');
+                loadDocuments();
+
+            } catch (error) {
+                console.error('Error removing document:', error);
+                showAlert(documentAlert, `Error removing document: ${error.message}`, 'error');
+            }
+        }
+
+        // Settings form handling
+        settingsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(settingsForm);
+            const settings = Object.fromEntries(formData.entries());
+
+            // Convert numeric values
+            settings.chunk_size = parseInt(settings.chunk_size);
+            settings.chunk_overlap = parseInt(settings.chunk_overlap);
+            settings.top_k = parseInt(settings.top_k);
+            settings.similarity_threshold = parseFloat(settings.similarity_threshold);
+
+            try {
+                // In a real implementation, we would save these settings to the app configuration
+                // For now, we'll just show a success message
+                showAlert(settingsAlert, 'Settings saved successfully.', 'success');
+
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showAlert(settingsAlert, `Error saving settings: ${error.message}`, 'error');
+            }
+        });
+
+        // Preview chat handling
+        previewSendButton.addEventListener('click', sendPreviewMessage);
+        previewInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendPreviewMessage();
+            }
+        });
+
+        async function sendPreviewMessage() {
+            const message = previewInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addPreviewMessage(message, 'user');
+
+            // Clear input
+            previewInput.value = '';
+
+            try {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message ai-message';
+                typingIndicator.id = 'preview-typing-indicator';
+                typingIndicator.textContent = 'Thinking...';
+                previewChatContainer.appendChild(typingIndicator);
+
+                // Scroll to bottom
+                previewChatContainer.scrollTop = previewChatContainer.scrollHeight;
+
+                // Make API request
+                const response = await fetch(RAG_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        query: message,
+                        app_id: APP_ID,
+                        temperature: 0.7,
+                        top_k: 5,
+                        similarity_threshold: 0.7
+                    })
+                });
+
+                // Remove typing indicator
+                const indicator = document.getElementById('preview-typing-indicator');
+                if (indicator) {
+                    previewChatContainer.removeChild(indicator);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addPreviewMessage(data.answer, 'ai');
+
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Remove typing indicator
+                const indicator = document.getElementById('preview-typing-indicator');
+                if (indicator) {
+                    previewChatContainer.removeChild(indicator);
+                }
+
+                // Show error message
+                addPreviewMessage(`Error: ${error.message}`, 'ai');
+            }
+        }
+
+        function addPreviewMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+
+            // Process markdown-like formatting
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                .replace(/\n/g, '<br>');                           // Line breaks
+
+            messageDiv.innerHTML = formattedText;
+            previewChatContainer.appendChild(messageDiv);
+
+            // Scroll to bottom
+            previewChatContainer.scrollTop = previewChatContainer.scrollHeight;
+        }
+
+        // Helper functions
+        function showAlert(element, message, type) {
+            element.textContent = message;
+            element.className = `alert alert-${type}`;
+            element.style.display = 'block';
+
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Refresh button
+        refreshButton.addEventListener('click', loadDocuments);
+
+        // Initial load
+        loadDocuments();
+    </script>
+</body>
+</html>

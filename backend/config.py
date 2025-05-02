@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     # @url: https://www.postgresql.org/
     # @important: Database configuration - override with environment variables
     DATABASE_URL: str = Field(
-        default="postgresql://peerai:peerai_password@localhost:5432/peerai_db",
+        default="postgresql://adamfalkenberg@localhost:5432/peerai_db",
         description="Main database URL",
     )
     TEST_DATABASE_URL: str = Field(
-        default="postgresql://peerai:peerai_password@localhost:5432/peerai_test",
+        default="postgresql://adamfalkenberg@localhost:5432/peerai_test",
         description="Test database URL",
     )
 
@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     # @model: mistral-tiny
     EXTERNAL_MODEL: str = Field(
         default="mistral-tiny", description="External LLM model name"
+    )
+
+    # File upload settings
+    UPLOAD_DIR: str = Field(
+        default="./uploads", description="Directory for file uploads"
     )
 
     model_config = {

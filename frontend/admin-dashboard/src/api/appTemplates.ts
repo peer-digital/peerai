@@ -109,8 +109,18 @@ const appTemplatesApi = {
     try {
       // Remove trailing slash to avoid redirect issues
       await api.delete(`/app-templates/${slug}`);
-    } catch (error) {
+    } catch (error: any) {
+      // Log detailed error information
       console.error(`Error deleting template ${slug}:`, error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error headers:', error.response?.headers);
+
+      // Rethrow with more details if available
+      if (error.response?.data?.detail) {
+        const enhancedError = new Error(`${error.response.data.detail} (Status: ${error.response.status})`);
+        throw enhancedError;
+      }
       throw error;
     }
   },

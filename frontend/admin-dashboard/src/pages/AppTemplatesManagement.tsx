@@ -126,6 +126,9 @@ const AppTemplatesManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['app-templates'] });
       setIsDeleteDialogOpen(false);
     },
+    onError: (error: any) => {
+      console.error('Delete template error details:', error);
+    },
   });
 
   // Handle opening the create dialog
@@ -334,7 +337,12 @@ const AppTemplatesManagement: React.FC = () => {
           {createMutation.error ? 'Error creating template: ' :
            updateMutation.error ? 'Error updating template: ' :
            'Error deleting template: '}
-          Please check your permissions and try again.
+          {(deleteMutation.error as Error)?.message?.includes('active deployments')
+            ? 'This template has active deployments. You must delete or update those deployments before deleting this template.'
+            : (createMutation.error as Error)?.message ||
+              (updateMutation.error as Error)?.message ||
+              (deleteMutation.error as Error)?.message ||
+              'Please check your permissions and try again.'}
         </Alert>
       ) : null}
 
@@ -616,12 +624,14 @@ const AppTemplatesManagement: React.FC = () => {
       <Dialog open={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
-          <Typography>
+          <Typography gutterBottom>
             Are you sure you want to delete the template "{selectedTemplate?.name}"? This action cannot be
             undone.
           </Typography>
-          {/* Deployment check removed as it's not available in the current API */}
-
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Note: Templates with active deployments cannot be deleted. You must first delete or update any apps
+            that use this template.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>

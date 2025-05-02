@@ -45,9 +45,14 @@ async def get_public_app(
     # Use the custom code if available, otherwise use the template code
     html_content = deployed_app.custom_code or template.template_code
 
+    # Add the app ID to the configuration
+    config = deployed_app.configuration or {}
+
+    # Add app_id to the configuration so it can be used in the template
+    config['app_id'] = deployed_app.slug
+
     # Replace configuration placeholders in the HTML using the helper function
-    if deployed_app.configuration:
-        html_content = replace_placeholders(html_content, deployed_app.configuration)
+    html_content = replace_placeholders(html_content, config)
 
     # Add the server's base URL as a meta tag to help client-side scripts
     # determine the correct API endpoint

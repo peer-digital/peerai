@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -10,6 +10,7 @@ import {
   Divider,
   Tooltip,
   IconButton,
+  Alert,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -19,6 +20,7 @@ import { JSONSchema7 } from 'json-schema';
 import Form from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { IChangeEvent } from '@rjsf/core';
+import customWidgets from '../widgets';
 
 interface EnhancedConfigFormProps {
   schema: JSONSchema7;
@@ -36,6 +38,26 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   disabled = false,
 }) => {
   const theme = useTheme();
+  const [error, setError] = useState<string | null>(null);
+
+  // Validate schema on mount
+  useEffect(() => {
+    try {
+      console.log('Validating schema:', schema);
+      if (!schema || typeof schema !== 'object') {
+        throw new Error('Invalid schema: Schema must be a valid JSON object');
+      }
+
+      if (!schema.properties || typeof schema.properties !== 'object') {
+        throw new Error('Invalid schema: Schema must have properties object');
+      }
+
+      setError(null);
+    } catch (err) {
+      console.error('Schema validation error:', err);
+      setError((err as Error).message || 'Invalid schema configuration');
+    }
+  }, [schema]);
 
   // Group schema properties into sections for better organization
   const getSections = () => {
@@ -97,7 +119,16 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
 
   return (
     <Box sx={{ width: '100%' }}>
-      {sections.map((section, index) => (
+      {error ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      ) : sections.length === 0 ? (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          No configuration options available for this template.
+        </Alert>
+      ) : (
+        sections.map((section, index) => (
         <Accordion
           key={section.key}
           defaultExpanded={index === 0}
@@ -138,47 +169,68 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
           <AccordionDetails sx={{ p: 0 }}>
             <Divider />
             <Box sx={{ p: 2 }}>
-              {section.isObject ? (
-                // For object sections, create a form for the nested properties
-                <Form
-                  schema={{
-                    type: 'object',
-                    properties: section.properties,
-                  } as JSONSchema7}
-                  formData={formData[section.key] || {}}
-                  onChange={(data: IChangeEvent<any>) => handleSectionChange(section.key, data)}
-                  validator={validator}
-                  disabled={disabled}
-                  uiSchema={getCustomUiSchema(section.key)}
-                />
-              ) : (
-                // For top-level properties, create a form with just that property
-                <Form
-                  schema={{
-                    type: 'object',
-                    properties: {
-                      [section.key]: schema.properties?.[section.key],
-                    },
-                  } as JSONSchema7}
-                  formData={{ [section.key]: formData[section.key] }}
-                  onChange={(data: IChangeEvent<any>) => {
-                    if (data.formData) {
-                      const newFormData = {
-                        ...formData,
-                        [section.key]: data.formData[section.key],
-                      };
-                      onChange({ formData: newFormData });
-                    }
-                  }}
-                  validator={validator}
-                  disabled={disabled}
-                  uiSchema={getCustomUiSchema(section.key)}
-                />
-              )}
+              {(() => {
+                try {
+                  if (section.isObject) {
+                    // For object sections, create a form for the nested properties
+                    return (
+                      <Form
+                        schema={{
+                          type: 'object',
+                          properties: section.properties,
+                        } as JSONSchema7}
+                        formData={formData[section.key] || {}}
+                        onChange={(data: IChangeEvent<any>) => handleSectionChange(section.key, data)}
+                        validator={validator}
+                        disabled={disabled}
+                        uiSchema={getCustomUiSchema(section.key)}
+                        widgets={{
+                          fileUpload: customWidgets.fileUpload,
+                        }}
+                      />
+                    );
+                  } else {
+                    // For top-level properties, create a form with just that property
+                    return (
+                      <Form
+                        schema={{
+                          type: 'object',
+                          properties: {
+                            [section.key]: schema.properties?.[section.key],
+                          },
+                        } as JSONSchema7}
+                        formData={{ [section.key]: formData[section.key] }}
+                        onChange={(data: IChangeEvent<any>) => {
+                          if (data.formData) {
+                            const newFormData = {
+                              ...formData,
+                              [section.key]: data.formData[section.key],
+                            };
+                            onChange({ formData: newFormData });
+                          }
+                        }}
+                        validator={validator}
+                        disabled={disabled}
+                        uiSchema={getCustomUiSchema(section.key)}
+                        widgets={{
+                          fileUpload: customWidgets.fileUpload,
+                        }}
+                      />
+                    );
+                  }
+                } catch (err) {
+                  console.error(`Error rendering form for section ${section.key}:`, err);
+                  return (
+                    <Alert severity="error" sx={{ mt: 1 }}>
+                      Error rendering form for section "{section.title}": {(err as Error).message}
+                    </Alert>
+                  );
+                }
+              })()}
             </Box>
           </AccordionDetails>
         </Accordion>
-      ))}
+      )))}
     </Box>
   );
 };

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="{{app_settings.language}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{app_settings.app_title}}</title>
+    <style>
+        :root {
+            --primary-color: {{styling.primary_color}};
+            --secondary-color: {{styling.secondary_color}};
+            --background-color: {{styling.background_color}};
+            --text-color: {{styling.text_color}};
+            --light-bg-color: {{styling.light_bg_color}};
+            --border-color: {{styling.border_color}};
+            --font-family: {{styling.font_family}};
+            --font-size-small: {{styling.font_size_small}};
+            --font-size-medium: {{styling.font_size_medium}};
+            --font-size-large: {{styling.font_size_large}};
+            --border-radius: {{styling.border_radius}};
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .app-title {
+            font-size: var(--font-size-large);
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .app-description {
+            font-size: var(--font-size-small);
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 15px 20px;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .content-title {
+            font-size: var(--font-size-medium);
+            font-weight: bold;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background-color: var(--light-bg-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .quick-action {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            font-size: var(--font-size-small);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-action:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 15px;
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-medium);
+            line-height: 1.5;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background-color: var(--light-bg-color);
+            border-bottom-left-radius: 0;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: white;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius) 0 0 var(--border-radius);
+            font-size: var(--font-size-medium);
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            padding: 0 20px;
+            font-size: var(--font-size-medium);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: var(--font-size-small);
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                height: 100vh;
+            }
+
+            .quick-actions {
+                padding: 10px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div class="app-title">{{app_settings.app_title}}</div>
+                <div class="app-description">{{app_settings.app_description}}</div>
+            </div>
+        </div>
+
+        <!-- Content section -->
+        <div class="content">
+            <div class="content-header">
+                <div class="content-title">{{content.content_title}}</div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="quick-actions">
+                <button class="quick-action">{{quick_actions.quick_action1}}</button>
+                <button class="quick-action">{{quick_actions.quick_action2}}</button>
+                <button class="quick-action">{{quick_actions.quick_action3}}</button>
+                <button class="quick-action">{{quick_actions.quick_action4}}</button>
+                <button class="quick-action">{{quick_actions.quick_action5}}</button>
+            </div>
+
+            <!-- Chat container -->
+            <div class="chat-container" id="chat-container">
+                <div class="message ai-message">
+                    {{content.welcome_message}}
+                </div>
+            </div>
+
+            <!-- Input section -->
+            <div class="input-container">
+                <input type="text" class="chat-input" id="user-input" placeholder="{{content.input_placeholder}}">
+                <button class="send-button" id="send-button">{{content.send_button_text}}</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration from template
+        let API_KEY = '{{api_key}}';
+        const MODEL = '{{ai_settings.model}}';
+        const TEMPERATURE = {{ai_settings.temperature}};
+        const SYSTEM_PROMPT = `{{ai_settings.system_prompt}}`;
+
+        // Helper function to determine API base URL
+        const getApiBaseUrl = () => {
+            console.log('Determining API base URL...');
+            console.log('Window location:', window.location.href);
+            console.log('Is in iframe:', window !== window.parent);
+
+            // Check if we're in an iframe (deployed app)
+            if (window !== window.parent) {
+                // We're in an iframe, use the parent's origin
+                try {
+                    // This will throw an error if cross-origin
+                    const parentOrigin = window.parent.location.origin;
+                    console.log('Using parent origin:', parentOrigin);
+                    return parentOrigin;
+                } catch (e) {
+                    // If we can't access parent origin, use the current origin
+                    console.log('Cannot access parent origin, using current origin:', window.location.origin);
+                    return window.location.origin;
+                }
+            }
+
+            // Check if we're in a production environment
+            if (window.location.hostname !== 'localhost') {
+                console.log('In production environment, using current origin:', window.location.origin);
+                return window.location.origin;
+            }
+
+            try {
+                // In development, use localhost:8000
+                console.log('In development environment, using localhost:8000');
+                return 'http://localhost:8000';
+            } catch (e) {
+                console.warn('Error determining API base URL:', e);
+                // Fallback to a default URL
+                console.log('Using fallback URL: http://localhost:8000');
+                return 'http://localhost:8000';
+            }
+        };
+
+        // Get app ID from URL path
+        const getAppIdFromPath = () => {
+            const pathParts = window.location.pathname.split('/');
+            const slug = pathParts[pathParts.length - 1];
+            return slug;
+        };
+
+        // Get the app ID from the template
+        let APP_ID = '{{app_id}}';
+        console.log('App ID from template:', APP_ID);
+
+        // If the app_id is still a template placeholder (not replaced), get it from the URL
+        if (APP_ID === '{{app_id}}' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
+            console.log('App ID is a template placeholder, trying to get it from URL');
+
+            // Try to extract from URL path
+            const urlPath = window.location.pathname;
+            console.log('Current URL path:', urlPath);
+
+            // First try to extract using regex to find rag-chatbot-XXX pattern
+            const chatbotRegex = /rag-chatbot-(\d+)/;
+            const chatbotMatch = urlPath.match(chatbotRegex);
+
+            if (chatbotMatch && chatbotMatch[0]) {
+                // We found a match like rag-chatbot-123
+                APP_ID = chatbotMatch[0]; // Use the full match (rag-chatbot-123)
+                console.log('Extracted app ID from URL path using regex:', APP_ID);
+            } else {
+                // Fallback to the last part of the URL path
+                APP_ID = getAppIdFromPath();
+                console.log('Using last part of URL path as app ID:', APP_ID);
+            }
+
+            // Store in localStorage for future use
+            if (APP_ID && APP_ID !== '{{app_id}}') {
+                localStorage.setItem('rag_app_id', APP_ID);
+            }
+        }
+
+        // Check if we have an API key
+        console.log('Initial API key:', API_KEY ? (API_KEY.substring(0, 4) + '...') : 'none');
+
+        // If no API key is available or it's still a template placeholder, try to get it from localStorage
+        if (!API_KEY ||
+            API_KEY === '{{api_key}}' ||
+            API_KEY.includes('{{') ||
+            API_KEY.includes('}}')) {
+
+            // Try to get the API key from localStorage (for development/testing)
+            const storedApiKey = localStorage.getItem('rag_api_key');
+            if (storedApiKey) {
+                console.log('Using API key from localStorage');
+                API_KEY = storedApiKey;
+            } else {
+                console.warn('No API key available. Some features may not work correctly.');
+                // For testing purposes, you can uncomment the following line to prompt for an API key
+                // const promptedKey = prompt('Please enter your API key:');
+                // if (promptedKey) {
+                //     API_KEY = promptedKey;
+                //     localStorage.setItem('rag_api_key', promptedKey);
+                // }
+            }
+        }
+
+        // Log configuration for debugging
+        console.log('App configuration loaded:');
+        console.log('- App ID:', APP_ID);
+        console.log('- Model:', MODEL);
+        console.log('- API Key available:', !!API_KEY &&
+                                    API_KEY !== '{{api_key}}' &&
+                                    !API_KEY.includes('{{') &&
+                                    !API_KEY.includes('}}'));
+
+        const apiBaseUrl = getApiBaseUrl();
+        const isInIframe = window !== window.parent;
+
+        // Construct the full API URL
+        const API_URL = `${apiBaseUrl}/api/v1/llm/completions`;
+
+        // Construct the documents API URL using the app ID
+        let DOCUMENTS_API_URL;
+
+        if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
+            DOCUMENTS_API_URL = `${apiBaseUrl}/api/v1/documents/app/${APP_ID}`;
+            console.log('Documents API URL:', DOCUMENTS_API_URL);
+        } else {
+            console.warn('No valid app ID available for document retrieval');
+            DOCUMENTS_API_URL = null;
+        }
+
+        // DOM elements
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const quickActions = document.querySelectorAll('.quick-action');
+
+        // Add event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Add event listeners to quick action buttons
+        quickActions.forEach(button => {
+            button.addEventListener('click', function() {
+                userInput.value = this.textContent;
+                sendMessage();
+            });
+        });
+
+        // Function to send message
+        async function sendMessage() {
+            console.log('Send message function called');
+            const message = userInput.value.trim();
+            if (!message) {
+                console.log('Message is empty, not sending');
+                return;
+            }
+
+            console.log('Sending message:', message);
+
+            // Add user message to chat
+            addMessage(message, 'user');
+
+            // Clear input
+            userInput.value = '';
+
+            try {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message ai-message';
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.textContent = '{{content.typing_indicator_text}}';
+                chatContainer.appendChild(typingIndicator);
+
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // Get relevant document chunks for RAG
+                let documentContext = '';
+                try {
+                    // Only try to fetch documents if we have a valid API key and a valid documents URL
+                    if (API_KEY &&
+                        API_KEY !== '{{api_key}}' &&
+                        !API_KEY.includes('{{') &&
+                        !API_KEY.includes('}}') &&
+                        DOCUMENTS_API_URL) {
+                        console.log('Fetching documents from:', DOCUMENTS_API_URL);
+                        // Set up headers for the request
+                        let headers = {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': API_KEY  // Always include X-API-Key header
+                        };
+
+                        // Also include Authorization header for backward compatibility
+                        headers['Authorization'] = `Bearer ${API_KEY}`;
+
+                        console.log('Using headers for document retrieval:', Object.keys(headers));
+
+                        const documentsResponse = await fetch(DOCUMENTS_API_URL, {
+                            method: 'GET',
+                            headers: headers
+                        });
+
+                        if (documentsResponse.ok) {
+                            const documents = await documentsResponse.json();
+                            if (documents && documents.length > 0) {
+                                // In a real implementation, we would search for relevant chunks here
+                                // For now, we'll just indicate that documents are available
+                                documentContext = "The user has uploaded documents. Please use them to answer the question.";
+                            } else {
+                                documentContext = "{{content.no_documents_message}}";
+                            }
+                        } else {
+                            console.warn(`Error fetching documents: ${documentsResponse.status}`);
+                            documentContext = "Error fetching documents. Proceeding with general knowledge.";
+                        }
+                    } else if (!API_KEY) {
+                        console.warn('No API key available for document retrieval');
+                        documentContext = "No API key available. Proceeding with general knowledge.";
+                    } else if (!DOCUMENTS_API_URL) {
+                        console.warn('No valid documents URL available');
+                        documentContext = "Could not determine app ID for document retrieval. Proceeding with general knowledge.";
+                    }
+                } catch (error) {
+                    console.error('Error fetching documents:', error);
+                    documentContext = "Error fetching documents. Proceeding with general knowledge.";
+                }
+
+                // Prepare request body
+                const requestBody = {
+                    messages: [
+                        {role: 'system', content: `${SYSTEM_PROMPT}\n\nDocument Context: ${documentContext}`},
+                        {role: 'user', content: message}
+                    ],
+                    model: MODEL,
+                    temperature: TEMPERATURE
+                };
+
+                // Make API request
+                let response;
+                try {
+                    // Check if we have a valid API key
+                    if (!API_KEY) {
+                        console.error('No API key available');
+                        throw new Error('No API key available');
+                    }
+
+                    // Log that we have a valid API key
+                    console.log('Using API key:', API_KEY.substring(0, 4) + '...');
+
+                    console.log('Making API request to:', API_URL);
+                    console.log('Request body:', requestBody);
+                    console.log('Using API key:', API_KEY.substring(0, 4) + '...');
+
+                    // Set up headers for the request
+                    let headers = {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY  // Always include X-API-Key header
+                    };
+
+                    // Also include Authorization header for backward compatibility
+                    headers['Authorization'] = `Bearer ${API_KEY}`;
+
+                    console.log('Using headers for completion:', Object.keys(headers));
+
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    console.log('API response status:', response.status);
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('Error making API request:', error);
+                    throw error;
+                }
+
+                // Remove typing indicator
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    chatContainer.removeChild(indicator);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.choices && data.choices.length > 0) {
+                    const aiMessage = data.choices[0].message.content;
+                    addMessage(aiMessage, 'ai');
+                } else {
+                    addMessage('{{content.no_response_text}}', 'ai');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Remove typing indicator
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    chatContainer.removeChild(indicator);
+                }
+
+                // Show error message
+                addMessage('{{content.error_message}}', 'ai');
+            }
+        }
+
+        // Function to add message to chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+
+            // Process markdown-like formatting
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                .replace(/\n/g, '<br>');                           // Line breaks
+
+            messageDiv.innerHTML = formattedText;
+            chatContainer.appendChild(messageDiv);
+
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>

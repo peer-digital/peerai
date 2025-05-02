@@ -135,6 +135,10 @@ const AppLibrary: React.FC = () => {
 
   // Handle template selection
   const handleSelectTemplate = (template: AppTemplate) => {
+    console.log('Selected template:', template);
+    console.log('Template config schema:', template.template_config.schema);
+    console.log('Template default values:', template.template_config.default_values);
+
     setSelectedTemplate(template);
     setFormData(template.template_config.default_values || {});
     setDeploymentData({
@@ -536,14 +540,26 @@ const AppLibrary: React.FC = () => {
                 App Configuration
               </Typography>
 
-              {selectedTemplate && (
-                <EnhancedConfigForm
-                  schema={selectedTemplate.template_config.schema as JSONSchema7}
-                  formData={formData}
-                  onChange={handleFormChange}
-                  uiSchema={selectedTemplate.template_config.uiSchema}
-                />
-              )}
+              {selectedTemplate && (() => {
+                try {
+                  console.log('Rendering EnhancedConfigForm with schema:', selectedTemplate.template_config.schema);
+                  return (
+                    <EnhancedConfigForm
+                      schema={selectedTemplate.template_config.schema as JSONSchema7}
+                      formData={formData}
+                      onChange={handleFormChange}
+                      uiSchema={selectedTemplate.template_config.uiSchema}
+                    />
+                  );
+                } catch (err) {
+                  console.error('Error rendering EnhancedConfigForm:', err);
+                  return (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      Error rendering configuration form: {(err as Error).message}
+                    </Alert>
+                  );
+                }
+              })()}
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>

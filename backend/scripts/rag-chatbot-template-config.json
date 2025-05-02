@@ -1,0 +1,390 @@
+{
+  "schema": {
+    "title": "RAG Chatbot Configuration",
+    "type": "object",
+    "properties": {
+      "app_settings": {
+        "type": "object",
+        "title": "App Settings",
+        "properties": {
+          "app_title": {
+            "type": "string",
+            "title": "App Title",
+            "description": "The title of your chatbot app",
+            "default": "RAG Chatbot"
+          },
+          "app_description": {
+            "type": "string",
+            "title": "App Description",
+            "description": "A short description of your chatbot",
+            "default": "An advanced chatbot solution that can answer questions based on your uploaded documents."
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "The language of your chatbot interface",
+            "enum": ["en", "sv"],
+            "enumNames": ["English", "Swedish"],
+            "default": "en"
+          }
+        }
+      },
+      "documents": {
+        "type": "object",
+        "title": "Documents",
+        "description": "Upload and manage documents for your RAG chatbot",
+        "properties": {
+          "file_upload": {
+            "type": "string",
+            "title": "Upload Documents",
+            "description": "Upload documents to be used by the chatbot",
+            "format": "data-url"
+          }
+        }
+      },
+      "content": {
+        "type": "object",
+        "title": "Content",
+        "properties": {
+          "content_title": {
+            "type": "string",
+            "title": "Content Title",
+            "description": "The title displayed above the chat",
+            "default": "Try it yourself"
+          },
+          "welcome_message": {
+            "type": "string",
+            "title": "Welcome Message",
+            "description": "The initial message from the chatbot",
+            "default": "Hello! I'm here to help you. What would you like to know about your documents?"
+          },
+          "input_placeholder": {
+            "type": "string",
+            "title": "Input Placeholder",
+            "description": "Placeholder text for the input field",
+            "default": "Type your question here..."
+          },
+          "send_button_text": {
+            "type": "string",
+            "title": "Send Button Text",
+            "description": "Text for the send button",
+            "default": "Send"
+          },
+          "typing_indicator_text": {
+            "type": "string",
+            "title": "Typing Indicator Text",
+            "description": "Text shown while the AI is generating a response",
+            "default": "Thinking..."
+          },
+          "error_message": {
+            "type": "string",
+            "title": "Error Message",
+            "description": "Message shown when an error occurs",
+            "default": "Sorry, I encountered an error. Please try again."
+          },
+          "no_response_text": {
+            "type": "string",
+            "title": "No Response Text",
+            "description": "Message shown when no response is received",
+            "default": "No response received. Please try again."
+          },
+          "no_documents_message": {
+            "type": "string",
+            "title": "No Documents Message",
+            "description": "Message shown when no documents are available",
+            "default": "No documents have been uploaded yet. Please upload documents in the admin panel to enable document-based answers."
+          }
+        }
+      },
+      "quick_actions": {
+        "type": "object",
+        "title": "Quick Actions",
+        "description": "Predefined questions that users can click on",
+        "properties": {
+          "quick_action1": {
+            "type": "string",
+            "title": "Quick Action 1",
+            "default": "What are the main topics in my documents?"
+          },
+          "quick_action2": {
+            "type": "string",
+            "title": "Quick Action 2",
+            "default": "Summarize the key points"
+          },
+          "quick_action3": {
+            "type": "string",
+            "title": "Quick Action 3",
+            "default": "Find information about..."
+          },
+          "quick_action4": {
+            "type": "string",
+            "title": "Quick Action 4",
+            "default": "Compare and contrast..."
+          },
+          "quick_action5": {
+            "type": "string",
+            "title": "Quick Action 5",
+            "default": "Explain the concept of..."
+          }
+        }
+      },
+      "ai_settings": {
+        "type": "object",
+        "title": "AI Settings",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "AI Model",
+            "description": "The AI model to use for the chatbot",
+            "enum": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
+            "default": "mistral-large-latest"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "description": "Controls randomness in the response (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt",
+            "description": "Instructions for the AI model",
+            "default": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
+          },
+          "embedding_model": {
+            "type": "string",
+            "title": "Embedding Model",
+            "description": "The model to use for generating embeddings",
+            "enum": ["mistral-embed", "openai-text-embedding-3-small"],
+            "default": "mistral-embed"
+          }
+        },
+        "required": ["model"]
+      },
+      "rag_settings": {
+        "type": "object",
+        "title": "RAG Settings",
+        "properties": {
+          "chunk_size": {
+            "type": "number",
+            "title": "Chunk Size",
+            "description": "Size of text chunks for processing (in characters)",
+            "minimum": 100,
+            "maximum": 2000,
+            "default": 500
+          },
+          "chunk_overlap": {
+            "type": "number",
+            "title": "Chunk Overlap",
+            "description": "Overlap between chunks (in characters)",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 50
+          },
+          "top_k_results": {
+            "type": "number",
+            "title": "Top K Results",
+            "description": "Number of most relevant chunks to include in context",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "title": "Similarity Threshold",
+            "description": "Minimum similarity score for chunks to be included (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "allowed_file_types": {
+            "type": "string",
+            "title": "Allowed File Types",
+            "description": "Comma-separated list of allowed file extensions",
+            "default": ".pdf,.txt,.docx,.md"
+          },
+          "max_file_size_mb": {
+            "type": "number",
+            "title": "Max File Size (MB)",
+            "description": "Maximum file size in megabytes",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10
+          }
+        }
+      },
+      "styling": {
+        "type": "object",
+        "title": "Styling",
+        "properties": {
+          "primary_color": {
+            "type": "string",
+            "title": "Primary Color",
+            "description": "Main color for buttons and accents",
+            "default": "#1a56db"
+          },
+          "secondary_color": {
+            "type": "string",
+            "title": "Secondary Color",
+            "description": "Secondary color for highlights",
+            "default": "#4f46e5"
+          },
+          "background_color": {
+            "type": "string",
+            "title": "Background Color",
+            "description": "Background color of the app",
+            "default": "#f9fafb"
+          },
+          "text_color": {
+            "type": "string",
+            "title": "Text Color",
+            "description": "Main text color",
+            "default": "#111827"
+          },
+          "light_bg_color": {
+            "type": "string",
+            "title": "Light Background Color",
+            "description": "Background color for message bubbles",
+            "default": "#f0f7ff"
+          },
+          "border_color": {
+            "type": "string",
+            "title": "Border Color",
+            "description": "Color for borders",
+            "default": "#e5e7eb"
+          },
+          "font_family": {
+            "type": "string",
+            "title": "Font Family",
+            "description": "Font family for text",
+            "default": "system-ui, sans-serif"
+          },
+          "font_size_small": {
+            "type": "string",
+            "title": "Small Font Size",
+            "description": "Font size for small text",
+            "default": "14px"
+          },
+          "font_size_medium": {
+            "type": "string",
+            "title": "Medium Font Size",
+            "description": "Font size for medium text",
+            "default": "16px"
+          },
+          "font_size_large": {
+            "type": "string",
+            "title": "Large Font Size",
+            "description": "Font size for large text",
+            "default": "22px"
+          },
+          "border_radius": {
+            "type": "string",
+            "title": "Border Radius",
+            "description": "Roundness of corners",
+            "default": "8px"
+          }
+        }
+      }
+    }
+  },
+  "uiSchema": {
+    "ui:submitButtonOptions": {
+      "norender": true
+    },
+    "app_settings": {
+      "ui:order": ["app_title", "app_description", "language"],
+      "ui:expandable": true,
+      "ui:expanded": true
+    },
+    "documents": {
+      "ui:expandable": true,
+      "ui:expanded": true,
+      "file_upload": {
+        "ui:widget": "fileUpload",
+        "ui:options": {
+          "accept": ".pdf,.txt,.docx,.md",
+          "multiple": true
+        }
+      }
+    },
+    "content": {
+      "ui:expandable": true,
+      "ui:expanded": false
+    },
+    "quick_actions": {
+      "ui:expandable": true,
+      "ui:expanded": false
+    },
+    "ai_settings": {
+      "ui:expandable": true,
+      "ui:expanded": true,
+      "system_prompt": {
+        "ui:widget": "textarea"
+      }
+    },
+    "rag_settings": {
+      "ui:expandable": true,
+      "ui:expanded": true
+    },
+    "styling": {
+      "ui:expandable": true,
+      "ui:expanded": false
+    }
+  },
+  "default_values": {
+    "app_settings": {
+      "app_title": "RAG Chatbot",
+      "app_description": "An advanced chatbot solution that can answer questions based on your uploaded documents.",
+      "language": "en"
+    },
+    "documents": {
+      "file_upload": null
+    },
+    "content": {
+      "content_title": "Try it yourself",
+      "welcome_message": "Hello! I'm here to help you. What would you like to know about your documents?",
+      "input_placeholder": "Type your question here...",
+      "send_button_text": "Send",
+      "typing_indicator_text": "Thinking...",
+      "error_message": "Sorry, I encountered an error. Please try again.",
+      "no_response_text": "No response received. Please try again.",
+      "no_documents_message": "No documents have been uploaded yet. Please upload documents in the admin panel to enable document-based answers."
+    },
+    "quick_actions": {
+      "quick_action1": "What are the main topics in my documents?",
+      "quick_action2": "Summarize the key points",
+      "quick_action3": "Find information about...",
+      "quick_action4": "Compare and contrast...",
+      "quick_action5": "Explain the concept of..."
+    },
+    "ai_settings": {
+      "model": "mistral-large-latest",
+      "temperature": 0.7,
+      "system_prompt": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge.",
+      "embedding_model": "mistral-embed"
+    },
+    "rag_settings": {
+      "chunk_size": 500,
+      "chunk_overlap": 50,
+      "top_k_results": 5,
+      "similarity_threshold": 0.7,
+      "allowed_file_types": ".pdf,.txt,.docx,.md",
+      "max_file_size_mb": 10
+    },
+    "styling": {
+      "primary_color": "#1a56db",
+      "secondary_color": "#4f46e5",
+      "background_color": "#f9fafb",
+      "text_color": "#111827",
+      "light_bg_color": "#f0f7ff",
+      "border_color": "#e5e7eb",
+      "font_family": "system-ui, sans-serif",
+      "font_size_small": "14px",
+      "font_size_medium": "16px",
+      "font_size_large": "22px",
+      "border_radius": "8px"
+    }
+  }
+}

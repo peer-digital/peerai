@@ -36,6 +36,7 @@ const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const LegalPages = React.lazy(() => import('./pages/LegalPages'));
+const TestConfigForm = React.lazy(() => import('./pages/TestConfigForm'));
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -183,6 +184,13 @@ function App() {
                     <Route path="/docs" element={
                       <PermissionGuard requiredPermissions={[Permission.VIEW_DOCS]}>
                         <DeveloperDocs />
+                      </PermissionGuard>
+                    } />
+
+                    {/* Test Config Form - for debugging */}
+                    <Route path="/test-config" element={
+                      <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
+                        <TestConfigForm />
                       </PermissionGuard>
                     } />
                   </Route>

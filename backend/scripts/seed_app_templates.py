@@ -26,6 +26,14 @@ with open(os.path.join(os.path.dirname(__file__), 'intelligent-chatbot-template-
     import json
     intelligent_chatbot_template_config = json.load(f)
 
+# Read the RAG Chatbot template HTML
+with open(os.path.join(os.path.dirname(__file__), 'rag-chatbot-template.html'), 'r') as f:
+    rag_chatbot_template_html = f.read()
+
+# Read the RAG Chatbot template config
+with open(os.path.join(os.path.dirname(__file__), 'rag-chatbot-template-config.json'), 'r') as f:
+    rag_chatbot_template_config = json.load(f)
+
 # Sample app templates to seed
 SAMPLE_TEMPLATES = [
     {
@@ -523,6 +531,16 @@ SAMPLE_TEMPLATES = [
         "template_config": intelligent_chatbot_template_config,
         "template_code": intelligent_chatbot_template_html,
         "tags": ["chatbot", "ai", "customer-support", "modern-ui"],
+        "is_active": True,
+    },
+    {
+        "slug": "rag-chatbot",
+        "name": "RAG Chatbot",
+        "description": "An advanced chatbot that can answer questions based on your uploaded documents. Perfect for creating a custom knowledge base or document assistant.",
+        "icon_url": "https://via.placeholder.com/300x150?text=RAG+Chatbot",
+        "template_config": rag_chatbot_template_config,
+        "template_code": rag_chatbot_template_html,
+        "tags": ["chatbot", "rag", "documents", "ai", "knowledge-base"],
         "is_active": True,
     },
 ]

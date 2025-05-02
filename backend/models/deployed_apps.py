@@ -31,3 +31,4 @@ class DeployedApp(Base):
     template = relationship("AppTemplate", back_populates="deployments")
     deployed_by = relationship("User", backref="deployed_apps")
     team = relationship("Team", backref="deployed_apps")
+    documents = relationship("AppDocument", back_populates="app", cascade="all, delete-orphan")

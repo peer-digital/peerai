@@ -22,9 +22,12 @@ from sqlalchemy import func
 
 from backend.models.auth import APIKey, User, DBSystemSettings
 from backend.models.usage import UsageRecord
+from backend.models.documents import Document, DocumentChunk, AppDocument
 from backend.database import get_db
 from backend.config import settings
 from backend.services.model_orchestrator import ModelOrchestrator
+from backend.services.document_processor import DocumentProcessor
+from backend.schemas.rag import RAGCompletionRequest, RAGCompletionResponse, DocumentChunkResponse
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -499,6 +502,7 @@ async def create_completion(
         elif system_settings and system_settings.models and "maxTokens" in system_settings.models:
             # Use system settings for max_tokens
             request_data["max_tokens"] = system_settings.models["maxTokens"]
+
         if request.top_p is not None:
             request_data["top_p"] = request.top_p
         if request.stop is not None:
@@ -524,18 +528,186 @@ async def create_completion(
         error_response = CompletionResponse(
             choices=[],
             provider="error",
+            model="error",
             usage={"total_tokens": 0},
             latency_ms=error_latency,
         )
         record_usage(
-            db,
-            api_key,
-            "/completions",
-            error_response,
-            getattr(e, "status_code", 500),
-            str(e),
+            db, api_key, "/completions", error_response, 500, str(e)
         )
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/rag", response_model=RAGCompletionResponse)
+async def create_rag_completion(
+    request: RAGCompletionRequest,
+    api_key: APIKey = Depends(get_api_key),
+    db: Session = Depends(get_db),
+):
+    """Create a RAG-based completion using document context"""
+    # Record start time for latency tracking
+    start_time = time.time()
+
+    # Handle mock mode
+    if request.mock_mode or settings.MOCK_MODE:
+        mock_sources = [
+            DocumentChunkResponse(
+                text="This is a sample document chunk that contains relevant information about the query.",
+                metadata={
+                    "document_id": 1,
+                    "document_name": "sample_document.pdf",
+                    "chunk_index": 0,
+                    "similarity_score": 0.92
+                }
+            ),
+            DocumentChunkResponse(
+                text="Another relevant document chunk that provides additional context for the answer.",
+                metadata={
+                    "document_id": 2,
+                    "document_name": "another_document.txt",
+                    "chunk_index": 3,
+                    "similarity_score": 0.85
+                }
+            )
+        ]
+
+        return RAGCompletionResponse(
+            answer="Based on the documents, the answer to your query is that RAG (Retrieval Augmented Generation) combines document retrieval with generative AI to provide more accurate and contextual responses.",
+            sources=mock_sources,
+            model="mock-rag-model",
+            usage={
+                "prompt_tokens": 150,
+                "completion_tokens": 50,
+                "total_tokens": 200
+            },
+            latency_ms=int((time.time() - start_time) * 1000)
+        )
+
+    # Check rate limits
+    await check_rate_limits(api_key, db)
+
+    # Check if app exists
+    app = db.query(AppDocument).filter(AppDocument.app_id == request.app_id, AppDocument.is_active.is_(True)).first()
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="No documents found for this app. Please upload documents first."
+        )
+
+    try:
+        # Initialize document processor
+        doc_processor = DocumentProcessor(db)
+
+        # Search for relevant document chunks
+        relevant_chunks = await doc_processor.search_similar_chunks(
+            query=request.query,
+            app_id=request.app_id,
+            top_k=request.top_k or 5,
+            threshold=request.similarity_threshold or 0.7
+        )
+
+        # Convert chunks to the format expected by the model
+        context = "\n\n".join([chunk["text"] for chunk in relevant_chunks])
+
+        # Prepare messages for the model
+        system_prompt = "You are a helpful assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
+
+        messages = [
+            {"role": "system", "content": f"{system_prompt}\n\nDocument Context:\n{context}"},
+            {"role": "user", "content": request.query}
+        ]
+
+        if request.messages:
+            # Add any additional conversation history
+            messages.extend(request.messages)
+
+        # Call the model
+        async with httpx.AsyncClient() as client:
+            model_name = request.model or settings.EXTERNAL_MODEL
+
+            payload = {
+                "model": model_name,
+                "messages": messages,
+                "temperature": request.temperature or 0.7,
+            }
+
+            if request.max_tokens:
+                payload["max_tokens"] = request.max_tokens
+            if request.top_p:
+                payload["top_p"] = request.top_p
+
+            response = await client.post(
+                settings.EXTERNAL_LLM_URL,
+                headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
+                json=payload,
+                timeout=30.0
+            )
+
+            response.raise_for_status()
+            result = response.json()
+
+            # Extract the answer
+            answer = result["choices"][0]["message"]["content"]
+
+            # Convert relevant chunks to the response format
+            sources = [
+                DocumentChunkResponse(
+                    text=chunk["text"],
+                    metadata=chunk["metadata"]
+                )
+                for chunk in relevant_chunks
+            ]
+
+            # Record usage
+            usage_record = UsageRecord(
+                user_id=api_key.user_id,
+                api_key_id=api_key.id,
+                endpoint="/rag",
+                model=model_name,
+                tokens_used=result["usage"]["total_tokens"],
+                latency_ms=float((time.time() - start_time) * 1000),
+                status_code=200,
+                error=False
+            )
+            db.add(usage_record)
+            db.commit()
+
+            return RAGCompletionResponse(
+                answer=answer,
+                sources=sources,
+                model=model_name,
+                usage=result["usage"],
+                latency_ms=int((time.time() - start_time) * 1000)
+            )
+
+    except Exception as e:
+        error_response = RAGCompletionResponse(
+            answer=f"Error: {str(e)}",
+            sources=[],
+            model="error",
+            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            latency_ms=int((time.time() - start_time) * 1000)
+        )
+
+        # Record error
+        error_record = UsageRecord(
+            user_id=api_key.user_id,
+            api_key_id=api_key.id,
+            endpoint="/rag",
+            model="error",
+            tokens_used=0,
+            latency_ms=float((time.time() - start_time) * 1000),
+            status_code=500,
+            error=True,
+            error_message=str(e)
+        )
+        db.add(error_record)
+        db.commit()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing RAG request: {str(e)}"
+        )
 
 
 @router.get("/models", response_model=List[Dict[str, Any]])
