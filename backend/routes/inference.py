@@ -18,6 +18,7 @@ import time
 import random
 import httpx
 import logging
+import asyncio  # Required for sleep in retry logic
 from sqlalchemy import func
 
 from backend.models.auth import APIKey, User, DBSystemSettings
@@ -652,10 +653,11 @@ async def create_rag_completion(
         print(f"Using app_id {search_app_id} for document search")
 
         # Search for relevant document chunks
+        # Reduced default from 5 to 3 to avoid exceeding token limits
         relevant_chunks = await doc_processor.search_similar_chunks(
             query=request.query,
             app_id=search_app_id,
-            top_k=request.top_k or 5,
+            top_k=request.top_k or 3,  # Reduced from 5 to 3
             threshold=request.similarity_threshold or 0.7
         )
 
@@ -674,7 +676,7 @@ async def create_rag_completion(
             # Add any additional conversation history
             messages.extend(request.messages)
 
-        # Call the model
+        # Call the model with retry logic for rate limits
         async with httpx.AsyncClient() as client:
             model_name = request.model or settings.EXTERNAL_MODEL
 
@@ -689,15 +691,67 @@ async def create_rag_completion(
             if request.top_p:
                 payload["top_p"] = request.top_p
 
-            response = await client.post(
-                settings.EXTERNAL_LLM_URL,
-                headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
-                json=payload,
-                timeout=30.0
-            )
+            # Retry parameters
+            max_retries = 5
+            retries = 0
+            base_delay = 1  # Start with a 1-second delay
 
-            response.raise_for_status()
-            result = response.json()
+            # Log the total context size
+            total_context = "\n".join([msg["content"] for msg in messages])
+            context_tokens = len(total_context.split())  # Rough estimate
+            logger.info(f"Sending request to Mistral chat API with ~{context_tokens} tokens (word count)")
+
+            while True:
+                try:
+                    logger.info(f"Calling Mistral chat completion API (attempt {retries+1}/{max_retries})")
+
+                    response = await client.post(
+                        settings.EXTERNAL_LLM_URL,
+                        headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
+                        json=payload,
+                        timeout=60.0  # Increased timeout for larger contexts
+                    )
+
+                    # Check if we hit a rate limit
+                    if response.status_code == 429:
+                        if retries >= max_retries:
+                            logger.error(f"Maximum retries reached after rate limit errors")
+                            response.raise_for_status()  # This will raise an exception
+
+                        # Get retry delay from headers if available, otherwise use exponential backoff
+                        retry_after = int(response.headers.get('retry-after', str(base_delay * (2 ** retries))))
+                        # Ensure minimum delay of 1 second
+                        retry_after = max(retry_after, 1)
+
+                        logger.warning(f"Rate limit hit. Retrying in {retry_after} seconds (attempt {retries+1}/{max_retries})")
+                        await asyncio.sleep(retry_after)
+                        retries += 1
+                        continue
+
+                    # For other errors, raise immediately
+                    response.raise_for_status()
+
+                    # If we get here, the request was successful
+                    result = response.json()
+                    break
+
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429 and retries < max_retries:
+                        # Get retry delay from headers if available, otherwise use exponential backoff
+                        retry_after = int(e.response.headers.get('retry-after', str(base_delay * (2 ** retries))))
+                        # Ensure minimum delay of 1 second
+                        retry_after = max(retry_after, 1)
+
+                        logger.warning(f"Rate limit hit. Retrying in {retry_after} seconds (attempt {retries+1}/{max_retries})")
+                        await asyncio.sleep(retry_after)
+                        retries += 1
+                    else:
+                        # For other errors or if we've exhausted retries, re-raise
+                        logger.error(f"Error calling Mistral API: {str(e)}")
+                        raise
+                except Exception as e:
+                    logger.error(f"Unexpected error calling Mistral API: {str(e)}")
+                    raise
 
             # Extract the answer
             answer = result["choices"][0]["message"]["content"]
@@ -734,14 +788,6 @@ async def create_rag_completion(
             )
 
     except Exception as e:
-        error_response = RAGCompletionResponse(
-            answer=f"Error: {str(e)}",
-            sources=[],
-            model="error",
-            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-            latency_ms=int((time.time() - start_time) * 1000)
-        )
-
         # Record error
         error_record = UsageRecord(
             user_id=api_key.user_id,
@@ -757,9 +803,20 @@ async def create_rag_completion(
         db.add(error_record)
         db.commit()
 
+        # Log the error for debugging
+        logger.error(f"RAG request failed: {str(e)}")
+
+        # Provide more specific error messages for common issues
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            detail = "Rate limit exceeded. The system is experiencing high demand. Please try again in a few moments."
+        elif "token limit" in str(e).lower() or "context length" in str(e).lower():
+            detail = "The document context is too large for the model. Try using fewer or smaller documents."
+        else:
+            detail = f"Error processing RAG request: {str(e)}"
+
         raise HTTPException(
             status_code=500,
-            detail=f"Error processing RAG request: {str(e)}"
+            detail=detail
         )
 
 
