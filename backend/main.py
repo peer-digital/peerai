@@ -5,6 +5,8 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+import logging
+import sys
 
 from backend.config import settings
 from backend.core.security import get_current_user, verify_password, create_access_token
@@ -12,9 +14,21 @@ from backend.core.roles import Permission, has_permission
 from backend.models.auth import User
 from backend.database import get_db
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if settings.ENVIRONMENT == "production" else logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("peerai.log")
+    ]
+)
+
+logger = logging.getLogger("peerai")
+
 # Only log non-sensitive settings in development mode
 if settings.ENVIRONMENT == "development":
-    print("\n[BACKEND] Environment: development")
+    logger.info("Environment: development")
 
 # Define allowed origins for admin/auth endpoints
 ADMIN_ALLOWED_ORIGINS = [
@@ -58,13 +72,13 @@ app.add_middleware(
 @app.middleware("http")
 async def request_logger_middleware(request: Request, call_next):
     # Log only non-sensitive request details
-    print(f"[BACKEND] Request: {request.method} {request.url.path}")
+    logger.info(f"Request: {request.method} {request.url.path}")
 
     # Process the request
     response = await call_next(request)
 
     # Log the response status
-    print(f"[BACKEND] Response status: {response.status_code}")
+    logger.info(f"Response status: {response.status_code}")
 
     return response
 
@@ -114,7 +128,7 @@ async def health_check():
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
     # Log exception without sensitive details
-    print(f"[BACKEND] Global exception handler caught error: {type(exc).__name__}")
+    logger.error(f"Global exception handler caught error: {type(exc).__name__}", exc_info=True)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import routers
@@ -155,19 +169,19 @@ try:
     from backend.models.base import Base
     from backend.database import engine
     Base.metadata.create_all(bind=engine)
-    print("Database tables created.")
+    logger.info("Database tables created.")
 
     # Seed app store (deprecated - kept for backward compatibility)
     from backend.scripts.seed_app_store import seed_app_store
     seed_app_store()
-    print("App store seeding completed (deprecated).")
+    logger.info("App store seeding completed (deprecated).")
 
     # Seed app templates
     from backend.scripts.seed_app_templates import seed_app_templates
     seed_app_templates()
-    print("App templates seeding completed.")
+    logger.info("App templates seeding completed.")
 except Exception as e:
-    print(f"Error in database setup: {e}")
+    logger.error(f"Error in database setup: {e}", exc_info=True)
 
 @app.get("/verify-email/{token}")
 async def redirect_verify_email(token: str):

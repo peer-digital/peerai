@@ -52,4 +52,14 @@ google-api-python-client==2.120.0
 # @url: https://github.com/googleapis/google-auth-oauthlib
 google-auth-oauthlib==1.0.0
 # @url: https://github.com/googleapis/google-auth-httplib2
-google-auth-httplib2==0.1.0 
+google-auth-httplib2==0.1.0
+
+# Document processing
+# @url: https://github.com/openai/tiktoken
+tiktoken==0.5.2
+# @url: https://github.com/matthewwithanm/python-markdownify
+markdownify==0.11.6
+# @url: https://github.com/py-pdf/pypdf
+PyPDF2==3.0.1
+# @url: https://numpy.org/
+numpy==1.26.3

@@ -3,7 +3,7 @@ API routes for document management and RAG functionality.
 """
 import os
 import uuid
-import shutil
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
@@ -22,6 +22,9 @@ from backend.core.security import get_current_user
 from backend.config import settings
 from backend.services.document_processor import DocumentProcessor
 from fastapi.security import APIKeyHeader
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Define API key headers for public access
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
@@ -99,6 +102,8 @@ async def upload_document(
     # Process the document immediately
     # In a production environment, this would be done asynchronously with a task queue
     try:
+        logger.info(f"Starting processing for document {document.id}: {document.filename} ({document.size_bytes / 1024:.2f} KB)")
+
         # Initialize document processor
         doc_processor = DocumentProcessor(db)
 
@@ -106,11 +111,13 @@ async def upload_document(
         processing_success = await doc_processor.process_document(document.id)
 
         if processing_success:
+            logger.info(f"Document {document.id} processed successfully")
             message = "Document uploaded and processed successfully"
         else:
+            logger.warning(f"Document {document.id} processing failed")
             message = "Document uploaded but processing failed"
     except Exception as e:
-        print(f"Error processing document: {str(e)}")
+        logger.error(f"Error processing document {document.id}: {str(e)}", exc_info=True)
         message = "Document uploaded but processing failed"
 
     return DocumentUploadResponse(
@@ -183,7 +190,7 @@ async def delete_document(
             os.remove(document.storage_path)
     except Exception as e:
         # Log the error but continue with database deletion
-        print(f"Error deleting file {document.storage_path}: {str(e)}")
+        logger.error(f"Error deleting file {document.storage_path}: {str(e)}")
 
     # Explicitly delete all chunks associated with this document
     chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).all()
@@ -425,7 +432,7 @@ async def list_public_app_documents_by_slug(
 
     # Check if we have a valid API key
     if not api_key or not api_key.startswith("pk_"):
-        print(f"Invalid API key format: {api_key}")
+        logger.warning(f"Invalid API key format: {api_key}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
@@ -439,13 +446,13 @@ async def list_public_app_documents_by_slug(
     ).first()
 
     if not app:
-        print(f"App not found: {app_slug}")
+        logger.warning(f"App not found: {app_slug}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="App not found",
         )
 
-    print(f"Found app: {app.id} ({app.slug})")
+    logger.info(f"Found app: {app.id} ({app.slug})")
 
     # Get documents associated with the app
     documents = (
@@ -455,7 +462,7 @@ async def list_public_app_documents_by_slug(
         .all()
     )
 
-    print(f"Found {len(documents)} documents for app {app.slug}")
+    logger.info(f"Found {len(documents)} documents for app {app.slug}")
 
     return documents
 
@@ -484,7 +491,7 @@ async def list_public_app_documents_by_id(
 
     # Check if we have a valid API key
     if not api_key or not api_key.startswith("pk_"):
-        print(f"Invalid API key format: {api_key}")
+        logger.warning(f"Invalid API key format: {api_key}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
