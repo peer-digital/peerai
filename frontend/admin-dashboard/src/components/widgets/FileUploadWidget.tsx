@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -12,16 +12,19 @@ import {
   ListItemSecondaryAction,
   IconButton,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { WidgetProps } from '@rjsf/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/config';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface FileUploadWidgetProps extends WidgetProps {
   options: {
@@ -38,6 +41,20 @@ interface UploadedFile {
   size: number;
 }
 
+interface DocumentResponse {
+  id: number;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_by_id: number;
+  storage_path: string;
+  is_processed: boolean;
+  processing_error: string | null;
+  created_at: string;
+  updated_at: string;
+  team_id: number | null;
+}
+
 const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
   const { options, id, disabled } = props;
   const { accept = '.pdf,.txt,.docx,.md', multiple = true } = options || {};
@@ -49,6 +66,7 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
   const [appId, setAppId] = useState<number | null>(null);
   // We'll use the JWT token from localStorage instead of the API key
   const token = localStorage.getItem('access_token');
+  const queryClient = useQueryClient();
 
   // Fetch the app ID using the slug
   useEffect(() => {
@@ -76,6 +94,57 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
 
     fetchAppId();
   }, [appSlug, token]);
+
+  // Fetch documents for this app
+  const {
+    data: documents,
+    isLoading: isLoadingDocuments,
+    isError: isDocumentsError,
+    refetch: refetchDocuments
+  } = useQuery({
+    queryKey: ['app-documents', appId],
+    queryFn: async () => {
+      if (!appId || !token) return [];
+
+      const response = await fetch(`${api.defaults.baseURL}/documents/app/${appId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch documents: ${response.status}`);
+      }
+
+      return response.json() as Promise<DocumentResponse[]>;
+    },
+    enabled: !!appId && !!token,
+  });
+
+  // Mutation for removing a document from the app
+  const removeDocumentMutation = useMutation({
+    mutationFn: async ({ appId, documentId }: { appId: number, documentId: number }) => {
+      const response = await fetch(
+        `${api.defaults.baseURL}/documents/app-documents/${appId}/${documentId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to remove document: ${response.status}`);
+      }
+
+      return { appId, documentId };
+    },
+    onSuccess: () => {
+      // Invalidate the documents query to refetch the list
+      queryClient.invalidateQueries({ queryKey: ['app-documents', appId] });
+    },
+  });
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
@@ -175,31 +244,59 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
 
     // Clear the input value so the same file can be uploaded again if needed
     event.target.value = '';
+
+    // Refresh the document list
+    refetchDocuments();
   };
 
   const handleRemoveFile = async (fileId: number) => {
     const fileToRemove = files.find(f => f.id === fileId);
-    if (!fileToRemove) return;
-
-    // If the file was successfully uploaded, we need to remove it from the server
-    if (fileToRemove.status === 'success') {
-      try {
-        // We would need the document ID to remove it, but we don't have it here
-        // In a real implementation, we would store the document ID when it's uploaded
-        // For now, we'll just remove it from the UI
-      } catch (err) {
-        console.error('Error removing file:', err);
+    if (fileToRemove) {
+      // If the file was successfully uploaded, we need to remove it from the server
+      if (fileToRemove.status === 'success') {
+        try {
+          // We would need the document ID to remove it, but we don't have it here
+          // For now, we'll just remove it from the UI
+          console.warn('Cannot delete document from server as document ID is not stored in the UI state');
+        } catch (err) {
+          console.error('Error removing file:', err);
+        }
       }
+
+      // Remove file from state
+      setFiles(prev => prev.filter(f => f.id !== fileId));
+    }
+  };
+
+  // Handle removing a document from the app
+  const handleRemoveDocument = async (documentId: number) => {
+    if (!appId) {
+      setError('App ID not available. Please try again later.');
+      return;
     }
 
-    // Remove file from state
-    setFiles(prev => prev.filter(f => f.id !== fileId));
+    try {
+      await removeDocumentMutation.mutateAsync({ appId, documentId });
+    } catch (err: any) {
+      console.error('Error removing document:', err);
+      setError(err.message || 'Failed to remove document');
+    }
   };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   return (
@@ -256,8 +353,13 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
         </Alert>
       )}
 
+      {/* Currently uploading files */}
       {files.length > 0 && (
         <Paper variant="outlined" sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
+            <Typography variant="subtitle1">Uploading Files</Typography>
+          </Box>
+          <Divider />
           <List>
             {files.map((file, index) => (
               <React.Fragment key={file.id}>
@@ -299,6 +401,82 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
           </List>
         </Paper>
       )}
+
+      {/* Existing documents */}
+      <Paper variant="outlined" sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
+          <Typography variant="subtitle1">Document History</Typography>
+          <Tooltip title="Refresh document list">
+            <IconButton
+              size="small"
+              onClick={() => refetchDocuments()}
+              disabled={isLoadingDocuments}
+            >
+              {isLoadingDocuments ? <CircularProgress size={20} /> : <RefreshIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Divider />
+        {isLoadingDocuments ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : isDocumentsError ? (
+          <Box sx={{ p: 2 }}>
+            <Alert severity="error">
+              Error loading documents. Please try refreshing.
+            </Alert>
+          </Box>
+        ) : documents && documents.length > 0 ? (
+          <List>
+            {documents.map((doc, index) => (
+              <React.Fragment key={doc.id}>
+                {index > 0 && <Divider />}
+                <ListItem>
+                  <ListItemText
+                    primary={doc.filename}
+                    secondary={
+                      <>
+                        {formatFileSize(doc.size_bytes)} • {formatDate(doc.created_at)}
+                        {doc.processing_error && (
+                          <Typography component="span" color="error" sx={{ ml: 1 }}>
+                            - Error: {doc.processing_error}
+                          </Typography>
+                        )}
+                      </>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    {doc.is_processed ? (
+                      <Tooltip title="Document processed">
+                        <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Processing failed">
+                        <ErrorIcon color="error" sx={{ mr: 1 }} />
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Remove document">
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleRemoveDocument(doc.id)}
+                        disabled={removeDocumentMutation.isPending}
+                      >
+                        {removeDocumentMutation.isPending ? <CircularProgress size={20} /> : <DeleteIcon />}
+                      </IconButton>
+                    </Tooltip>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              </React.Fragment>
+            ))}
+          </List>
+        ) : (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="textSecondary">No documents uploaded yet</Typography>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 };
