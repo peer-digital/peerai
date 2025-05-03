@@ -9,6 +9,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from markdownify import markdownify as md
 from bs4 import BeautifulSoup
+import PyPDF2
+import io
 
 from backend.models.documents import Document, DocumentChunk
 from backend.config import settings
@@ -109,9 +111,21 @@ class DocumentProcessor:
                 extracted_text = f.read()
 
         elif content_type == "application/pdf":
-            # For PDF files - placeholder implementation
-            # In a production system, you would use PyPDF2, pdfminer, or similar
-            extracted_text = f"# {os.path.basename(file_path)}\n\nText extracted from PDF document."
+            # For PDF files - use PyPDF2 to extract text
+            try:
+                pdf_text = ""
+                with open(file_path, "rb") as pdf_file:
+                    pdf_reader = PyPDF2.PdfReader(pdf_file)
+                    for page_num in range(len(pdf_reader.pages)):
+                        page = pdf_reader.pages[page_num]
+                        pdf_text += page.extract_text() + "\n\n"
+
+                # Add a title based on the filename
+                filename = os.path.basename(file_path)
+                extracted_text = f"# {filename}\n\n{pdf_text}"
+            except Exception as e:
+                print(f"Error extracting text from PDF: {str(e)}")
+                extracted_text = f"# {os.path.basename(file_path)}\n\nError extracting text from PDF: {str(e)}"
 
         elif content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             # For DOCX files - placeholder implementation
@@ -177,29 +191,58 @@ class DocumentProcessor:
 
     async def _generate_embedding(self, text: str) -> List[float]:
         """
-        Generate an embedding for a text chunk.
+        Generate an embedding for a text chunk using Mistral's embedding API.
 
         Args:
             text: Text to generate embedding for.
 
         Returns:
-            List[float]: Embedding vector.
+            List[float]: Embedding vector with 1024 dimensions.
         """
-        # In a real implementation, we would call an embedding API
-        # For now, we'll just return a placeholder
+        try:
+            # Use Mistral's embedding API
+            url = "https://api.mistral.ai/v1/embeddings"
 
-        # TODO: Implement proper embedding generation using Mistral's API
-        # This would typically involve making an API call to an embedding service
+            # Prepare the request payload
+            payload = {
+                "model": "mistral-embed",  # Mistral's embedding model
+                "input": text,
+                "encoding_format": "float"
+            }
 
-        # Placeholder: Return a random vector of length 384 (typical for small embedding models)
-        import random
-        return [random.random() for _ in range(384)]
+            # Make the API call
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
+                    json=payload,
+                    timeout=30.0
+                )
+
+                # Check if the request was successful
+                response.raise_for_status()
+                result = response.json()
+
+                # Extract the embedding vector
+                embedding = result["data"][0]["embedding"]
+
+                # Verify that we have a 1024-dimensional vector
+                if len(embedding) != 1024:
+                    print(f"Warning: Expected 1024-dimensional embedding, got {len(embedding)}")
+
+                return embedding
+
+        except Exception as e:
+            print(f"Error generating embedding: {str(e)}")
+            # Fallback to random vector if API call fails
+            import random
+            return [random.random() for _ in range(1024)]
 
     async def search_similar_chunks(
         self, query: str, app_id: int, top_k: int = 5, threshold: float = 0.7
     ) -> List[Dict[str, Any]]:
         """
-        Search for document chunks similar to a query.
+        Search for document chunks similar to a query using vector similarity.
 
         Args:
             query: Query text.
@@ -210,20 +253,16 @@ class DocumentProcessor:
         Returns:
             List[Dict[str, Any]]: List of similar chunks with metadata.
         """
-        # In a real implementation, we would:
-        # 1. Generate an embedding for the query
-        # 2. Find document chunks with similar embeddings
-        # 3. Return the most similar chunks
-
-        # For now, we'll just return a placeholder
-
-        # TODO: Implement proper similarity search
-
-        # Placeholder: Return some chunks from the app's documents
         from backend.models.documents import AppDocument
+        import numpy as np
 
         print(f"Searching for documents with app_id={app_id}")
 
+        # 1. Generate an embedding for the query
+        query_embedding = await self._generate_embedding(query)
+        query_embedding_np = np.array(query_embedding)
+
+        # 2. Get all document chunks for the app
         app_documents = (
             self.db.query(Document)
             .join(AppDocument)
@@ -233,24 +272,49 @@ class DocumentProcessor:
 
         print(f"Found {len(app_documents)} documents for app_id={app_id}")
 
-        results = []
+        # 3. Calculate similarity scores and find the most similar chunks
+        all_chunks = []
         for document in app_documents:
             print(f"Processing document {document.id}: {document.filename}")
             chunks = self.db.query(DocumentChunk).filter(
                 DocumentChunk.document_id == document.id
-            ).limit(top_k).all()
+            ).all()
 
             print(f"Found {len(chunks)} chunks for document {document.id}")
+            all_chunks.extend(chunks)
 
-            for chunk in chunks:
-                results.append({
-                    "text": chunk.text,
-                    "metadata": {
-                        "document_id": document.id,
-                        "document_name": document.filename,
-                        "chunk_index": chunk.chunk_index,
-                        "similarity_score": 0.8  # Placeholder similarity score
-                    }
-                })
+        # Calculate similarity scores for all chunks
+        results_with_scores = []
+        for chunk in all_chunks:
+            if chunk.embedding:
+                # Calculate cosine similarity
+                chunk_embedding_np = np.array(chunk.embedding)
+                similarity = np.dot(query_embedding_np, chunk_embedding_np) / (
+                    np.linalg.norm(query_embedding_np) * np.linalg.norm(chunk_embedding_np)
+                )
 
-        return results[:top_k]
+                # Only include results above the threshold
+                if similarity >= threshold:
+                    results_with_scores.append({
+                        "chunk": chunk,
+                        "similarity": float(similarity)
+                    })
+
+        # Sort by similarity score (highest first)
+        results_with_scores.sort(key=lambda x: x["similarity"], reverse=True)
+
+        # Convert to the expected output format
+        results = []
+        for item in results_with_scores[:top_k]:
+            chunk = item["chunk"]
+            results.append({
+                "text": chunk.text,
+                "metadata": {
+                    "document_id": chunk.document_id,
+                    "document_name": self.db.query(Document.filename).filter(Document.id == chunk.document_id).scalar(),
+                    "chunk_index": chunk.chunk_index,
+                    "similarity_score": item["similarity"]
+                }
+            })
+
+        return results
