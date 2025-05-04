@@ -52,12 +52,25 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         throw new Error('Invalid schema: Schema must have properties object');
       }
 
+      // Log UI schema for debugging
+      console.log('Using UI schema:', uiSchema);
+
+      // Check if documents section is disabled
+      if (uiSchema && uiSchema.documents) {
+        console.log('Documents section UI schema:', uiSchema.documents);
+        console.log('Documents section disabled:', uiSchema.documents['ui:disabled']);
+
+        if (uiSchema.documents.file_upload) {
+          console.log('File upload widget disabled:', uiSchema.documents.file_upload['ui:disabled']);
+        }
+      }
+
       setError(null);
     } catch (err) {
       console.error('Schema validation error:', err);
       setError((err as Error).message || 'Invalid schema configuration');
     }
-  }, [schema]);
+  }, [schema, uiSchema]);
 
   // Group schema properties into sections for better organization
   const getSections = () => {

@@ -68,6 +68,7 @@ const DeployedAppView: React.FC = () => {
   const [formData, setFormData] = useState<any>({});
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [customUiSchema, setCustomUiSchema] = useState<any>(null);
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -101,6 +102,33 @@ const DeployedAppView: React.FC = () => {
   useEffect(() => {
     if (app) {
       setFormData(app.configuration || {});
+
+      // Check if this is a RAG chatbot template and create a custom UI schema
+      if (app.template.slug === 'rag-chatbot' && app.template.template_config?.uiSchema) {
+        // Create a deep copy of the original UI schema
+        const originalUiSchema = JSON.parse(JSON.stringify(app.template.template_config.uiSchema));
+
+        // Enable the documents section for deployed apps
+        if (originalUiSchema.documents) {
+          // Enable the documents section
+          originalUiSchema.documents['ui:disabled'] = false;
+
+          // Enable the file upload widget
+          if (originalUiSchema.documents.file_upload) {
+            originalUiSchema.documents.file_upload['ui:disabled'] = false;
+            originalUiSchema.documents.file_upload['ui:help'] = 'Upload documents to be used by the chatbot';
+          }
+
+          // Update the description
+          originalUiSchema.documents['ui:description'] = 'Upload documents to be used by the chatbot';
+        }
+
+        setCustomUiSchema(originalUiSchema);
+        console.log('Created custom UI schema for RAG app:', originalUiSchema);
+      } else {
+        // For other templates, use the original UI schema
+        setCustomUiSchema(app.template.template_config?.uiSchema || {});
+      }
     }
   }, [app]);
 
@@ -341,7 +369,7 @@ const DeployedAppView: React.FC = () => {
                 formData={formData}
                 onChange={handleFormChange}
                 disabled={!isEditing}
-                uiSchema={app.template.template_config.uiSchema || {}}
+                uiSchema={customUiSchema || app.template.template_config.uiSchema || {}}
               />
             )}
           </TabPanel>
