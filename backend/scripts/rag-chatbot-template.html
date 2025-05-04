@@ -808,6 +808,40 @@
                             credentials: 'include'
                         });
                         console.log('RAG API response status:', response.status);
+
+                        // Handle 404 error (no documents found) by falling back to standard completions API
+                        if (response.status === 404) {
+                            console.log('No documents found for this app. Falling back to standard completions API.');
+
+                            // Prepare request body for standard completions API
+                            const completionsRequestBody = {
+                                messages: [
+                                    {
+                                        role: "system",
+                                        content: SYSTEM_PROMPT
+                                    },
+                                    {
+                                        role: "user",
+                                        content: message
+                                    }
+                                ],
+                                temperature: TEMPERATURE,
+                                model: MODEL,
+                                max_tokens: 1000
+                            };
+
+                            console.log('Making standard completions API request to:', COMPLETIONS_API_URL);
+                            console.log('Completions Request body:', completionsRequestBody);
+
+                            // Make request to standard completions API
+                            response = await fetch(COMPLETIONS_API_URL, {
+                                method: 'POST',
+                                headers: headers,
+                                body: JSON.stringify(completionsRequestBody)
+                            });
+
+                            console.log('Completions API response status:', response.status);
+                        }
                     } catch (fetchError) {
                         console.error('Error calling backend directly:', fetchError);
                         throw new Error('Failed to connect to backend server. Please make sure the server is running on port 8000.');
@@ -834,7 +868,7 @@
                 }
 
                 const data = await response.json();
-                console.log('RAG API response:', data);
+                console.log('API response data:', data);
 
                 if (data.answer) {
                     // This is a RAG response
@@ -847,7 +881,13 @@
                 } else if (data.choices && data.choices.length > 0) {
                     // This is a standard completions response
                     const aiMessage = data.choices[0].message.content;
-                    addMessage(aiMessage, 'ai');
+
+                    // Add a note if we fell back to standard completions due to no documents
+                    if (response.status === 200 && response.url.includes('/completions')) {
+                        addMessage("I don't have any documents to reference for this app yet. Here's a general response:\n\n" + aiMessage, 'ai');
+                    } else {
+                        addMessage(aiMessage, 'ai');
+                    }
                 } else {
                     addMessage('{{content.no_response_text}}', 'ai');
                 }
