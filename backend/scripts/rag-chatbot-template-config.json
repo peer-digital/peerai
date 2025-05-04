@@ -132,89 +132,15 @@
         "type": "object",
         "title": "AI Settings",
         "properties": {
-          "model": {
-            "type": "string",
-            "title": "AI Model",
-            "description": "The AI model to use for the chatbot",
-            "enum": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
-            "default": "mistral-large-latest"
-          },
-          "temperature": {
-            "type": "number",
-            "title": "Temperature",
-            "description": "Controls randomness in the response (0-1)",
-            "minimum": 0,
-            "maximum": 1,
-            "default": 0.7
-          },
           "system_prompt": {
             "type": "string",
             "title": "System Prompt",
-            "description": "Instructions for the AI model",
+            "description": "Instructions that guide how the AI responds. This sets the AI's behavior, tone, and capabilities. For RAG applications, this prompt should instruct the AI to use document context when available and indicate when information isn't found in the documents.",
             "default": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
-          },
-          "embedding_model": {
-            "type": "string",
-            "title": "Embedding Model",
-            "description": "The model to use for generating embeddings",
-            "enum": ["mistral-embed", "openai-text-embedding-3-small"],
-            "default": "mistral-embed"
-          }
-        },
-        "required": ["model"]
-      },
-      "rag_settings": {
-        "type": "object",
-        "title": "RAG Settings",
-        "properties": {
-          "chunk_size": {
-            "type": "number",
-            "title": "Chunk Size",
-            "description": "Size of text chunks for processing (in characters)",
-            "minimum": 100,
-            "maximum": 2000,
-            "default": 500
-          },
-          "chunk_overlap": {
-            "type": "number",
-            "title": "Chunk Overlap",
-            "description": "Overlap between chunks (in characters)",
-            "minimum": 0,
-            "maximum": 500,
-            "default": 50
-          },
-          "top_k_results": {
-            "type": "number",
-            "title": "Top K Results",
-            "description": "Number of most relevant chunks to include in context",
-            "minimum": 1,
-            "maximum": 20,
-            "default": 5
-          },
-          "similarity_threshold": {
-            "type": "number",
-            "title": "Similarity Threshold",
-            "description": "Minimum similarity score for chunks to be included (0-1)",
-            "minimum": 0,
-            "maximum": 1,
-            "default": 0.7
-          },
-          "allowed_file_types": {
-            "type": "string",
-            "title": "Allowed File Types",
-            "description": "Comma-separated list of allowed file extensions",
-            "default": ".pdf,.txt,.docx,.md"
-          },
-          "max_file_size_mb": {
-            "type": "number",
-            "title": "Max File Size (MB)",
-            "description": "Maximum file size in megabytes",
-            "minimum": 1,
-            "maximum": 50,
-            "default": 10
           }
         }
       },
+
       "styling": {
         "type": "object",
         "title": "Styling",
@@ -223,36 +149,42 @@
             "type": "string",
             "title": "Primary Color",
             "description": "Main color for buttons and accents",
+            "format": "color",
             "default": "#1a56db"
           },
           "secondary_color": {
             "type": "string",
             "title": "Secondary Color",
             "description": "Secondary color for highlights",
+            "format": "color",
             "default": "#4f46e5"
           },
           "background_color": {
             "type": "string",
             "title": "Background Color",
             "description": "Background color of the app",
+            "format": "color",
             "default": "#f9fafb"
           },
           "text_color": {
             "type": "string",
             "title": "Text Color",
             "description": "Main text color",
+            "format": "color",
             "default": "#111827"
           },
           "light_bg_color": {
             "type": "string",
             "title": "Light Background Color",
             "description": "Background color for message bubbles",
+            "format": "color",
             "default": "#f0f7ff"
           },
           "border_color": {
             "type": "string",
             "title": "Border Color",
             "description": "Color for borders",
+            "format": "color",
             "default": "#e5e7eb"
           },
           "font_family": {
@@ -324,10 +256,7 @@
         "ui:widget": "textarea"
       }
     },
-    "rag_settings": {
-      "ui:expandable": true,
-      "ui:expanded": true
-    },
+
     "styling": {
       "ui:expandable": true,
       "ui:expanded": false
@@ -360,18 +289,7 @@
       "quick_action5": "Explain the concept of..."
     },
     "ai_settings": {
-      "model": "mistral-large-latest",
-      "temperature": 0.7,
-      "system_prompt": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge.",
-      "embedding_model": "mistral-embed"
-    },
-    "rag_settings": {
-      "chunk_size": 500,
-      "chunk_overlap": 50,
-      "top_k_results": 5,
-      "similarity_threshold": 0.7,
-      "allowed_file_types": ".pdf,.txt,.docx,.md",
-      "max_file_size_mb": 10
+      "system_prompt": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
     },
     "styling": {
       "primary_color": "#1a56db",
