@@ -239,8 +239,9 @@
     <script>
         // Configuration from template
         let API_KEY = '{{api_key}}';
-        const MODEL = '{{ai_settings.model}}';
-        const TEMPERATURE = {{ai_settings.temperature}};
+        // Default values for model and temperature in case they're not in the configuration
+        const MODEL = '{{ai_settings.model}}' === '{{ai_settings.model}}' ? 'mistral-large-latest' : '{{ai_settings.model}}';
+        const TEMPERATURE = isNaN(parseFloat('{{ai_settings.temperature}}')) ? 0.7 : parseFloat('{{ai_settings.temperature}}');
         const SYSTEM_PROMPT = `{{ai_settings.system_prompt}}`;
 
         // Helper function to determine API base URL
@@ -731,8 +732,8 @@
                     query: message,
                     temperature: TEMPERATURE,
                     model: MODEL,
-                    top_k: 5,
-                    similarity_threshold: 0.7
+                    top_k: parseInt('{{rag_settings.top_k_results}}') || 5,
+                    similarity_threshold: parseFloat('{{rag_settings.similarity_threshold}}') || 0.7
                 };
 
                 // Get the app ID from the template - this is the correct ID set by the backend
