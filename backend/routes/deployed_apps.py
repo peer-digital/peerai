@@ -2,6 +2,8 @@
 Routes for deployed AI apps.
 """
 from typing import List, Optional
+import os
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +12,7 @@ from backend.database import get_db
 from backend.models.deployed_apps import DeployedApp
 from backend.models.app_templates import AppTemplate
 from backend.models.auth import User, Team
+from backend.models.documents import Document, DocumentChunk, AppDocument
 from backend.schemas.deployed_apps import (
     DeployedAppCreate,
     DeployedAppUpdate,
@@ -267,7 +270,7 @@ async def delete_deployed_app(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete a deployed app.
+    Delete a deployed app and all associated documents that are only used by this app.
     """
     # Check if user has permission to deploy apps (same permission needed to undeploy)
     check_deploy_permission(current_user)
@@ -287,8 +290,49 @@ async def delete_deployed_app(
             detail="Not authorized to delete this deployed app",
         )
 
-    # Delete the deployed app
+    # Set up logging
+    logger = logging.getLogger(__name__)
+
+    # Find all documents associated with this app
+    app_documents = db.query(AppDocument).filter(AppDocument.app_id == deployed_app.id).all()
+
+    # For each document, check if it's only used by this app
+    documents_to_delete = []
+    for app_doc in app_documents:
+        # Count how many active app associations this document has
+        association_count = db.query(AppDocument).filter(
+            AppDocument.document_id == app_doc.document_id,
+            AppDocument.is_active == True,
+            AppDocument.app_id != deployed_app.id  # Exclude the current app
+        ).count()
+
+        # If this is the only app using this document, mark it for deletion
+        if association_count == 0:
+            documents_to_delete.append(app_doc.document_id)
+
+    # Delete the documents that are only used by this app
+    for doc_id in documents_to_delete:
+        document = db.query(Document).filter(Document.id == doc_id).first()
+        if document:
+            # Try to delete the physical file if it exists and hasn't been processed yet
+            if document.storage_path and not document.storage_path.startswith("PROCESSED_AND_DELETED:"):
+                try:
+                    if os.path.exists(document.storage_path):
+                        os.remove(document.storage_path)
+                        logger.info(f"Deleted file: {document.storage_path}")
+                except Exception as e:
+                    logger.error(f"Error deleting file {document.storage_path}: {str(e)}")
+
+            # Delete all chunks associated with this document
+            # (This is redundant due to cascade, but being explicit for clarity)
+            db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
+
+            # Delete the document itself
+            db.delete(document)
+            logger.info(f"Deleted document: {document.filename} (ID: {doc_id})")
+
+    # Delete the deployed app (this will cascade delete app_document associations)
     db.delete(deployed_app)
     db.commit()
 
-    return {"detail": "Deployed app deleted successfully"}
+    return {"detail": f"Deployed app deleted successfully along with {len(documents_to_delete)} associated documents"}
