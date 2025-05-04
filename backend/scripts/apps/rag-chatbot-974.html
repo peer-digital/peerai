@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="{{app_settings.language}}">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{app_settings.app_title}}</title>
+    <title>RAG Chatbot</title>
     <style>
         :root {
-            --primary-color: {{styling.primary_color}};
-            --secondary-color: {{styling.secondary_color}};
-            --background-color: {{styling.background_color}};
-            --text-color: {{styling.text_color}};
-            --light-bg-color: {{styling.light_bg_color}};
-            --border-color: {{styling.border_color}};
-            --font-family: {{styling.font_family}};
-            --font-size-small: {{styling.font_size_small}};
-            --font-size-medium: {{styling.font_size_medium}};
-            --font-size-large: {{styling.font_size_large}};
-            --border-radius: {{styling.border_radius}};
+            --primary-color: #1a56db;
+            --secondary-color: #4f46e5;
+            --background-color: #f9fafb;
+            --text-color: #111827;
+            --light-bg-color: #f0f7ff;
+            --border-color: #e5e7eb;
+            --font-family: system-ui, sans-serif;
+            --font-size-small: 14px;
+            --font-size-medium: 16px;
+            --font-size-large: 22px;
+            --border-radius: 8px;
         }
 
         * {
@@ -269,48 +269,48 @@
     <div class="container">
         <div class="header">
             <div>
-                <div class="app-title">{{app_settings.app_title}}</div>
-                <div class="app-description">{{app_settings.app_description}}</div>
+                <div class="app-title">RAG Chatbot</div>
+                <div class="app-description">An advanced chatbot solution that can answer questions based on your uploaded documents.</div>
             </div>
         </div>
 
         <!-- Content section -->
         <div class="content">
             <div class="content-header">
-                <div class="content-title">{{content.content_title}}</div>
+                <div class="content-title">Try it yourself</div>
             </div>
 
             <!-- Quick actions -->
             <div class="quick-actions">
-                <button class="quick-action">{{quick_actions.quick_action1}}</button>
-                <button class="quick-action">{{quick_actions.quick_action2}}</button>
-                <button class="quick-action">{{quick_actions.quick_action3}}</button>
-                <button class="quick-action">{{quick_actions.quick_action4}}</button>
-                <button class="quick-action">{{quick_actions.quick_action5}}</button>
+                <button class="quick-action">What are the main topics in my documents?</button>
+                <button class="quick-action">Summarize the key points</button>
+                <button class="quick-action">Find information about...</button>
+                <button class="quick-action">Compare and contrast...</button>
+                <button class="quick-action">Explain the concept of...</button>
             </div>
 
             <!-- Chat container -->
             <div class="chat-container" id="chat-container">
                 <div class="message ai-message">
-                    {{content.welcome_message}}
+                    Hello! I'm here to help you. What would you like to know about your documents?
                 </div>
             </div>
 
             <!-- Input section -->
             <div class="input-container">
-                <input type="text" class="chat-input" id="user-input" placeholder="{{content.input_placeholder}}">
-                <button class="send-button" id="send-button">{{content.send_button_text}}</button>
+                <input type="text" class="chat-input" id="user-input" placeholder="Type your question here...">
+                <button class="send-button" id="send-button">Send</button>
             </div>
         </div>
     </div>
 
     <script>
         // Configuration from template
-        let API_KEY = '{{api_key}}';
+        let API_KEY = 'pk_2nCrhgCh2gjyf4kMsOYwW6ImQ4Dnf7caRy1A-c7kXFY';
         // Default values for model and temperature in case they're not in the configuration
         const MODEL = '{{ai_settings.model}}' === '{{ai_settings.model}}' ? 'mistral-large-latest' : '{{ai_settings.model}}';
         const TEMPERATURE = isNaN(parseFloat('{{ai_settings.temperature}}')) ? 0.7 : parseFloat('{{ai_settings.temperature}}');
-        const SYSTEM_PROMPT = `{{ai_settings.system_prompt}}`;
+        const SYSTEM_PROMPT = `You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge.`;
 
         // Helper function to determine API base URL
         const getApiBaseUrl = () => {
@@ -365,11 +365,11 @@
         };
 
         // Get the app ID from the template
-        let APP_ID = '{{app_id}}';
+        let APP_ID = '32';
         console.log('App ID from template:', APP_ID);
 
         // If the app_id is still a template placeholder (not replaced), get it from the URL
-        if (APP_ID === '{{app_id}}' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
+        if (APP_ID === '32' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
             console.log('App ID is a template placeholder, trying to get it from URL');
 
             // Try to extract from URL path
@@ -410,7 +410,7 @@
                     }
 
                     // If still no valid app ID, try localStorage
-                    if (APP_ID === '{{app_id}}' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
+                    if (APP_ID === '32' || APP_ID.includes('{{') || APP_ID.includes('}}')) {
                         const storedAppId = localStorage.getItem('rag_app_id');
                         if (storedAppId && !isNaN(parseInt(storedAppId, 10))) {
                             APP_ID = storedAppId;
@@ -442,7 +442,7 @@
             }
 
             // Store in localStorage for future use
-            if (APP_ID && APP_ID !== '{{app_id}}' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
+            if (APP_ID && APP_ID !== '32' && !APP_ID.includes('{{') && !APP_ID.includes('}}')) {
                 localStorage.setItem('rag_app_id', APP_ID);
             }
         }
@@ -452,7 +452,7 @@
 
         // If no API key is available or it's still a template placeholder, try to get it from localStorage
         if (!API_KEY ||
-            API_KEY === '{{api_key}}' ||
+            API_KEY === 'pk_2nCrhgCh2gjyf4kMsOYwW6ImQ4Dnf7caRy1A-c7kXFY' ||
             API_KEY.includes('{{') ||
             API_KEY.includes('}}')) {
 
@@ -477,7 +477,7 @@
         console.log('- App ID:', APP_ID);
         console.log('- Model:', MODEL);
         console.log('- API Key available:', !!API_KEY &&
-                                    API_KEY !== '{{api_key}}' &&
+                                    API_KEY !== 'pk_2nCrhgCh2gjyf4kMsOYwW6ImQ4Dnf7caRy1A-c7kXFY' &&
                                     !API_KEY.includes('{{') &&
                                     !API_KEY.includes('}}'));
 
@@ -494,7 +494,7 @@
         let DOCUMENTS_API_URL;
 
         // Get the app ID from the template - this is the correct ID set by the backend
-        const templateAppId = '{{app_id}}';
+        const templateAppId = '32';
         console.log('App ID from template (raw):', templateAppId);
 
         // Check if the template app ID is a valid number and not a placeholder
@@ -560,7 +560,7 @@
                 const typingIndicator = document.createElement('div');
                 typingIndicator.className = 'message ai-message';
                 typingIndicator.id = 'typing-indicator';
-                typingIndicator.textContent = '{{content.typing_indicator_text}}';
+                typingIndicator.textContent = 'Thinking...';
                 chatContainer.appendChild(typingIndicator);
 
                 // Scroll to bottom
@@ -571,7 +571,7 @@
                 try {
                     // Only try to fetch documents if we have a valid API key and a valid documents URL
                     if (API_KEY &&
-                        API_KEY !== '{{api_key}}' &&
+                        API_KEY !== 'pk_2nCrhgCh2gjyf4kMsOYwW6ImQ4Dnf7caRy1A-c7kXFY' &&
                         !API_KEY.includes('{{') &&
                         !API_KEY.includes('}}') &&
                         DOCUMENTS_API_URL) {
@@ -599,7 +599,7 @@
                                 // For now, we'll just indicate that documents are available
                                 documentContext = "The user has uploaded documents. Please use them to answer the question.";
                             } else {
-                                documentContext = "{{content.no_documents_message}}";
+                                documentContext = "No documents have been uploaded yet. Please upload documents in the admin panel to enable document-based answers.";
                             }
                         } else {
                             console.warn(`Error fetching documents: ${documentsResponse.status}`);
@@ -805,7 +805,7 @@
                 };
 
                 // Get the app ID from the template - this is the correct ID set by the backend
-                const templateAppIdForRequest = '{{app_id}}';
+                const templateAppIdForRequest = '32';
                 console.log('App ID from template for request (raw):', templateAppIdForRequest);
 
                 // Check if the template app ID is a valid number and not a placeholder
@@ -958,7 +958,7 @@
                         addMessage(aiMessage, 'ai');
                     }
                 } else {
-                    addMessage('{{content.no_response_text}}', 'ai');
+                    addMessage('No response received. Please try again.', 'ai');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -970,7 +970,7 @@
                 }
 
                 // Show error message
-                addMessage('{{content.error_message}}', 'ai');
+                addMessage('Sorry, I encountered an error. Please try again.', 'ai');
             }
         }
 
