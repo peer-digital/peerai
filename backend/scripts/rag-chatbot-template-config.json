@@ -32,12 +32,12 @@
       "documents": {
         "type": "object",
         "title": "Documents",
-        "description": "Upload and manage documents for your RAG chatbot",
+        "description": "Documents can be uploaded after the app is deployed. After deployment, go to the app settings to upload and manage documents.",
         "properties": {
           "file_upload": {
             "type": "string",
             "title": "Upload Documents",
-            "description": "Upload documents to be used by the chatbot",
+            "description": "Upload documents to be used by the chatbot (available after deployment)",
             "format": "data-url"
           }
         }
@@ -233,12 +233,16 @@
     "documents": {
       "ui:expandable": true,
       "ui:expanded": true,
+      "ui:description": "Note: Document upload is only available after deployment",
+      "ui:disabled": true,
       "file_upload": {
         "ui:widget": "fileUpload",
         "ui:options": {
           "accept": ".pdf,.txt,.docx,.md",
           "multiple": true
-        }
+        },
+        "ui:disabled": true,
+        "ui:help": "This feature will be available after you deploy the app"
       }
     },
     "content": {
