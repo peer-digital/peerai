@@ -3,7 +3,6 @@ Service for processing documents and generating embeddings.
 """
 import os
 import re
-import httpx
 import logging
 import asyncio
 from typing import List, Dict, Any
@@ -13,15 +12,13 @@ import PyPDF2
 import tiktoken
 
 from backend.models.documents import Document, DocumentChunk
-from backend.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Maximum tokens per chunk for Mistral embeddings
 # Mistral's embedding model has a limit of 8192 tokens
-# Our token counting differs from Mistral's by ~12%, so we need a significant safety margin
-MAX_TOKENS_PER_CHUNK = 6000
+MAX_TOKENS_PER_CHUNK = 1500
 
 
 class DocumentProcessor:
@@ -412,7 +409,7 @@ class DocumentProcessor:
 
     async def _generate_embedding(self, text: str, max_retries: int = 5) -> List[float]:
         """
-        Generate an embedding for a text chunk using Mistral's embedding API.
+        Generate an embedding for a text chunk using the ModelOrchestrator.
         Includes retry logic for rate limiting.
 
         Args:
@@ -437,103 +434,80 @@ class DocumentProcessor:
             logger.warning(f"Chunk is larger than our configured limit: {token_count} tokens (limit: {MAX_TOKENS_PER_CHUNK})")
             # We'll still try to process it if it's under Mistral's hard limit
 
+        # Import the ModelOrchestrator
+        from backend.services.model_orchestrator import ModelOrchestrator
+        from backend.models.auth import APIKey
+
+        # Create a test API key for usage tracking
+        # In a production environment, you would use a real API key
+        test_api_key = APIKey(
+            id=1,
+            key="test_key_123",
+            name="Embedding API Key",
+            user_id=1,
+            is_active=True,
+            daily_limit=1000,
+            minute_limit=60,
+        )
+
+        # Initialize the ModelOrchestrator
+        orchestrator = ModelOrchestrator(self.db)
+
         retries = 0
         base_delay = 1  # Start with a 1-second delay (respecting 1 RPS limit)
 
         while retries <= max_retries:
             try:
-                # Use Mistral's embedding API
-                url = "https://api.mistral.ai/v1/embeddings"
-
-                # Prepare the request payload
-                payload = {
-                    "model": "mistral-embed",  # Mistral's embedding model
-                    "input": text,
+                # Prepare the request data
+                request_data = {
+                    "text": text,
                     "encoding_format": "float"
                 }
 
-                # Make the API call
-                async with httpx.AsyncClient() as client:
-                    logger.debug(f"Sending request to Mistral API for embedding generation (attempt {retries+1})")
-                    response = await client.post(
-                        url,
-                        headers={"Authorization": f"Bearer {settings.EXTERNAL_LLM_API_KEY}"},
-                        json=payload,
-                        timeout=30.0
-                    )
+                # Call the model through the orchestrator
+                logger.debug(f"Sending request to ModelOrchestrator for embedding generation (attempt {retries+1})")
+                result = await orchestrator.call_model(
+                    request_data=request_data,
+                    model_name="mistral-embed",
+                    api_key=test_api_key,
+                    endpoint="/embeddings"
+                )
 
-                    # Check if we hit a rate limit
-                    if response.status_code == 429:
-                        # Get retry delay from headers if available, otherwise use exponential backoff
-                        retry_after = int(response.headers.get('retry-after', str(base_delay * (2 ** retries))))
-                        # Ensure minimum delay of 1 second for rate limit (1 RPS)
-                        retry_after = max(retry_after, 1)
-                        logger.warning(f"Rate limit hit. Retrying in {retry_after} seconds (attempt {retries+1}/{max_retries})")
-                        await asyncio.sleep(retry_after)
+                # Extract the embedding vector
+                embedding = result.get("embedding")
+
+                # Verify that we have a 1024-dimensional vector
+                if not embedding:
+                    logger.error("No embedding found in response")
+                    raise ValueError("No embedding found in response")
+
+                if len(embedding) != 1024:
+                    logger.warning(f"Expected 1024-dimensional embedding, got {len(embedding)}")
+
+                logger.info(f"Successfully generated embedding with dimension {len(embedding)}")
+
+                # Close the orchestrator's HTTP client
+                await orchestrator.close()
+
+                return embedding
+
+            except Exception as e:
+                logger.error(f"Error generating embedding: {str(e)}")
+
+                # For rate limit errors, retry with backoff
+                if "429" in str(e) or "rate limit" in str(e).lower():
+                    if retries < max_retries:
+                        delay = base_delay * (2 ** retries)
+                        logger.warning(f"Rate limit hit. Retrying in {delay} seconds (attempt {retries+1}/{max_retries})")
+                        await asyncio.sleep(delay)
                         retries += 1
                         continue
 
-                    # Check if the request was successful
-                    if response.status_code != 200:
-                        error_content = response.text
-                        logger.error(f"Embedding API error: Status {response.status_code}, Response: {error_content}")
-
-                        # If it's a token limit error, extract the actual token count from Mistral for debugging
-                        if response.status_code == 400 and "exceeding max" in error_content:
-                            try:
-                                import json
-                                error_json = json.loads(error_content)
-                                error_msg = error_json.get("message", "")
-                                import re
-                                token_count_match = re.search(r"has (\d+) tokens", error_msg)
-                                if token_count_match:
-                                    mistral_token_count = int(token_count_match.group(1))
-                                    our_token_count = self._count_tokens(text) / 1.15  # Remove our safety factor
-                                    discrepancy = (mistral_token_count - our_token_count) / our_token_count * 100
-                                    logger.warning(f"Token count discrepancy: Mistral counted {mistral_token_count} tokens, " +
-                                                  f"we estimated {int(our_token_count)} tokens (raw) or {self._count_tokens(text)} (adjusted). " +
-                                                  f"Discrepancy: {discrepancy:.2f}%")
-                            except Exception as e:
-                                logger.error(f"Error parsing token count from error message: {str(e)}")
-
-                        response.raise_for_status()
-
-                    result = response.json()
-
-                    # Log token usage if available
-                    if "usage" in result:
-                        logger.info(f"Embedding API usage: {result['usage']}")
-
-                    # Extract the embedding vector
-                    embedding = result["data"][0]["embedding"]
-
-                    # Verify that we have a 1024-dimensional vector
-                    if len(embedding) != 1024:
-                        logger.warning(f"Expected 1024-dimensional embedding, got {len(embedding)}")
-
-                    logger.info(f"Successfully generated embedding with dimension {len(embedding)}")
-                    return embedding
-
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 429 and retries < max_retries:
-                    # Get retry delay from headers if available, otherwise use exponential backoff
-                    retry_after = int(e.response.headers.get('retry-after', str(base_delay * (2 ** retries))))
-                    # Ensure minimum delay of 1 second for rate limit (1 RPS)
-                    retry_after = max(retry_after, 1)
-                    logger.warning(f"Rate limit hit. Retrying in {retry_after} seconds (attempt {retries+1}/{max_retries})")
-                    await asyncio.sleep(retry_after)
-                    retries += 1
-                elif e.response.status_code == 400:
-                    # This is likely a token limit issue
-                    logger.error(f"Bad request error (possibly token limit exceeded): {e.response.text}")
-
-                    # Extract token count information for debugging
+                # For token limit errors, extract token count information if possible
+                if "400" in str(e) and "token" in str(e).lower():
                     try:
-                        import json
-                        error_json = json.loads(e.response.text)
-                        error_msg = error_json.get("message", "")
                         import re
-                        token_count_match = re.search(r"has (\d+) tokens", error_msg)
+                        token_count_match = re.search(r"has (\d+) tokens", str(e))
                         if token_count_match:
                             mistral_token_count = int(token_count_match.group(1))
                             our_token_count = self._count_tokens(text) / 1.15  # Remove our safety factor
@@ -544,16 +518,7 @@ class DocumentProcessor:
                     except Exception as parse_error:
                         logger.error(f"Error parsing token count from error message: {str(parse_error)}")
 
-                    raise
-                else:
-                    logger.error(f"HTTP error generating embedding: {str(e)}")
-                    raise
-            except httpx.RequestError as e:
-                logger.error(f"Request error generating embedding: {str(e)}")
-                raise
-            except Exception as e:
-                logger.error(f"Unexpected error generating embedding: {str(e)}")
-                # For unexpected errors, we might want to retry
+                # For other errors, retry a few times
                 if retries < max_retries:
                     delay = base_delay * (2 ** retries)
                     logger.warning(f"Unexpected error. Retrying in {delay} seconds (attempt {retries+1}/{max_retries})")
@@ -563,10 +528,18 @@ class DocumentProcessor:
                     # Fallback to random vector if API call fails after all retries
                     import random
                     logger.warning("Using random vector as fallback due to embedding generation failure")
+
+                    # Close the orchestrator's HTTP client
+                    await orchestrator.close()
+
                     return [random.random() for _ in range(1024)]
 
         # If we've exhausted all retries
         logger.error(f"Failed to generate embedding after {max_retries} retries")
+
+        # Close the orchestrator's HTTP client
+        await orchestrator.close()
+
         import random
         return [random.random() for _ in range(1024)]
 
@@ -590,7 +563,7 @@ class DocumentProcessor:
 
         logger.info(f"Searching for documents with app_id={app_id}")
 
-        # 1. Generate an embedding for the query
+        # 1. Generate an embedding for the query using the ModelOrchestrator
         query_embedding = await self._generate_embedding(query)
         query_embedding_np = np.array(query_embedding)
 

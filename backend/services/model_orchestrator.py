@@ -121,34 +121,52 @@ class ModelOrchestrator:
             logger.debug(f"Using Mistral API model ID: {api_model_id}")
             transformed_request["model"] = api_model_id
 
-            # Handle prompt conversion for Mistral API
-            if "prompt" in request_data:
-                # Convert prompt to messages format for Mistral
-                transformed_request["messages"] = [
-                    {"role": "user", "content": request_data["prompt"]}
-                ]
-                # Don't add prompt to the transformed request
-                request_data = {k: v for k, v in request_data.items() if k != "prompt"}
-                logger.info("Converted prompt to messages format")
-            elif "messages" in request_data:
-                # Use messages directly
-                transformed_request["messages"] = request_data["messages"]
-                # Don't add messages to the transformed request
-                request_data = {
-                    k: v for k, v in request_data.items() if k != "messages"
-                }
-                logger.info("Using messages format directly")
+            # Check if this is an embedding request
+            if model.model_type == "embedding" or model.name == "mistral-embed":
+                # Handle embedding request
+                if "text" in request_data:
+                    transformed_request["input"] = request_data["text"]
+                    # Don't add text to the transformed request
+                    request_data = {k: v for k, v in request_data.items() if k != "text"}
+                    logger.info("Using text for embedding input")
+                elif "input" in request_data:
+                    transformed_request["input"] = request_data["input"]
+                    # Don't add input to the transformed request
+                    request_data = {k: v for k, v in request_data.items() if k != "input"}
+                    logger.info("Using input directly for embedding")
 
-            # Add standard parameters
-            if "temperature" in request_data:
-                transformed_request["temperature"] = request_data["temperature"]
-                request_data = {k: v for k, v in request_data.items() if k != "temperature"}
+                # Add encoding format
+                transformed_request["encoding_format"] = request_data.get("encoding_format", "float")
+                request_data = {k: v for k, v in request_data.items() if k != "encoding_format"}
+            else:
+                # Handle standard chat/completion request
+                if "prompt" in request_data:
+                    # Convert prompt to messages format for Mistral
+                    transformed_request["messages"] = [
+                        {"role": "user", "content": request_data["prompt"]}
+                    ]
+                    # Don't add prompt to the transformed request
+                    request_data = {k: v for k, v in request_data.items() if k != "prompt"}
+                    logger.info("Converted prompt to messages format")
+                elif "messages" in request_data:
+                    # Use messages directly
+                    transformed_request["messages"] = request_data["messages"]
+                    # Don't add messages to the transformed request
+                    request_data = {
+                        k: v for k, v in request_data.items() if k != "messages"
+                    }
+                    logger.info("Using messages format directly")
 
-            # Add optional parameters if provided
-            for param in ["max_tokens", "top_p", "stop", "random_seed"]:
-                if param in request_data and request_data[param] is not None:
-                    transformed_request[param] = request_data[param]
-                    request_data = {k: v for k, v in request_data.items() if k != param}
+                # Add standard parameters
+                if "temperature" in request_data:
+                    transformed_request["temperature"] = request_data["temperature"]
+                    request_data = {k: v for k, v in request_data.items() if k != "temperature"}
+
+                # Add optional parameters if provided
+                for param in ["max_tokens", "top_p", "stop", "random_seed"]:
+                    if param in request_data and request_data[param] is not None:
+                        transformed_request[param] = request_data[param]
+                        request_data = {k: v for k, v in request_data.items() if k != param}
 
             # Add other parameters from model config, excluding description and api_model_id
             if model.config:
@@ -224,6 +242,7 @@ class ModelOrchestrator:
         request_data: Dict[str, Any],
         model_name: Optional[str] = None,
         api_key: Optional[APIKey] = None,
+        endpoint: str = "/completions",
     ) -> Dict[str, Any]:
         """
         Call a model with the given request data.
@@ -232,6 +251,7 @@ class ModelOrchestrator:
             request_data: The request data in Peer AI's unified format
             model_name: The name of the model to use, or None to use the default
             api_key: The API key used for the request (for usage tracking)
+            endpoint: The API endpoint being called (for usage tracking)
 
         Returns:
             A dictionary with the model's response in a unified format
@@ -261,11 +281,20 @@ class ModelOrchestrator:
             # Get the API key
             provider_api_key = self._get_api_key(provider)
 
+            # Determine the API URL to use
+            api_url = provider.api_base_url
+
+            # For embedding models, use a different endpoint
+            if model.model_type == "embedding" or model.name == "mistral-embed":
+                # Override the URL for embeddings
+                api_url = "https://api.mistral.ai/v1/embeddings"
+                logger.info(f"Using embeddings endpoint: {api_url}")
+
             # Make the API call
             logger.info(f"Calling {provider.name} model {model.name}")
 
             response = await self.http_client.post(
-                provider.api_base_url,
+                api_url,
                 headers={"Authorization": f"Bearer {provider_api_key}"},
                 json=transformed_request,
                 timeout=30.0,
@@ -295,7 +324,7 @@ class ModelOrchestrator:
                         "total_tokens", 0
                     ),
                     latency_ms=latency_ms,
-                    endpoint="/completions",
+                    endpoint=endpoint,
                     status_code=200,
                 )
 
@@ -358,13 +387,23 @@ class ModelOrchestrator:
             }
 
         elif provider_name == "mistral":
-            # Mistral response is already in a similar format
-            return {
-                "choices": response.get("choices", []),
-                "provider": provider_name,
-                "model": model_name,
-                "usage": response.get("usage", {"total_tokens": 0}),
-            }
+            # Check if this is an embedding response
+            if "data" in response and "embedding" in response.get("data", [{}])[0]:
+                # This is an embedding response
+                return {
+                    "embedding": response["data"][0]["embedding"],
+                    "provider": provider_name,
+                    "model": model_name,
+                    "usage": response.get("usage", {"total_tokens": 0}),
+                }
+            else:
+                # This is a standard chat/completion response
+                return {
+                    "choices": response.get("choices", []),
+                    "provider": provider_name,
+                    "model": model_name,
+                    "usage": response.get("usage", {"total_tokens": 0}),
+                }
 
         # Default fallback
         return {

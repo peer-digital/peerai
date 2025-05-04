@@ -132,7 +132,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import routers
-from backend.routes import inference, auth, admin, rbac, referral, admin_models, documents
+from backend.routes import inference, auth, admin, rbac, referral, admin_models, documents, embeddings
 
 # No need to print API prefix
 
@@ -143,6 +143,7 @@ app.include_router(rbac.router, prefix=f"{settings.API_V1_PREFIX}")
 app.include_router(admin_models.router, prefix=f"{settings.API_V1_PREFIX}/admin")
 app.include_router(referral.router)      # NO prefix
 app.include_router(inference.router, prefix=f"{settings.API_V1_PREFIX}/llm") # ADDED LLM router here
+app.include_router(embeddings.router, prefix=f"{settings.API_V1_PREFIX}/embeddings") # Embeddings router
 app.include_router(documents.router, prefix=f"{settings.API_V1_PREFIX}") # Document management router
 
 # App Store router (deprecated - kept for backward compatibility)
