@@ -996,16 +996,16 @@
                 // Create toggle button for sources
                 const sourcesToggle = document.createElement('div');
                 sourcesToggle.className = 'sources-toggle';
-                sourcesToggle.innerHTML = '📚 Sources (' + sources.length + ')';
+                sourcesToggle.innerHTML = '📚 What is my answer based on?';
                 sourcesToggle.addEventListener('click', function() {
                     const sourcesList = this.nextElementSibling;
                     sourcesList.classList.toggle('expanded');
 
                     // Change text based on expanded state
                     if (sourcesList.classList.contains('expanded')) {
-                        this.innerHTML = '📚 Hide sources (' + sources.length + ')';
+                        this.innerHTML = '📚 Hide source documents';
                     } else {
-                        this.innerHTML = '📚 Sources (' + sources.length + ')';
+                        this.innerHTML = '📚 What is my answer based on?';
                     }
                 });
 
@@ -1027,12 +1027,8 @@
                         ? source.metadata.document_name
                         : `Source ${index + 1}`;
 
-                    // Get similarity score if available
-                    const similarityScore = source.metadata && source.metadata.similarity_score
-                        ? ` (${Math.round(source.metadata.similarity_score * 100)}% match)`
-                        : '';
-
-                    sourceName.innerHTML = `<span>${docName}${similarityScore}</span><span>▼</span>`;
+                    // We're removing the similarity score display as requested
+                    sourceName.innerHTML = `<span>${docName}</span><span>▼</span>`;
 
                     // Toggle source content visibility on click
                     sourceName.addEventListener('click', function() {
@@ -1048,10 +1044,18 @@
                         }
                     });
 
-                    // Create source content
+                    // Create source content with markdown formatting
                     const sourceContent = document.createElement('div');
                     sourceContent.className = 'source-content';
-                    sourceContent.textContent = source.text;
+
+                    // Apply the same markdown formatting we use for messages
+                    let formattedSourceText = source.text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                        .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                        .replace(/\n/g, '<br>');                           // Line breaks
+
+                    sourceContent.innerHTML = formattedSourceText;
 
                     // Add to source item
                     sourceItem.appendChild(sourceName);
