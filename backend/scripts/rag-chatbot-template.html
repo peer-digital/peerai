@@ -188,21 +188,54 @@
         }
 
         .source-content {
+            white-space: pre-wrap;
+            font-family: var(--font-family);
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .source-content code {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .source-chunks-container {
             display: none;
             margin-top: 8px;
+        }
+
+        .source-chunks-container.expanded {
+            display: block;
+        }
+
+        .source-chunk {
+            margin-bottom: 8px;
             padding: 8px;
             background-color: white;
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
         }
 
-        .source-content.expanded {
-            display: block;
+        .chunk-header {
+            font-weight: 500;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .sources-explanation {
+            margin-bottom: 12px;
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.02);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            color: var(--text-color);
+            line-height: 1.4;
         }
 
         .input-container {
@@ -1013,8 +1046,32 @@
                 const sourcesList = document.createElement('div');
                 sourcesList.className = 'sources-list';
 
-                // Add each source
+                // Add explanation heading
+                const sourcesExplanation = document.createElement('div');
+                sourcesExplanation.className = 'sources-explanation';
+                sourcesExplanation.innerHTML = 'Below documents were used to generate this answer. Click on a document to see the specific paragraphs.';
+                sourcesList.appendChild(sourcesExplanation);
+
+                // Group sources by document name
+                const groupedSources = {};
+
                 sources.forEach((source, index) => {
+                    // Get document name from metadata
+                    const docName = source.metadata && source.metadata.document_name
+                        ? source.metadata.document_name
+                        : `Source ${index + 1}`;
+
+                    // Create the group if it doesn't exist
+                    if (!groupedSources[docName]) {
+                        groupedSources[docName] = [];
+                    }
+
+                    // Add the source to its group
+                    groupedSources[docName].push(source);
+                });
+
+                // Add each document group
+                Object.entries(groupedSources).forEach(([docName, docSources]) => {
                     const sourceItem = document.createElement('div');
                     sourceItem.className = 'source-item';
 
@@ -1022,44 +1079,72 @@
                     const sourceName = document.createElement('div');
                     sourceName.className = 'source-name';
 
-                    // Get document name from metadata
-                    const docName = source.metadata && source.metadata.document_name
-                        ? source.metadata.document_name
-                        : `Source ${index + 1}`;
+                    // Show document name with paragraph count
+                    sourceName.innerHTML = `<span>${docName} (${docSources.length} ${docSources.length === 1 ? 'paragraph' : 'paragraphs'})</span><span>▼</span>`;
 
-                    // We're removing the similarity score display as requested
-                    sourceName.innerHTML = `<span>${docName}</span><span>▼</span>`;
+                    // Create container for all chunks from this document
+                    const chunksContainer = document.createElement('div');
+                    chunksContainer.className = 'source-chunks-container';
 
-                    // Toggle source content visibility on click
+                    // Toggle chunks container visibility on click
                     sourceName.addEventListener('click', function() {
-                        const content = this.nextElementSibling;
-                        content.classList.toggle('expanded');
+                        chunksContainer.classList.toggle('expanded');
 
                         // Change arrow direction
                         const arrow = this.querySelector('span:last-child');
-                        if (content.classList.contains('expanded')) {
+                        if (chunksContainer.classList.contains('expanded')) {
                             arrow.textContent = '▲';
                         } else {
                             arrow.textContent = '▼';
                         }
                     });
 
-                    // Create source content with markdown formatting
-                    const sourceContent = document.createElement('div');
-                    sourceContent.className = 'source-content';
+                    // Add each chunk from this document
+                    docSources.forEach((source, chunkIndex) => {
+                        // Create chunk container
+                        const chunkItem = document.createElement('div');
+                        chunkItem.className = 'source-chunk';
 
-                    // Apply the same markdown formatting we use for messages
-                    let formattedSourceText = source.text
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
-                        .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
-                        .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
-                        .replace(/\n/g, '<br>');                           // Line breaks
+                        // Add paragraph number if there are multiple paragraphs
+                        if (docSources.length > 1) {
+                            const chunkHeader = document.createElement('div');
+                            chunkHeader.className = 'chunk-header';
+                            chunkHeader.textContent = `Paragraph ${chunkIndex + 1}`;
+                            chunkItem.appendChild(chunkHeader);
+                        }
 
-                    sourceContent.innerHTML = formattedSourceText;
+                        // Create source content with markdown formatting
+                        const sourceContent = document.createElement('div');
+                        sourceContent.className = 'source-content';
+
+                        // Clean up the text - remove document IDs and clean up formatting
+                        let cleanText = source.text;
+
+                        // Remove document ID lines (lines starting with # followed by alphanumeric characters and hyphens)
+                        cleanText = cleanText.replace(/^#\s*[a-zA-Z0-9\-]+\.pdf.*$/m, '');
+
+                        // Apply the same markdown formatting we use for messages
+                        let formattedSourceText = cleanText
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                            .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                            .replace(/\n/g, '<br>');                           // Line breaks
+
+                        // Remove any empty lines at the beginning
+                        formattedSourceText = formattedSourceText.replace(/^(<br>)+/, '');
+
+                        sourceContent.innerHTML = formattedSourceText;
+
+                        // Add content to chunk
+                        chunkItem.appendChild(sourceContent);
+
+                        // Add chunk to chunks container
+                        chunksContainer.appendChild(chunkItem);
+                    });
 
                     // Add to source item
                     sourceItem.appendChild(sourceName);
-                    sourceItem.appendChild(sourceContent);
+                    sourceItem.appendChild(chunksContainer);
 
                     // Add to sources list
                     sourcesList.appendChild(sourceItem);
