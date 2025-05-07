@@ -1,28 +1,28 @@
 {
   "schema": {
-    "title": "RAG Chatbot Configuration",
+    "title": "Smart Document Chatbot Setup",
     "type": "object",
     "properties": {
       "app_settings": {
         "type": "object",
-        "title": "App Settings",
+        "title": "Basic Information",
         "properties": {
           "app_title": {
             "type": "string",
-            "title": "App Title",
-            "description": "The title of your chatbot app",
-            "default": "RAG Chatbot"
+            "title": "Chatbot Name",
+            "description": "What would you like to name your chatbot?",
+            "default": "Document Assistant"
           },
           "app_description": {
             "type": "string",
-            "title": "App Description",
-            "description": "A short description of your chatbot",
-            "default": "An advanced chatbot solution that can answer questions based on your uploaded documents."
+            "title": "Short Description",
+            "description": "Briefly describe what your chatbot will help users with",
+            "default": "A helpful assistant that can answer questions based on your documents."
           },
           "language": {
             "type": "string",
             "title": "Language",
-            "description": "The language of your chatbot interface",
+            "description": "Choose the language for your chatbot interface",
             "enum": ["en", "sv"],
             "enumNames": ["English", "Swedish"],
             "default": "en"
@@ -31,111 +31,118 @@
       },
       "documents": {
         "type": "object",
-        "title": "Documents",
-        "description": "Documents can be uploaded after the app is deployed. After deployment, go to the app settings to upload and manage documents.",
+        "title": "Document Library",
+        "description": "After you deploy your chatbot, you'll be able to upload documents that it can use to answer questions.",
         "properties": {
           "file_upload": {
             "type": "string",
             "title": "Upload Documents",
-            "description": "Upload documents to be used by the chatbot (available after deployment)",
+            "description": "You'll be able to upload PDF, Word, text, and markdown files after deployment",
             "format": "data-url"
           }
         }
       },
       "content": {
         "type": "object",
-        "title": "Content",
+        "title": "Chat Interface",
+        "description": "Customize how your chatbot communicates with users",
         "properties": {
           "content_title": {
             "type": "string",
-            "title": "Content Title",
-            "description": "The title displayed above the chat",
-            "default": "Try it yourself"
+            "title": "Chat Header",
+            "description": "The heading shown above the chat area",
+            "default": "Ask me about your documents"
           },
           "welcome_message": {
             "type": "string",
             "title": "Welcome Message",
-            "description": "The initial message from the chatbot",
-            "default": "Hello! I'm here to help you. What would you like to know about your documents?"
+            "description": "The first message users see when they open the chat",
+            "default": "Hello! I'm here to help you find information in your documents. What would you like to know?"
           },
           "input_placeholder": {
             "type": "string",
-            "title": "Input Placeholder",
-            "description": "Placeholder text for the input field",
+            "title": "Question Box Placeholder",
+            "description": "Text shown in the empty question box",
             "default": "Type your question here..."
           },
           "send_button_text": {
             "type": "string",
-            "title": "Send Button Text",
-            "description": "Text for the send button",
+            "title": "Send Button Label",
+            "description": "Text on the button that sends the user's question",
             "default": "Send"
           },
           "typing_indicator_text": {
             "type": "string",
-            "title": "Typing Indicator Text",
-            "description": "Text shown while the AI is generating a response",
+            "title": "Loading Message",
+            "description": "Text shown while the chatbot is preparing an answer",
             "default": "Thinking..."
           },
           "error_message": {
             "type": "string",
             "title": "Error Message",
-            "description": "Message shown when an error occurs",
+            "description": "Message shown if something goes wrong",
             "default": "Sorry, I encountered an error. Please try again."
           },
           "no_response_text": {
             "type": "string",
-            "title": "No Response Text",
-            "description": "Message shown when no response is received",
+            "title": "No Response Message",
+            "description": "Message shown if the chatbot doesn't respond",
             "default": "No response received. Please try again."
           },
           "no_documents_message": {
             "type": "string",
             "title": "No Documents Message",
-            "description": "Message shown when no documents are available",
+            "description": "Message shown when no documents have been uploaded yet",
             "default": "No documents have been uploaded yet. Please upload documents in the admin panel to enable document-based answers."
           }
         }
       },
       "quick_actions": {
         "type": "object",
-        "title": "Quick Actions",
-        "description": "Predefined questions that users can click on",
+        "title": "Suggested Questions",
+        "description": "Create buttons with pre-written questions that users can click instead of typing",
         "properties": {
           "quick_action1": {
             "type": "string",
-            "title": "Quick Action 1",
+            "title": "Suggestion 1",
+            "description": "First suggested question for users to click",
             "default": "What are the main topics in my documents?"
           },
           "quick_action2": {
             "type": "string",
-            "title": "Quick Action 2",
+            "title": "Suggestion 2",
+            "description": "Second suggested question for users to click",
             "default": "Summarize the key points"
           },
           "quick_action3": {
             "type": "string",
-            "title": "Quick Action 3",
+            "title": "Suggestion 3",
+            "description": "Third suggested question for users to click",
             "default": "Find information about..."
           },
           "quick_action4": {
             "type": "string",
-            "title": "Quick Action 4",
+            "title": "Suggestion 4",
+            "description": "Fourth suggested question for users to click",
             "default": "Compare and contrast..."
           },
           "quick_action5": {
             "type": "string",
-            "title": "Quick Action 5",
+            "title": "Suggestion 5",
+            "description": "Fifth suggested question for users to click",
             "default": "Explain the concept of..."
           }
         }
       },
       "ai_settings": {
         "type": "object",
-        "title": "AI Settings",
+        "title": "AI Behavior",
+        "description": "Control how the AI responds to questions",
         "properties": {
           "system_prompt": {
             "type": "string",
-            "title": "System Prompt",
-            "description": "Instructions that guide how the AI responds. This sets the AI's behavior, tone, and capabilities. For RAG applications, this prompt should instruct the AI to use document context when available and indicate when information isn't found in the documents.",
+            "title": "AI Instructions",
+            "description": "These instructions tell the AI how to behave when answering questions. You can customize this to change the AI's tone, style, and what information it prioritizes.",
             "default": "You are a helpful, friendly assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
           }
         }
@@ -143,78 +150,79 @@
 
       "styling": {
         "type": "object",
-        "title": "Styling",
+        "title": "Visual Design",
+        "description": "Customize how your chatbot looks",
         "properties": {
           "primary_color": {
             "type": "string",
-            "title": "Primary Color",
-            "description": "Main color for buttons and accents",
+            "title": "Main Color",
+            "description": "The main color used for buttons and important elements",
             "format": "color",
             "default": "#1a56db"
           },
           "secondary_color": {
             "type": "string",
-            "title": "Secondary Color",
-            "description": "Secondary color for highlights",
+            "title": "Accent Color",
+            "description": "A secondary color used for highlights and less important elements",
             "format": "color",
             "default": "#4f46e5"
           },
           "background_color": {
             "type": "string",
             "title": "Background Color",
-            "description": "Background color of the app",
+            "description": "The color of the page background",
             "format": "color",
             "default": "#f9fafb"
           },
           "text_color": {
             "type": "string",
             "title": "Text Color",
-            "description": "Main text color",
+            "description": "The color of the main text",
             "format": "color",
             "default": "#111827"
           },
           "light_bg_color": {
             "type": "string",
-            "title": "Light Background Color",
-            "description": "Background color for message bubbles",
+            "title": "Message Bubble Color",
+            "description": "The background color for chat message bubbles",
             "format": "color",
             "default": "#f0f7ff"
           },
           "border_color": {
             "type": "string",
             "title": "Border Color",
-            "description": "Color for borders",
+            "description": "The color of borders between elements",
             "format": "color",
             "default": "#e5e7eb"
           },
           "font_family": {
             "type": "string",
-            "title": "Font Family",
-            "description": "Font family for text",
+            "title": "Font",
+            "description": "The font used throughout the chatbot",
             "default": "system-ui, sans-serif"
           },
           "font_size_small": {
             "type": "string",
-            "title": "Small Font Size",
-            "description": "Font size for small text",
+            "title": "Small Text Size",
+            "description": "Size for small text elements",
             "default": "14px"
           },
           "font_size_medium": {
             "type": "string",
-            "title": "Medium Font Size",
-            "description": "Font size for medium text",
+            "title": "Normal Text Size",
+            "description": "Size for most text elements",
             "default": "16px"
           },
           "font_size_large": {
             "type": "string",
-            "title": "Large Font Size",
-            "description": "Font size for large text",
+            "title": "Large Text Size",
+            "description": "Size for headings and important text",
             "default": "22px"
           },
           "border_radius": {
             "type": "string",
-            "title": "Border Radius",
-            "description": "Roundness of corners",
+            "title": "Corner Roundness",
+            "description": "How rounded the corners of elements should be",
             "default": "8px"
           }
         }
@@ -225,16 +233,25 @@
     "ui:submitButtonOptions": {
       "norender": true
     },
+    "ui:order": ["app_settings", "content", "quick_actions", "ai_settings", "documents", "styling"],
     "app_settings": {
       "ui:order": ["app_title", "app_description", "language"],
       "ui:expandable": true,
-      "ui:expanded": true
+      "ui:expanded": true,
+      "ui:help": "Start by giving your chatbot a name and description",
+      "app_title": {
+        "ui:help": "This will be displayed at the top of your chatbot"
+      },
+      "app_description": {
+        "ui:help": "A brief explanation of what your chatbot does"
+      }
     },
     "documents": {
       "ui:expandable": true,
       "ui:expanded": true,
-      "ui:description": "Note: Document upload is only available after deployment",
+      "ui:description": "You'll be able to upload documents after deployment",
       "ui:disabled": true,
+      "ui:help": "After deployment, you can upload PDF, Word, text, and markdown files that your chatbot will use to answer questions",
       "file_upload": {
         "ui:widget": "fileUpload",
         "ui:options": {
@@ -247,37 +264,45 @@
     },
     "content": {
       "ui:expandable": true,
-      "ui:expanded": false
+      "ui:expanded": false,
+      "ui:help": "Customize the text that appears in your chatbot interface",
+      "welcome_message": {
+        "ui:widget": "textarea",
+        "ui:help": "This is the first message users will see"
+      }
     },
     "quick_actions": {
       "ui:expandable": true,
-      "ui:expanded": false
+      "ui:expanded": false,
+      "ui:help": "Create clickable question buttons to help users get started"
     },
     "ai_settings": {
       "ui:expandable": true,
       "ui:expanded": true,
+      "ui:help": "Control how the AI responds to questions",
       "system_prompt": {
-        "ui:widget": "textarea"
+        "ui:widget": "textarea",
+        "ui:help": "These instructions tell the AI how to behave - you can customize the tone and style"
       }
     },
-
     "styling": {
       "ui:expandable": true,
-      "ui:expanded": false
+      "ui:expanded": false,
+      "ui:help": "Customize colors, fonts, and other visual elements"
     }
   },
   "default_values": {
     "app_settings": {
-      "app_title": "RAG Chatbot",
-      "app_description": "An advanced chatbot solution that can answer questions based on your uploaded documents.",
+      "app_title": "Document Assistant",
+      "app_description": "A helpful assistant that can answer questions based on your documents.",
       "language": "en"
     },
     "documents": {
       "file_upload": null
     },
     "content": {
-      "content_title": "Try it yourself",
-      "welcome_message": "Hello! I'm here to help you. What would you like to know about your documents?",
+      "content_title": "Ask me about your documents",
+      "welcome_message": "Hello! I'm here to help you find information in your documents. What would you like to know?",
       "input_placeholder": "Type your question here...",
       "send_button_text": "Send",
       "typing_indicator_text": "Thinking...",

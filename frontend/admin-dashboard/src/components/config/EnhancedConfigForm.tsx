@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -11,10 +11,14 @@ import {
   Tooltip,
   IconButton,
   Alert,
+  Button,
+  Stack,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   HelpOutline as HelpIcon,
+  NavigateNext as NavigateNextIcon,
+  NavigateBefore as NavigateBeforeIcon,
 } from '@mui/icons-material';
 import { JSONSchema7 } from 'json-schema';
 import Form from '@rjsf/mui';
@@ -28,6 +32,11 @@ interface EnhancedConfigFormProps {
   formData: any;
   onChange: (data: { formData: any }) => void;
   disabled?: boolean;
+  /**
+   * If true, the form will be in wizard mode with next/previous buttons
+   * If not provided, wizard mode will be enabled when disabled is false
+   */
+  wizardMode?: boolean;
 }
 
 const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
@@ -36,9 +45,20 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   formData,
   onChange,
   disabled = false,
+  wizardMode,
 }) => {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
+
+  // Determine if we should use wizard mode
+  // Default to wizard mode when we're in deployment mode (not disabled)
+  const isWizardMode = wizardMode !== undefined ? wizardMode : !disabled;
+
+  // State to track the currently active section
+  const [activeSection, setActiveSection] = useState<number>(0);
+
+  // Refs for each accordion
+  const accordionRefs = useRef<(HTMLElement | null)[]>([]);
 
   // Validate schema on mount
   useEffect(() => {
@@ -130,6 +150,61 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     }
   };
 
+  // Initialize accordion refs when sections change
+  useEffect(() => {
+    accordionRefs.current = accordionRefs.current.slice(0, sections.length);
+  }, [sections]);
+
+  // Handle navigation to the next section
+  const handleNext = () => {
+    if (activeSection < sections.length - 1) {
+      // Close current accordion
+      const currentAccordion = accordionRefs.current[activeSection];
+      if (currentAccordion) {
+        const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
+        if (summary && !summary.classList.contains('Mui-expanded')) {
+          summary.click();
+        }
+      }
+
+      // Open next accordion
+      const nextAccordion = accordionRefs.current[activeSection + 1];
+      if (nextAccordion) {
+        const summary = nextAccordion.querySelector('.MuiAccordionSummary-root');
+        if (summary && summary.classList.contains('Mui-expanded')) {
+          summary.click();
+        }
+      }
+
+      setActiveSection(activeSection + 1);
+    }
+  };
+
+  // Handle navigation to the previous section
+  const handlePrevious = () => {
+    if (activeSection > 0) {
+      // Close current accordion
+      const currentAccordion = accordionRefs.current[activeSection];
+      if (currentAccordion) {
+        const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
+        if (summary && !summary.classList.contains('Mui-expanded')) {
+          summary.click();
+        }
+      }
+
+      // Open previous accordion
+      const prevAccordion = accordionRefs.current[activeSection - 1];
+      if (prevAccordion) {
+        const summary = prevAccordion.querySelector('.MuiAccordionSummary-root');
+        if (summary && summary.classList.contains('Mui-expanded')) {
+          summary.click();
+        }
+      }
+
+      setActiveSection(activeSection - 1);
+    }
+  };
+
   return (
     <Box sx={{ width: '100%' }}>
       {error ? (
@@ -144,7 +219,14 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         sections.map((section, index) => (
         <Accordion
           key={section.key}
+          ref={(el) => (accordionRefs.current[index] = el)}
           defaultExpanded={index === 0}
+          expanded={isWizardMode ? index === activeSection : undefined}
+          onChange={isWizardMode ? (_, expanded) => {
+            if (expanded) {
+              setActiveSection(index);
+            }
+          } : undefined}
           sx={{
             mb: 2,
             border: `1px solid ${theme.palette.divider}`,
@@ -240,6 +322,33 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                   );
                 }
               })()}
+
+              {/* Wizard navigation buttons */}
+              {isWizardMode && (
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  justifyContent="space-between"
+                  sx={{ mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}
+                >
+                  <Button
+                    variant="outlined"
+                    startIcon={<NavigateBeforeIcon />}
+                    onClick={handlePrevious}
+                    disabled={index === 0}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="contained"
+                    endIcon={<NavigateNextIcon />}
+                    onClick={handleNext}
+                    disabled={index === sections.length - 1}
+                  >
+                    Next
+                  </Button>
+                </Stack>
+              )}
             </Box>
           </AccordionDetails>
         </Accordion>
