@@ -26,12 +26,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/config';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-interface FileUploadWidgetProps extends WidgetProps {
-  options: {
-    accept?: string;
-    multiple?: boolean;
-  };
-}
+
 
 interface UploadedFile {
   id: number;
@@ -55,9 +50,10 @@ interface DocumentResponse {
   team_id: number | null;
 }
 
-const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
-  const { options, id, disabled } = props;
-  const { accept = '.pdf,.txt,.docx,.md', multiple = true } = options || {};
+const FileUploadWidget: React.FC<WidgetProps> = (props) => {
+  const { options = {}, id, disabled } = props;
+  const accept = options.accept ?? '.pdf,.txt,.docx,.md';
+  const multiple = options.multiple ?? true;
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -313,13 +309,13 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
         }}
       >
         <input
-          accept={accept}
+          accept={String(accept)}
           style={{ display: 'none' }}
-          id={id}
-          multiple={multiple}
+          id={id ?? 'file-upload-input'}
+          multiple={Boolean(multiple)}
           type="file"
           onChange={handleFileChange}
-          disabled={disabled || isUploading}
+          disabled={!!disabled || isUploading}
         />
         <label htmlFor={id}>
           <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
@@ -330,8 +326,7 @@ const FileUploadWidget: React.FC<FileUploadWidgetProps> = (props) => {
             Click to browse or drag and drop files here
           </Typography>
           <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-            Supported formats: {accept.replace(/\./g, '').toUpperCase()}
-          </Typography>
+          Supported formats: {String(accept).replace(/\./g, '').toUpperCase()}          </Typography>
           <Typography variant="caption" color="textSecondary" display="block">
             Files will be processed to extract text and generate embeddings for RAG.
           </Typography>
