@@ -114,11 +114,12 @@ $DEPLOY_DIR/.venv/bin/python -m backend.scripts.seed_mistral_models || {
 echo "Model seeding script finished."
 # --- End model seeding script ---
 
-# Optional: Add commands here to run database migrations if needed
-# Example:
-# echo "Running database migrations..."
-# cd $DEPLOY_DIR
-# source .venv/bin/activate  # @note: Or however you activate your environment
-# alembic upgrade head  # @note: Or your migration command
+# Update RAG chatbot template and deployed apps
+echo "Updating RAG chatbot template and deployed apps..."
+cd $DEPLOY_DIR
+source .venv/bin/activate
+python backend/scripts/seed_rag_chatbot_template.py --force-update
+python backend/scripts/update_deployed_apps.py
+deactivate
 
 echo "deploy.sh script finished successfully on VM."
