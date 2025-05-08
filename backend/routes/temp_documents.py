@@ -123,10 +123,10 @@ async def process_temp_documents(
     # Get the temporary files directory
     temp_uploads_dir = os.path.join(settings.UPLOAD_DIR, "temp", session_id)
     if not os.path.exists(temp_uploads_dir):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No temporary files found for this session",
-        )
+        # Instead of returning an error, just return an empty list
+        # This handles the case where files have already been processed
+        logger.info(f"No temporary files directory found for session {session_id}. Files may have already been processed.")
+        return []
 
     # Process each file in the directory
     processed_documents = []

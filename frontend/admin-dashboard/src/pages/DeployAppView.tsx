@@ -118,6 +118,12 @@ const DeployAppView: React.FC = () => {
       });
 
       if (!response.ok) {
+        // If we get a 404, it means the files have already been processed
+        if (response.status === 404) {
+          console.log('No temporary files found. They may have already been processed.');
+          return;
+        }
+
         console.error(`Failed to process temporary files: ${response.status}`);
         return;
       }

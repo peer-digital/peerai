@@ -377,8 +377,11 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       const processedDocuments = await response.json();
       console.log(`Successfully processed ${processedDocuments.length} documents`);
 
-      // Update all files to success status
-      setFiles(prev => prev.map(f => ({ ...f, status: 'success' })));
+      // Clear the files list completely instead of just updating status
+      setFiles([]);
+
+      // Clear in-memory files as well
+      setInMemoryFiles([]);
 
       // Clear the session ID to prevent duplicate processing
       localStorage.removeItem('rag_chatbot_session_id');
