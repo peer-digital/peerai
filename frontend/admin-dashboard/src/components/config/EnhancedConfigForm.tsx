@@ -102,9 +102,9 @@ const CustomFieldTemplate = (props: FieldTemplateProps) => {
             )}
           </Typography>
 
-          {/* Help icon for additional information */}
-          {help && help !== description && (
-            <Tooltip title="Click for more information">
+          {/* Help icon for additional information - only show when help text is available and meaningful */}
+          {help && help !== description && typeof help === 'string' && help.trim() !== "" && (
+            <Tooltip title={help}>
               <IconButton
                 size="small"
                 onClick={toggleHelp}
@@ -138,8 +138,8 @@ const CustomFieldTemplate = (props: FieldTemplateProps) => {
         </Typography>
       )}
 
-      {/* Expandable help text */}
-      {help && help !== description && showHelp && (
+      {/* Expandable help text - only show when help text is available and meaningful */}
+      {help && help !== description && typeof help === 'string' && help.trim() !== "" && showHelp && (
         <Box
           sx={{
             p: 1.5,
@@ -1090,8 +1090,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                           {section.title}
                         </Typography>
 
-                        {/* Show description as subtitle in the header */}
-                        {section.description && (
+                        {/* Show description as subtitle in the header - only when description is available and meaningful */}
+                        {section.description && typeof section.description === 'string' && section.description.trim() !== "" && (
                           <Typography
                             variant="body2"
                             sx={{
@@ -1107,8 +1107,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                       </Box>
                     </Box>
 
-                    {/* Help icon for mobile view */}
-                    {!isWizardMode && section.description && (
+                    {/* Help icon for mobile view - only show when description is available and meaningful */}
+                    {!isWizardMode && section.description && typeof section.description === 'string' && section.description.trim() !== "" && (
                       <Box
                         sx={{
                           ml: 'auto',

@@ -264,15 +264,51 @@
       "ui:expandable": true,
       "ui:expanded": false,
       "ui:help": "Customize the text that appears in your chatbot interface",
+      "content_title": {
+        "ui:help": "This heading appears at the top of the chat area and helps users understand the purpose of the chatbot."
+      },
       "welcome_message": {
         "ui:widget": "textarea",
-        "ui:help": "This is the first message users will see"
+        "ui:help": "This is the first message users will see when they open the chatbot. It should be friendly and explain what the chatbot can help with."
+      },
+      "input_placeholder": {
+        "ui:help": "This text appears in the empty input field to guide users on what to type."
+      },
+      "send_button_text": {
+        "ui:help": "The text on the button that sends the user's message. Usually 'Send' or 'Ask'."
+      },
+      "typing_indicator_text": {
+        "ui:help": "Text shown while the AI is generating a response. Indicates to users that the system is working."
+      },
+      "error_message": {
+        "ui:help": "Message shown if there's a technical error. Should be clear but not too technical."
+      },
+      "no_response_text": {
+        "ui:help": "Message shown if the AI doesn't provide a response. Encourages users to try again."
+      },
+      "no_documents_message": {
+        "ui:help": "Message shown when no documents have been uploaded. Guides users on what to do next."
       }
     },
     "quick_actions": {
       "ui:expandable": true,
       "ui:expanded": false,
-      "ui:help": "Create clickable question buttons to help users get started"
+      "ui:help": "Create clickable question buttons to help users get started",
+      "quick_action1": {
+        "ui:help": "This question helps users discover the main topics or themes in their documents. Good for initial exploration."
+      },
+      "quick_action2": {
+        "ui:help": "This question prompts the AI to provide a concise summary of the key points from all documents."
+      },
+      "quick_action3": {
+        "ui:help": "This template encourages users to search for specific information by completing the phrase (e.g., 'Find information about pricing')."
+      },
+      "quick_action4": {
+        "ui:help": "This template helps users compare different concepts or topics found in their documents."
+      },
+      "quick_action5": {
+        "ui:help": "This template allows users to ask for explanations of specific concepts mentioned in their documents."
+      }
     },
     "ai_settings": {
       "ui:expandable": true,
@@ -286,7 +322,40 @@
     "styling": {
       "ui:expandable": true,
       "ui:expanded": false,
-      "ui:help": "Customize colors, fonts, and other visual elements"
+      "ui:help": "Customize colors, fonts, and other visual elements",
+      "primary_color": {
+        "ui:help": "This color is used for buttons, user message bubbles, and the header. Choose a color that matches your brand."
+      },
+      "secondary_color": {
+        "ui:help": "This color is used for hover states and secondary elements. It should complement your primary color."
+      },
+      "background_color": {
+        "ui:help": "The main background color of the chatbot interface. Lighter colors are recommended for better readability."
+      },
+      "text_color": {
+        "ui:help": "The color of the main text in your chatbot. Should have good contrast with the background color."
+      },
+      "light_bg_color": {
+        "ui:help": "The background color for AI message bubbles. Should be light enough for text to be readable."
+      },
+      "border_color": {
+        "ui:help": "The color of borders between elements. Usually a light gray for subtle separation."
+      },
+      "font_family": {
+        "ui:help": "The font used throughout the chatbot. System fonts ensure consistent display across devices."
+      },
+      "font_size_small": {
+        "ui:help": "Size for smaller text elements like quick action buttons. Usually 12-14px."
+      },
+      "font_size_medium": {
+        "ui:help": "Size for most text elements including chat messages. Usually 16px for good readability."
+      },
+      "font_size_large": {
+        "ui:help": "Size for headings and important text. Usually 20-24px."
+      },
+      "border_radius": {
+        "ui:help": "Controls how rounded the corners of elements are. Higher values (8-12px) give a more modern look."
+      }
     }
   },
   "default_values": {
