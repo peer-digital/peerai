@@ -429,6 +429,7 @@ const DeployAppView: React.FC = () => {
                 onDeploy={handleDeploy}
                 deploymentSettingsComponent={<DeploymentSettingsComponent />}
                 isDeploying={isDeploying}
+                wizardMode={true}
               />
             )}
           </TabPanel>

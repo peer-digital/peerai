@@ -16,6 +16,7 @@ import {
   Card,
   CardContent,
   FormHelperText,
+  CircularProgress,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -25,6 +26,8 @@ import {
   Settings as SettingsIcon,
   CheckCircle as CheckCircleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { JSONSchema7 } from 'json-schema';
 import Form from '@rjsf/mui';
@@ -130,6 +133,18 @@ interface EnhancedConfigFormProps {
    * Whether the form is currently in a deploying state
    */
   isDeploying?: boolean;
+  /**
+   * Optional callback for when a section-specific edit button is clicked
+   */
+  onSectionEdit?: (sectionKey: string) => void;
+  /**
+   * Optional callback for when a section-specific save button is clicked
+   */
+  onSectionSave?: (sectionKey: string) => void;
+  /**
+   * Optional array of section keys that are currently being edited
+   */
+  editingSections?: string[];
 }
 
 // Add global styles for form fields
@@ -155,13 +170,16 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   onDeploy,
   deploymentSettingsComponent,
   isDeploying = false,
+  onSectionEdit,
+  onSectionSave,
+  editingSections = [],
 }) => {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
 
   // Determine if we should use wizard mode
-  // Default to wizard mode when we're in deployment mode (not disabled)
-  const isWizardMode = wizardMode !== undefined ? wizardMode : !disabled;
+  // Only use wizard mode if explicitly set to true
+  const isWizardMode = wizardMode === true;
 
   // State to track the currently active section
   const [activeSection, setActiveSection] = useState<number>(0);
@@ -280,7 +298,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (currentAccordion) {
         const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && !summary.classList.contains('Mui-expanded')) {
-          summary.click();
+          (summary as HTMLElement).click();
         }
       }
 
@@ -289,7 +307,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (nextAccordion) {
         const summary = nextAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && summary.classList.contains('Mui-expanded')) {
-          summary.click();
+          (summary as HTMLElement).click();
         }
       }
 
@@ -335,7 +353,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (currentAccordion) {
         const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && !summary.classList.contains('Mui-expanded')) {
-          summary.click();
+          (summary as HTMLElement).click();
         }
       }
 
@@ -344,7 +362,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (prevAccordion) {
         const summary = prevAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && summary.classList.contains('Mui-expanded')) {
-          summary.click();
+          (summary as HTMLElement).click();
         }
       }
 
@@ -517,8 +535,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
               <Accordion
                 key={section.key}
                 ref={(el) => (accordionRefs.current[index] = el)}
-                defaultExpanded={index === 0 || !isWizardMode}
-                expanded={isWizardMode ? true : undefined} // Always expanded in wizard mode
+                defaultExpanded={isWizardMode ? true : false} // Default to closed in view mode, open in wizard mode
+                expanded={isWizardMode ? true : undefined} // Always expanded in wizard mode, controlled by user in view mode
                 sx={{
                   mb: 2,
                   border: `1px solid ${theme.palette.divider}`,
@@ -530,7 +548,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                 }}
               >
                 <AccordionSummary
-                  expandIcon={isWizardMode ? null : <ExpandMoreIcon />} // No expand icon in wizard mode
+                  expandIcon={null} // No expand icon
                   aria-controls={`${section.key}-content`}
                   id={`${section.key}-header`}
                   sx={{
@@ -538,20 +556,69 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                       ? 'rgba(255, 255, 255, 0.05)'
                       : 'rgba(0, 0, 0, 0.03)',
                     borderRadius: '8px 8px 0 0',
-                    // Disable click in wizard mode
+                    // Only disable click in wizard mode
                     pointerEvents: isWizardMode ? 'none' : 'auto',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      {section.title}
-                    </Typography>
-                    {section.description && (
-                      <Tooltip title={section.description}>
-                        <IconButton size="small" sx={{ ml: 1 }}>
-                          <HelpIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="subtitle1" fontWeight="medium">
+                        {section.title}
+                      </Typography>
+                      {section.description && (
+                        <Tooltip title={section.description}>
+                          <IconButton size="small" sx={{ ml: 1 }}>
+                            <HelpIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                    {!isWizardMode && onSectionEdit && (
+                      <Box sx={{ ml: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                        {editingSections.includes(section.key) ? (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            startIcon={<SaveIcon />}
+                            onClick={() => {
+                              // Find the accordion and close it
+                              const accordion = accordionRefs.current[index];
+                              if (accordion) {
+                                const summary = accordion.querySelector('.MuiAccordionSummary-root');
+                                if (summary && summary.classList.contains('Mui-expanded')) {
+                                  (summary as HTMLElement).click();
+                                }
+                              }
+                              // Call the section save handler
+                              onSectionSave && onSectionSave(section.key);
+                            }}
+                          >
+                            Save
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={() => {
+                              // Find the accordion and expand it if it's not already expanded
+                              const accordion = accordionRefs.current[index];
+                              if (accordion) {
+                                const summary = accordion.querySelector('.MuiAccordionSummary-root');
+                                if (summary && !summary.classList.contains('Mui-expanded')) {
+                                  (summary as HTMLElement).click();
+                                }
+                              }
+                              // Call the section edit handler
+                              onSectionEdit(section.key);
+                            }}
+                            disabled={false} // Always enable edit buttons
+                          >
+                            Edit
+                          </Button>
+                        )}
+                      </Box>
                     )}
                   </Box>
                 </AccordionSummary>
@@ -571,7 +638,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                               formData={formData[section.key] || {}}
                               onChange={(data: IChangeEvent<any>) => handleSectionChange(section.key, data)}
                               validator={validator}
-                              disabled={disabled}
+                              disabled={disabled || (!isWizardMode && !editingSections.includes(section.key))}
                               uiSchema={getCustomUiSchema(section.key)}
                               widgets={{
                                 fileUpload: customWidgets.fileUpload,
@@ -600,7 +667,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                                 }
                               }}
                               validator={validator}
-                              disabled={disabled}
+                              disabled={disabled || (!isWizardMode && !editingSections.includes(section.key))}
                               uiSchema={getCustomUiSchema(section.key)}
                               widgets={{
                                 fileUpload: customWidgets.fileUpload,

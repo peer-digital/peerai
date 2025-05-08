@@ -30,6 +30,7 @@ import validator from '@rjsf/validator-ajv8';
 import { replacePlaceholders } from '../utils/templateHelpers';
 import DevicePreview from '../components/preview/DevicePreview';
 import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
+import { showToast } from '../components/ui/Toast';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -69,6 +70,7 @@ const DeployedAppView: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [customUiSchema, setCustomUiSchema] = useState<any>(null);
+  const [editingSections, setEditingSections] = useState<string[]>([]);
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -87,6 +89,7 @@ const DeployedAppView: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deployed-app', slug] });
       setIsEditing(false);
+      setEditingSections([]);
     },
   });
 
@@ -142,7 +145,7 @@ const DeployedAppView: React.FC = () => {
     setFormData(formData);
   };
 
-  // Handle save changes
+  // Handle save changes for all sections
   const handleSaveChanges = () => {
     if (!app) return;
 
@@ -153,6 +156,45 @@ const DeployedAppView: React.FC = () => {
         custom_code: app.template.template_code,
       },
     });
+  };
+
+  // Handle edit for a specific section
+  const handleSectionEdit = (sectionKey: string) => {
+    setEditingSections([...editingSections, sectionKey]);
+  };
+
+  // Handle save for a specific section
+  const handleSectionSave = (sectionKey: string) => {
+    if (!app) return;
+
+    // Remove the section from editing sections
+    setEditingSections(editingSections.filter(key => key !== sectionKey));
+
+    // Save the changes
+    updateMutation.mutate({
+      slug: app.slug,
+      updates: {
+        configuration: formData,
+        custom_code: app.template.template_code,
+      },
+    }, {
+      onSuccess: () => {
+        // Show success toast
+        showToast(`${getSectionTitle(sectionKey)} settings saved successfully`, 'success');
+      }
+    });
+  };
+
+  // Helper function to get section title from key
+  const getSectionTitle = (sectionKey: string): string => {
+    if (!app?.template?.template_config?.schema?.properties) return 'Section';
+
+    const property = app.template.template_config.schema.properties[sectionKey];
+    if (property && typeof property === 'object' && 'title' in property) {
+      return property.title as string;
+    }
+
+    return sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1).replace(/_/g, ' ');
   };
 
   // Handle delete app
@@ -256,26 +298,7 @@ const DeployedAppView: React.FC = () => {
         <Box>
           {canConfigureApps && (
             <>
-              {isEditing ? (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleSaveChanges}
-                  disabled={updateMutation.isPending}
-                  sx={{ mr: 1 }}
-                >
-                  {updateMutation.isPending ? <CircularProgress size={24} /> : 'Save Changes'}
-                </Button>
-              ) : (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={() => setIsEditing(true)}
-                  sx={{ mr: 1 }}
-                >
-                  Edit App
-                </Button>
-              )}
+              {/* Edit button removed - using section-specific edit buttons instead */}
               <Button
                 variant="outlined"
                 color="error"
@@ -368,9 +391,12 @@ const DeployedAppView: React.FC = () => {
                 schema={app.template.template_config.schema as JSONSchema7}
                 formData={formData}
                 onChange={handleFormChange}
-                disabled={!isEditing}
+                disabled={false} // Always allow section editing
                 uiSchema={customUiSchema || app.template.template_config.uiSchema || {}}
                 onDeploy={handleSaveChanges}
+                onSectionEdit={handleSectionEdit}
+                onSectionSave={handleSectionSave}
+                editingSections={editingSections}
               />
             )}
           </TabPanel>
