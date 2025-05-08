@@ -310,38 +310,17 @@ const DeployAppView: React.FC = () => {
 
   return (
     <Box p={3} sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton
-            onClick={() => navigate('/app-library')}
-            sx={{ mr: 1 }}
-            aria-label="back"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Deploy: {template.name}
-          </Typography>
-        </Box>
-        <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={isDeploying ? <CircularProgress size={20} /> : <CloudUploadIcon />}
-            onClick={handleDeploy}
-            disabled={isDeploying || Object.keys(formErrors).length > 0}
-          >
-            {isDeploying ? 'Deploying...' : 'Deploy App'}
-          </Button>
-          <Button
-            variant="outlined"
-            sx={{ ml: 1 }}
-            onClick={() => navigate('/app-library')}
-            disabled={isDeploying}
-          >
-            Cancel
-          </Button>
-        </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton
+          onClick={() => navigate('/app-library')}
+          sx={{ mr: 1 }}
+          aria-label="back"
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+          Deploy: {template.name}
+        </Typography>
       </Box>
 
       {deployError && (
