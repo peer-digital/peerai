@@ -3,19 +3,6 @@
     "title": "Smart Document Chatbot Setup",
     "type": "object",
     "properties": {
-      "introduction": {
-        "type": "object",
-        "title": "Welcome to the Document Chatbot Wizard! 🚀",
-        "description": "Create your AI-powered document assistant in just a few minutes",
-        "properties": {
-          "welcome_text": {
-            "type": "string",
-            "title": "Let's Get Started!",
-            "description": "This wizard will guide you through creating your own AI document assistant that can answer questions based on your documents. The entire process takes about 5 minutes to complete.\n\nHere's what to expect:\n\n1. Basic Information - Name your chatbot and set a description\n2. Chat Interface - Customize how your chatbot communicates\n3. Suggested Questions - Create quick-start buttons for users\n4. AI Behavior - Control how the AI responds to questions\n5. Document Library - After deployment, you'll upload your documents here\n6. Visual Design - Customize colors and appearance\n\nAfter completing these steps, you'll be able to deploy your chatbot and start uploading documents right away. Your users will be able to ask questions and get AI-powered answers based on the content of those documents.\n\nClick 'Next' to begin!",
-            "default": "I'm ready to create my document chatbot!"
-          }
-        }
-      },
       "app_settings": {
         "type": "object",
         "title": "Basic Information",
@@ -246,22 +233,7 @@
     "ui:submitButtonOptions": {
       "norender": true
     },
-    "ui:order": ["introduction", "app_settings", "content", "quick_actions", "ai_settings", "documents", "styling"],
-    "introduction": {
-      "ui:expandable": true,
-      "ui:expanded": true,
-      "ui:description": "Follow the steps to create your document chatbot",
-      "ui:help": "This wizard will guide you through each step of the process",
-      "classNames": "introduction-section",
-      "ui:options": {
-        "backgroundColor": "#f0f7ff",
-        "padding": "24px"
-      },
-      "welcome_text": {
-        "ui:widget": "hidden",
-        "ui:help": ""
-      }
-    },
+    "ui:order": ["app_settings", "content", "quick_actions", "ai_settings", "documents", "styling"],
     "app_settings": {
       "ui:order": ["app_title", "app_description", "language"],
       "ui:expandable": true,
@@ -320,9 +292,6 @@
     }
   },
   "default_values": {
-    "introduction": {
-      "welcome_text": "I'm ready to create my document chatbot!"
-    },
     "app_settings": {
       "app_title": "Document Assistant",
       "app_description": "A helpful assistant that can answer questions based on your documents.",
