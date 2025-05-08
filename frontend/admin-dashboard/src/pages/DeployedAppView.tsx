@@ -13,6 +13,11 @@ import {
   IconButton,
   Chip,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -71,6 +76,7 @@ const DeployedAppView: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [customUiSchema, setCustomUiSchema] = useState<any>(null);
   const [editingSections, setEditingSections] = useState<string[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -97,7 +103,12 @@ const DeployedAppView: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (slug: string) => deployedAppsApi.deleteDeployedApp(slug),
     onSuccess: () => {
+      showToast(`App "${app?.name}" has been deleted`, 'success');
       navigate('/my-apps');
+    },
+    onError: (error) => {
+      showToast(`Failed to delete app: ${(error as Error).message}`, 'error');
+      setIsDeleting(false);
     },
   });
 
@@ -197,10 +208,21 @@ const DeployedAppView: React.FC = () => {
     return sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1).replace(/_/g, ' ');
   };
 
+  // Open delete confirmation dialog
+  const handleOpenDeleteConfirm = () => {
+    setDeleteConfirmOpen(true);
+  };
+
+  // Close delete confirmation dialog
+  const handleCloseDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+  };
+
   // Handle delete app
   const handleDeleteApp = () => {
     if (!app) return;
     setIsDeleting(true);
+    setDeleteConfirmOpen(false);
     deleteMutation.mutate(app.slug);
   };
 
@@ -303,7 +325,7 @@ const DeployedAppView: React.FC = () => {
                 variant="outlined"
                 color="error"
                 startIcon={<DeleteIcon />}
-                onClick={handleDeleteApp}
+                onClick={handleOpenDeleteConfirm}
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? <CircularProgress size={24} /> : 'Delete'}
@@ -406,6 +428,50 @@ const DeployedAppView: React.FC = () => {
           </TabPanel>
         </Box>
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCloseDeleteConfirm}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ color: 'error.main' }}>
+          Confirm Deletion
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete <strong>{app?.name}</strong>? This action cannot be undone.
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
+              <Typography variant="body2" fontWeight="medium">
+                Warning: This will permanently delete:
+              </Typography>
+              <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                <li>All app configuration</li>
+                <li>All uploaded documents</li>
+                <li>All chat history</li>
+              </ul>
+              <Typography variant="body2">
+                Users will no longer be able to access this app.
+              </Typography>
+            </Box>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteConfirm} color="primary" autoFocus>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteApp}
+            color="error"
+            variant="contained"
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+            Delete Permanently
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
