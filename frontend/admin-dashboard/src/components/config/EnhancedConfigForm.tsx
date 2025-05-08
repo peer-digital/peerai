@@ -15,6 +15,7 @@ import {
   Stack,
   Card,
   CardContent,
+  FormHelperText,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -29,7 +30,82 @@ import { JSONSchema7 } from 'json-schema';
 import Form from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { IChangeEvent } from '@rjsf/core';
+import { FieldTemplateProps } from '@rjsf/utils';
 import customWidgets from '../widgets';
+
+// Custom field template that places descriptions above input fields
+const CustomFieldTemplate = (props: FieldTemplateProps) => {
+  const {
+    id,
+    label,
+    help,
+    required,
+    description,
+    errors,
+    children,
+  } = props;
+
+  // Don't render anything for hidden fields
+  if (props.hidden) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Box sx={{ mb: 2, width: '100%' }}>
+      {label && (
+        <Typography
+          component="label"
+          htmlFor={id}
+          sx={{
+            display: 'block',
+            mb: 0.5,
+            fontWeight: required ? 'bold' : 'normal'
+          }}
+        >
+          {label}
+          {required ? '*' : ''}
+        </Typography>
+      )}
+
+      {/* Place description above the input field */}
+      {description && (
+        <FormHelperText
+          sx={{
+            mt: 0,
+            mb: 1,
+            lineHeight: 1.4,
+            '&.MuiFormHelperText-root': {
+              marginLeft: 0,
+              marginRight: 0
+            }
+          }}
+        >
+          {description}
+        </FormHelperText>
+      )}
+
+      {/* Render the actual input field with 100% width */}
+      <Box
+        sx={{
+          width: '100%',
+          '& .MuiFormControl-root': {
+            width: '100%'
+          }
+        }}
+      >
+        {children}
+      </Box>
+
+      {/* Show errors below the field */}
+      {errors && <FormHelperText error>{errors}</FormHelperText>}
+
+      {/* Show help text below the field if it's different from description */}
+      {help && help !== description && (
+        <FormHelperText sx={{ mt: 0.5 }}>{help}</FormHelperText>
+      )}
+    </Box>
+  );
+};
 
 interface EnhancedConfigFormProps {
   schema: JSONSchema7;
@@ -55,6 +131,19 @@ interface EnhancedConfigFormProps {
    */
   isDeploying?: boolean;
 }
+
+// Add global styles for form fields
+const formStyles = `
+  .full-width-form-fields .MuiFormControl-root {
+    width: 100% !important;
+  }
+  .full-width-form-fields .MuiTextField-root {
+    width: 100% !important;
+  }
+  .full-width-form-fields .MuiOutlinedInput-root {
+    width: 100% !important;
+  }
+`;
 
 const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   schema,
@@ -152,6 +241,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       'ui:submitButtonOptions': {
         norender: true,
       },
+      // Add global styles to ensure all form controls have 100% width
+      'ui:classNames': 'full-width-form-fields',
     };
 
     // If there's a UI schema for this section in the provided uiSchema, use it
@@ -378,6 +469,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
 
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Add global styles */}
+      <style>{formStyles}</style>
       <Box sx={{ flexGrow: 1 }}>
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -464,6 +557,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                               widgets={{
                                 fileUpload: customWidgets.fileUpload,
                               }}
+                              templates={{ FieldTemplate: CustomFieldTemplate }}
                             />
                           );
                         } else {
@@ -492,6 +586,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                               widgets={{
                                 fileUpload: customWidgets.fileUpload,
                               }}
+                              templates={{ FieldTemplate: CustomFieldTemplate }}
                             />
                           );
                         }
