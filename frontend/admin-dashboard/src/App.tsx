@@ -33,6 +33,7 @@ const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesMana
 const MyApps = React.lazy(() => import('./pages/MyApps'));
 const AppLibrary = React.lazy(() => import('./pages/AppLibrary'));
 const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
+const DeployAppView = React.lazy(() => import('./pages/DeployAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const LegalPages = React.lazy(() => import('./pages/LegalPages'));
@@ -177,6 +178,13 @@ function App() {
                     <Route path="/app-library" element={
                       <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
                         <AppLibrary />
+                      </PermissionGuard>
+                    } />
+
+                    {/* Deploy App */}
+                    <Route path="/deploy-app/:templateSlug" element={
+                      <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
+                        <DeployAppView />
                       </PermissionGuard>
                     } />
 
