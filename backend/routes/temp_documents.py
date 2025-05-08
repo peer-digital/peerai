@@ -45,10 +45,15 @@ async def upload_temp_document(
     temp_uploads_dir = os.path.join(settings.UPLOAD_DIR, "temp", session_id)
     os.makedirs(temp_uploads_dir, exist_ok=True)
 
-    # Generate a unique filename
+    # Generate a unique filename but keep track of the original filename
     file_ext = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = os.path.join(temp_uploads_dir, unique_filename)
+
+    # Create a metadata file to store the original filename
+    metadata_path = os.path.join(temp_uploads_dir, f"{unique_filename}.metadata")
+    with open(metadata_path, "w") as metadata_file:
+        metadata_file.write(file.filename)
 
     # Save the file
     try:
@@ -128,20 +133,33 @@ async def process_temp_documents(
 
     try:
         for filename in os.listdir(temp_uploads_dir):
+            # Skip metadata files
+            if filename.endswith(".metadata"):
+                continue
+
             file_path = os.path.join(temp_uploads_dir, filename)
             if os.path.isfile(file_path):
                 # Get file info
                 file_size = os.path.getsize(file_path)
 
+                # Check if we have metadata with the original filename
+                original_filename = filename
+                metadata_path = os.path.join(temp_uploads_dir, f"{filename}.metadata")
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, "r") as metadata_file:
+                        original_filename = metadata_file.read().strip()
+                    # Remove the metadata file
+                    os.remove(metadata_path)
+
                 # Determine content type based on extension
                 content_type = "application/octet-stream"  # Default
-                if filename.endswith(".pdf"):
+                if original_filename.endswith(".pdf"):
                     content_type = "application/pdf"
-                elif filename.endswith(".txt"):
+                elif original_filename.endswith(".txt"):
                     content_type = "text/plain"
-                elif filename.endswith(".docx"):
+                elif original_filename.endswith(".docx"):
                     content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                elif filename.endswith(".md"):
+                elif original_filename.endswith(".md"):
                     content_type = "text/markdown"
 
                 # Create permanent uploads directory
@@ -155,7 +173,7 @@ async def process_temp_documents(
 
                 # Create document record
                 document = Document(
-                    filename=os.path.basename(filename),
+                    filename=os.path.basename(original_filename),
                     content_type=content_type,
                     size_bytes=file_size,
                     uploaded_by_id=current_user.id,
