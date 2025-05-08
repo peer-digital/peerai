@@ -38,6 +38,7 @@ interface UploadedFile {
   contentType?: string; // MIME type of the file
   sessionId?: string; // Session ID for temporary storage
   tempStoragePath?: string; // Path to the file in temporary storage
+  documentId?: number; // ID of the document in the database after successful upload
 }
 
 interface DocumentResponse {
@@ -452,9 +453,12 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
 
     setFiles(prev => [...prev, ...newFiles]);
 
+    // Store the file IDs for tracking
+    const fileIds = newFiles.map(f => f.id);
+
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const fileIndex = files.length + i;
+      const fileId = fileIds[i];
 
       try {
         // Create form data
@@ -476,6 +480,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         }
 
         const data = await response.json();
+        console.log('Upload response:', data);
 
         // Associate document with app
         if (data && data.document_id) {
@@ -497,17 +502,24 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
             throw new Error(`Failed to associate document: ${associateResponse.status}`);
           }
 
-          // Update file status
-          setFiles(prev => prev.map((f, idx) =>
-            idx === fileIndex ? { ...f, status: 'success' } : f
+          const associateData = await associateResponse.json();
+          console.log('Associate response:', associateData);
+
+          // Update file status by ID instead of index
+          setFiles(prev => prev.map(f =>
+            f.id === fileId ? {
+              ...f,
+              status: 'success',
+              documentId: data.document_id
+            } : f
           ));
         }
       } catch (err: any) {
         console.error('Error uploading file:', err);
 
-        // Update file status with error
-        setFiles(prev => prev.map((f, idx) =>
-          idx === fileIndex ? {
+        // Update file status with error by ID instead of index
+        setFiles(prev => prev.map(f =>
+          f.id === fileId ? {
             ...f,
             status: 'error',
             error: err.message || 'Upload failed'
@@ -548,14 +560,26 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       // Handle regular files (post-deployment)
       const fileToRemove = files.find(f => f.id === fileId);
       if (fileToRemove) {
+        console.log('Removing file:', fileToRemove);
+
         // If the file was successfully uploaded, we need to remove it from the server
-        if (fileToRemove.status === 'success') {
+        if (fileToRemove.status === 'success' && fileToRemove.documentId && appId) {
           try {
-            // We would need the document ID to remove it, but we don't have it here
-            // For now, we'll just remove it from the UI
-            console.warn('Cannot delete document from server as document ID is not stored in the UI state');
+            console.log(`Removing document ${fileToRemove.documentId} from app ${appId}`);
+
+            // Call the removeDocumentMutation to properly remove the document
+            await removeDocumentMutation.mutateAsync({
+              appId,
+              documentId: fileToRemove.documentId
+            });
+
+            console.log(`Document ${fileToRemove.documentId} removed successfully`);
+
+            // Refresh the document list
+            refetchDocuments();
           } catch (err) {
             console.error('Error removing file:', err);
+            setError('Failed to remove document from server. Please try again.');
           }
         }
 
@@ -652,16 +676,27 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       {inMemoryFiles.length > 0 && (
         <Paper variant="outlined" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
-            <Typography variant="subtitle1">Files Ready for Upload</Typography>
+            <Typography variant="subtitle1">Uploaded Files</Typography>
           </Box>
           <Divider />
           <List>
             {inMemoryFiles.map((file, index) => (
               <React.Fragment key={file.id}>
                 {index > 0 && <Divider />}
-                <ListItem>
+                <ListItem sx={{ pr: 10 }}>
                   <ListItemText
-                    primary={file.filename}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body1" component="span">
+                          {file.filename}
+                        </Typography>
+                        {file.status === 'success' && (
+                          <Typography component="span" color="success.main" sx={{ ml: 1, fontWeight: 'bold' }}>
+                            (Uploaded Successfully)
+                          </Typography>
+                        )}
+                      </Box>
+                    }
                     secondary={
                       <>
                         {formatFileSize(file.size)}
@@ -673,21 +708,25 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                       </>
                     }
                   />
-                  <ListItemSecondaryAction>
-                    {file.status === 'pending' ? (
-                      <CircularProgress size={24} />
-                    ) : file.status === 'success' ? (
-                      <CheckCircleIcon color="success" />
-                    ) : (
-                      <ErrorIcon color="error" />
-                    )}
+                  <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative', right: 0, transform: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                      {file.status === 'pending' ? (
+                        <CircularProgress size={28} />
+                      ) : file.status === 'success' ? (
+                        <CheckCircleIcon color="success" fontSize="large" sx={{ backgroundColor: 'rgba(0, 255, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                      ) : (
+                        <ErrorIcon color="error" fontSize="large" sx={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                      )}
+                    </Box>
                     <IconButton
                       edge="end"
                       aria-label="delete"
                       onClick={() => handleRemoveFile(file.id, true)}
                       disabled={file.status === 'pending'}
+                      sx={{ ml: 1, bgcolor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', '&:hover': { bgcolor: 'rgba(255, 0, 0, 0.2)' } }}
+                      size="large"
                     >
-                      <DeleteIcon />
+                      <DeleteIcon fontSize="medium" color="error" />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -701,16 +740,27 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       {files.length > 0 && (
         <Paper variant="outlined" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
-            <Typography variant="subtitle1">Uploading Files</Typography>
+            <Typography variant="subtitle1">Recently Uploaded Files</Typography>
           </Box>
           <Divider />
           <List>
             {files.map((file, index) => (
               <React.Fragment key={file.id}>
                 {index > 0 && <Divider />}
-                <ListItem>
+                <ListItem sx={{ pr: 10 }}>
                   <ListItemText
-                    primary={file.filename}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body1" component="span">
+                          {file.filename}
+                        </Typography>
+                        {file.status === 'success' && (
+                          <Typography component="span" color="success.main" sx={{ ml: 1, fontWeight: 'bold' }}>
+                            (Uploaded Successfully)
+                          </Typography>
+                        )}
+                      </Box>
+                    }
                     secondary={
                       <>
                         {formatFileSize(file.size)}
@@ -722,21 +772,25 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                       </>
                     }
                   />
-                  <ListItemSecondaryAction>
-                    {file.status === 'uploading' ? (
-                      <CircularProgress size={24} />
-                    ) : file.status === 'success' ? (
-                      <CheckCircleIcon color="success" />
-                    ) : (
-                      <ErrorIcon color="error" />
-                    )}
+                  <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative', right: 0, transform: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                      {file.status === 'uploading' ? (
+                        <CircularProgress size={28} />
+                      ) : file.status === 'success' ? (
+                        <CheckCircleIcon color="success" fontSize="large" sx={{ backgroundColor: 'rgba(0, 255, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                      ) : (
+                        <ErrorIcon color="error" fontSize="large" sx={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                      )}
+                    </Box>
                     <IconButton
                       edge="end"
                       aria-label="delete"
                       onClick={() => handleRemoveFile(file.id)}
                       disabled={file.status === 'uploading'}
+                      sx={{ ml: 1, bgcolor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', '&:hover': { bgcolor: 'rgba(255, 0, 0, 0.2)' } }}
+                      size="large"
                     >
-                      <DeleteIcon />
+                      <DeleteIcon fontSize="medium" color="error" />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -749,7 +803,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       {/* Existing documents */}
       <Paper variant="outlined" sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
-          <Typography variant="subtitle1">Document History</Typography>
+          <Typography variant="subtitle1">Knowledge base</Typography>
           {!isPreDeployment && (
             <Tooltip title="Refresh document list">
               <IconButton
@@ -784,9 +838,20 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
             {documents.map((doc, index) => (
               <React.Fragment key={doc.id}>
                 {index > 0 && <Divider />}
-                <ListItem>
+                <ListItem sx={{ pr: 10 }}>
                   <ListItemText
-                    primary={doc.filename}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body1" component="span">
+                          {doc.filename}
+                        </Typography>
+                        {doc.is_processed && (
+                          <Typography component="span" color="success.main" sx={{ ml: 1, fontWeight: 'bold' }}>
+                            (Processed Successfully)
+                          </Typography>
+                        )}
+                      </Box>
+                    }
                     secondary={
                       <>
                         {formatFileSize(doc.size_bytes)} • {formatDate(doc.created_at)}
@@ -798,24 +863,28 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                       </>
                     }
                   />
-                  <ListItemSecondaryAction>
-                    {doc.is_processed ? (
-                      <Tooltip title="Document processed">
-                        <CheckCircleIcon color="success" sx={{ mr: 1 }} />
-                      </Tooltip>
-                    ) : (
-                      <Tooltip title="Processing failed">
-                        <ErrorIcon color="error" sx={{ mr: 1 }} />
-                      </Tooltip>
-                    )}
+                  <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative', right: 0, transform: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                      {doc.is_processed ? (
+                        <Tooltip title="Document processed">
+                          <CheckCircleIcon color="success" fontSize="large" sx={{ backgroundColor: 'rgba(0, 255, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                        </Tooltip>
+                      ) : (
+                        <Tooltip title="Processing failed">
+                          <ErrorIcon color="error" fontSize="large" sx={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', borderRadius: '50%', padding: '4px' }} />
+                        </Tooltip>
+                      )}
+                    </Box>
                     <Tooltip title="Remove document">
                       <IconButton
                         edge="end"
                         aria-label="delete"
                         onClick={() => handleRemoveDocument(doc.id)}
                         disabled={removeDocumentMutation.isPending}
+                        sx={{ ml: 1, bgcolor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', '&:hover': { bgcolor: 'rgba(255, 0, 0, 0.2)' } }}
+                        size="large"
                       >
-                        {removeDocumentMutation.isPending ? <CircularProgress size={20} /> : <DeleteIcon />}
+                        {removeDocumentMutation.isPending ? <CircularProgress size={24} /> : <DeleteIcon fontSize="medium" color="error" />}
                       </IconButton>
                     </Tooltip>
                   </ListItemSecondaryAction>

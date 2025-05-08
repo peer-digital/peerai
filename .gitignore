@@ -49,6 +49,11 @@ coverage.xml
 .env*
 !.env.example
 pr_review_*.txt
+/uploads/
+/uploads/temp/
+backend/uploads/
+backend/uploads/temp/
+
 
 # macOS
 .DS_Store
@@ -59,7 +64,7 @@ pr_review_*.txt
 # Temporary files
 *.tmp
 *.temp
-.*.swp 
+.*.swp
 /node_modules
 *.gz
 /.specstory

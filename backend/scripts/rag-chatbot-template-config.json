@@ -31,7 +31,7 @@
       },
       "documents": {
         "type": "object",
-        "title": "Document Library",
+        "title": "Knowledge Base",
         "description": "Upload documents that your chatbot can use to answer questions.",
         "properties": {
           "file_upload": {

@@ -460,7 +460,6 @@ const DeployedAppView: React.FC = () => {
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                 <li>All app configuration</li>
                 <li>All uploaded documents</li>
-                <li>All chat history</li>
               </ul>
               <Typography variant="body2">
                 Users will no longer be able to access this app.
