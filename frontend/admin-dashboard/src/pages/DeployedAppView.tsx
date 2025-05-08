@@ -370,6 +370,7 @@ const DeployedAppView: React.FC = () => {
                 onChange={handleFormChange}
                 disabled={!isEditing}
                 uiSchema={customUiSchema || app.template.template_config.uiSchema || {}}
+                onDeploy={handleSaveChanges}
               />
             )}
           </TabPanel>

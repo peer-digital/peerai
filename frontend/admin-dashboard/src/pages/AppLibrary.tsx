@@ -39,6 +39,7 @@ import {
   Key as KeyIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
+  Launch as LaunchIcon,
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { EmptyState, PageContainer, SectionContainer, SearchField } from '../components/ui';
@@ -113,6 +114,8 @@ const AppLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
+  const [deployedApp, setDeployedApp] = useState<{name: string, slug: string, public_url: string} | null>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   // Check if user has permission to deploy apps
   const canDeployApps = user && hasPermission(user.permissions, Permission.DEPLOY_APPS);
@@ -246,9 +249,23 @@ const AppLibrary: React.FC = () => {
         custom_code: selectedTemplate.template_code,
       };
 
-      await deployedAppsApi.deployApp(deployData);
+      const deployedAppData = await deployedAppsApi.deployApp(deployData);
+
+      // Get the full app details including the public URL
+      const appDetails = await deployedAppsApi.getDeployedApp(deployedAppData.slug);
+
+      // Set the deployed app data for the success modal
+      setDeployedApp({
+        name: appDetails.name,
+        slug: appDetails.slug,
+        public_url: appDetails.public_url || `${window.location.origin}/apps/${appDetails.slug}`
+      });
+
+      // Show the success modal
+      setIsSuccessModalOpen(true);
+
+      // Close the deploy dialog
       setIsDeployDialogOpen(false);
-      navigate('/my-apps');
     } catch (error) {
       setDeployError((error as Error).message || 'Failed to deploy app');
     } finally {
@@ -259,6 +276,51 @@ const AppLibrary: React.FC = () => {
   // Handle back to templates
   const handleBackToTemplates = () => {
     setShowTemplates(true);
+  };
+
+  // Deployment settings component
+  const DeploymentSettingsComponent = () => {
+    return (
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="App Name"
+            name="name"
+            value={deploymentData.name}
+            onChange={handleDeploymentDataChange}
+            fullWidth
+            required
+            error={!!formErrors.name}
+            helperText={formErrors.name}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="App Slug"
+            name="slug"
+            value={deploymentData.slug}
+            onChange={handleDeploymentDataChange}
+            fullWidth
+            required
+            error={!!formErrors.slug}
+            helperText={
+              formErrors.slug || 'Use lowercase letters, numbers, and hyphens only'
+            }
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <ApiKeySelector
+            value={apiKey}
+            onChange={setApiKey}
+            error={!!formErrors.apiKey}
+            helperText={formErrors.apiKey}
+            required
+            fullWidth
+            size="small"
+          />
+        </Grid>
+      </Grid>
+    );
   };
 
   // Preview component
@@ -489,53 +551,6 @@ const AppLibrary: React.FC = () => {
 
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Deployment Settings
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="App Name"
-                      name="name"
-                      value={deploymentData.name}
-                      onChange={handleDeploymentDataChange}
-                      fullWidth
-                      required
-                      error={!!formErrors.name}
-                      helperText={formErrors.name}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="App Slug"
-                      name="slug"
-                      value={deploymentData.slug}
-                      onChange={handleDeploymentDataChange}
-                      fullWidth
-                      required
-                      error={!!formErrors.slug}
-                      helperText={
-                        formErrors.slug || 'Use lowercase letters, numbers, and hyphens only'
-                      }
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <ApiKeySelector
-                      value={apiKey}
-                      onChange={setApiKey}
-                      error={!!formErrors.apiKey}
-                      helperText={formErrors.apiKey}
-                      required
-                      fullWidth
-                      size="small"
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
               <Typography variant="h6" gutterBottom>
                 App Configuration
               </Typography>
@@ -549,6 +564,9 @@ const AppLibrary: React.FC = () => {
                       formData={formData}
                       onChange={handleFormChange}
                       uiSchema={selectedTemplate.template_config.uiSchema}
+                      onDeploy={handleDeploy}
+                      deploymentSettingsComponent={<DeploymentSettingsComponent />}
+                      isDeploying={isDeploying}
                     />
                   );
                 } catch (err) {
@@ -575,14 +593,57 @@ const AppLibrary: React.FC = () => {
           >
             Cancel
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog
+        open={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
+          <CheckCircleIcon color="success" sx={{ fontSize: 64, mb: 2 }} />
+          <Typography variant="h5">App Deployed Successfully!</Typography>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', px: 4 }}>
+          <Typography variant="body1" paragraph>
+            Your app <strong>{deployedApp?.name}</strong> has been successfully deployed and is now available.
+          </Typography>
+          <Box sx={{ my: 3, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              App URL:
+            </Typography>
+            <Link
+              href={deployedApp?.public_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ wordBreak: 'break-all' }}
+            >
+              {deployedApp?.public_url}
+            </Link>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, justifyContent: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setIsSuccessModalOpen(false);
+              navigate('/my-apps');
+            }}
+          >
+            Go to My Apps
+          </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleDeploy}
-            disabled={isDeploying}
-            startIcon={isDeploying ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+            startIcon={<LaunchIcon />}
+            onClick={() => {
+              window.open(deployedApp?.public_url, '_blank');
+            }}
           >
-            {isDeploying ? 'Deploying...' : 'Deploy App'}
+            View App
           </Button>
         </DialogActions>
       </Dialog>
