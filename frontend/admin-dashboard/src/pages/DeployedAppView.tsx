@@ -137,11 +137,10 @@ const DeployedAppView: React.FC = () => {
           // Enable the file upload widget
           if (originalUiSchema.documents.file_upload) {
             originalUiSchema.documents.file_upload['ui:disabled'] = false;
-            originalUiSchema.documents.file_upload['ui:help'] = 'Upload documents to be used by the chatbot';
+            originalUiSchema.documents.file_upload['ui:help'] = 'Upload files in supported formats to enable document-based answers';
           }
 
-          // Update the description
-          originalUiSchema.documents['ui:description'] = 'Upload documents to be used by the chatbot';
+          // No description needed
         }
 
         setCustomUiSchema(originalUiSchema);

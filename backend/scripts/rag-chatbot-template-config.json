@@ -249,15 +249,15 @@
     "documents": {
       "ui:expandable": true,
       "ui:expanded": true,
-      "ui:description": "Upload documents for your chatbot to reference",
-      "ui:help": "Upload PDF, Word, text, and markdown files that your chatbot will use to answer questions",
+
+      "ui:help": "Upload files in supported formats to enable document-based answers",
       "file_upload": {
         "ui:widget": "fileUpload",
         "ui:options": {
           "accept": ".pdf,.txt,.docx,.md",
           "multiple": true
         },
-        "ui:help": "Files uploaded here will be processed when the app is deployed"
+        "ui:help": "Upload files in supported formats to enable document-based answers"
       }
     },
     "content": {

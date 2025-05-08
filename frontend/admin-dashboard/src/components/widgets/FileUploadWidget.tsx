@@ -623,20 +623,13 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           <Typography variant="h6" gutterBottom>
             Upload Documents
           </Typography>
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            Click to browse or drag and drop files here
-          </Typography>
+
           <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
             Supported formats: {String(accept).replace(/\./g, '').toUpperCase()}
           </Typography>
           <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-            Files will be processed to extract text and generate embeddings for RAG.
+            Files will be processed automatically after upload.
           </Typography>
-          {isPreDeployment && (
-            <Typography variant="caption" color="primary" display="block">
-              You can upload files now and they will be processed when the app is deployed.
-            </Typography>
-          )}
           <Button
             variant="contained"
             component="span"
@@ -644,11 +637,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
             startIcon={isUploading ? <CircularProgress size={20} /> : null}
             sx={{ mt: 2 }}
           >
-            {isUploading
-              ? 'Uploading...'
-              : isPreDeployment
-                ? 'Select Files (Will be uploaded after deployment)'
-                : 'Select Files'}
+            {isUploading ? 'Uploading...' : 'Select Files'}
           </Button>
         </label>
       </Paper>
@@ -664,9 +653,6 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         <Paper variant="outlined" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
             <Typography variant="subtitle1">Files Ready for Upload</Typography>
-            <Typography variant="caption" color="text.secondary">
-              These files will be uploaded when the app is deployed
-            </Typography>
           </Box>
           <Divider />
           <List>
@@ -780,10 +766,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         {isPreDeployment ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="textSecondary">
-              Document history will be available after the app is deployed.
-            </Typography>
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-              Files uploaded before deployment will be processed automatically when the app is deployed.
+              Document history will be available soon.
             </Typography>
           </Box>
         ) : isLoadingDocuments ? (
