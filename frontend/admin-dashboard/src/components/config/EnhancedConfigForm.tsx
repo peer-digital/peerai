@@ -181,14 +181,47 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   // Only use wizard mode if explicitly set to true
   const isWizardMode = wizardMode === true;
 
+  // Get the app slug from the URL to use as part of the localStorage key
+  const getAppSlugFromUrl = (): string | null => {
+    const path = window.location.pathname;
+    // Check for deploy-app path
+    const deployMatch = path.match(/\/deploy-app\/([^/]+)/);
+    if (deployMatch) return deployMatch[1];
+
+    // Check for my-apps path
+    const appMatch = path.match(/\/my-apps\/([^/]+)/);
+    if (appMatch) return appMatch[1];
+
+    return null;
+  };
+
   // State to track the currently active section
-  const [activeSection, setActiveSection] = useState<number>(0);
+  const [activeSection, setActiveSection] = useState<number>(() => {
+    const appSlug = getAppSlugFromUrl();
+    if (appSlug) {
+      const savedSection = localStorage.getItem(`rag_app_${appSlug}_active_section`);
+      return savedSection ? parseInt(savedSection, 10) : 0;
+    }
+    return 0;
+  });
 
   // State to track if we're in the completion step (after all sections)
-  const [showCompletion, setShowCompletion] = useState<boolean>(false);
+  const [showCompletion, setShowCompletion] = useState<boolean>(() => {
+    const appSlug = getAppSlugFromUrl();
+    if (appSlug) {
+      return localStorage.getItem(`rag_app_${appSlug}_show_completion`) === 'true';
+    }
+    return false;
+  });
 
   // State to track if we're in the deployment settings step (before completion)
-  const [showDeploymentSettings, setShowDeploymentSettings] = useState<boolean>(false);
+  const [showDeploymentSettings, setShowDeploymentSettings] = useState<boolean>(() => {
+    const appSlug = getAppSlugFromUrl();
+    if (appSlug) {
+      return localStorage.getItem(`rag_app_${appSlug}_show_deployment`) === 'true';
+    }
+    return false;
+  });
 
   // Refs for each accordion
   const accordionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -311,18 +344,39 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         }
       }
 
-      setActiveSection(activeSection + 1);
+      const newActiveSection = activeSection + 1;
+      setActiveSection(newActiveSection);
       setShowCompletion(false);
       setShowDeploymentSettings(false);
+
+      // Save the active section to localStorage
+      const appSlug = getAppSlugFromUrl();
+      if (appSlug) {
+        localStorage.setItem(`rag_app_${appSlug}_active_section`, newActiveSection.toString());
+      }
     } else if (activeSection === sections.length - 1) {
       // We're at the last section, move to deployment settings if available
       if (deploymentSettingsComponent) {
         setShowDeploymentSettings(true);
         setShowCompletion(false);
+
+        // Save the state to localStorage
+        const appSlug = getAppSlugFromUrl();
+        if (appSlug) {
+          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'true');
+          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
+        }
       } else {
         // No deployment settings, go straight to completion
         setShowCompletion(true);
         setShowDeploymentSettings(false);
+
+        // Save the state to localStorage
+        const appSlug = getAppSlugFromUrl();
+        if (appSlug) {
+          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'false');
+          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'true');
+        }
       }
     }
   };
@@ -334,9 +388,22 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (deploymentSettingsComponent) {
         setShowDeploymentSettings(true);
         setShowCompletion(false);
+
+        // Save the state to localStorage
+        const appSlug = getAppSlugFromUrl();
+        if (appSlug) {
+          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'true');
+          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
+        }
       } else {
         // No deployment settings, go back to the last section
         setShowCompletion(false);
+
+        // Save the state to localStorage
+        const appSlug = getAppSlugFromUrl();
+        if (appSlug) {
+          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
+        }
       }
       return;
     }
@@ -344,6 +411,12 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     if (showDeploymentSettings) {
       // If we're in the deployment settings step, go back to the last section
       setShowDeploymentSettings(false);
+
+      // Save the state to localStorage
+      const appSlug = getAppSlugFromUrl();
+      if (appSlug) {
+        localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'false');
+      }
       return;
     }
 
@@ -366,7 +439,14 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         }
       }
 
-      setActiveSection(activeSection - 1);
+      const newActiveSection = activeSection - 1;
+      setActiveSection(newActiveSection);
+
+      // Save the active section to localStorage
+      const appSlug = getAppSlugFromUrl();
+      if (appSlug) {
+        localStorage.setItem(`rag_app_${appSlug}_active_section`, newActiveSection.toString());
+      }
     }
   };
 

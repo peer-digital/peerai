@@ -70,7 +70,14 @@ const DeployedAppView: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [tabValue, setTabValue] = useState(0);
+  // Initialize tab value from localStorage if available, otherwise default to 0
+  const [tabValue, setTabValue] = useState(() => {
+    if (slug) {
+      const savedTabValue = localStorage.getItem(`rag_app_${slug}_tab_value`);
+      return savedTabValue ? parseInt(savedTabValue, 10) : 0;
+    }
+    return 0;
+  });
   const [formData, setFormData] = useState<any>({});
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -149,6 +156,11 @@ const DeployedAppView: React.FC = () => {
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+
+    // Save the tab value to localStorage
+    if (slug) {
+      localStorage.setItem(`rag_app_${slug}_tab_value`, newValue.toString());
+    }
   };
 
   // Handle form data change

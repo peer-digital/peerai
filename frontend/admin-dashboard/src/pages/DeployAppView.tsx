@@ -71,7 +71,14 @@ const DeployAppView: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tabValue, setTabValue] = useState(0);
+  // Initialize tab value from localStorage if available, otherwise default to 0
+  const [tabValue, setTabValue] = useState(() => {
+    if (templateSlug) {
+      const savedTabValue = localStorage.getItem(`rag_app_${templateSlug}_tab_value`);
+      return savedTabValue ? parseInt(savedTabValue, 10) : 0;
+    }
+    return 0;
+  });
   const [formData, setFormData] = useState<any>({});
   const [deploymentData, setDeploymentData] = useState({
     name: '',
@@ -178,6 +185,11 @@ const DeployAppView: React.FC = () => {
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+
+    // Save the tab value to localStorage
+    if (templateSlug) {
+      localStorage.setItem(`rag_app_${templateSlug}_tab_value`, newValue.toString());
+    }
   };
 
   // Handle form data change
