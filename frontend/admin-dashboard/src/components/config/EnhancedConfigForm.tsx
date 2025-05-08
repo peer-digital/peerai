@@ -331,7 +331,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (currentAccordion) {
         const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && !summary.classList.contains('Mui-expanded')) {
-          (summary as HTMLElement).click();
+          (summary as HTMLElement & { click(): void }).click();
         }
       }
 
@@ -340,7 +340,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (nextAccordion) {
         const summary = nextAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && summary.classList.contains('Mui-expanded')) {
-          (summary as HTMLElement).click();
+          (summary as HTMLElement & { click(): void }).click();
         }
       }
 
@@ -426,7 +426,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (currentAccordion) {
         const summary = currentAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && !summary.classList.contains('Mui-expanded')) {
-          (summary as HTMLElement).click();
+          (summary as HTMLElement & { click(): void }).click();
         }
       }
 
@@ -435,7 +435,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       if (prevAccordion) {
         const summary = prevAccordion.querySelector('.MuiAccordionSummary-root');
         if (summary && summary.classList.contains('Mui-expanded')) {
-          (summary as HTMLElement).click();
+          (summary as HTMLElement & { click(): void }).click();
         }
       }
 
@@ -667,7 +667,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                               if (accordion) {
                                 const summary = accordion.querySelector('.MuiAccordionSummary-root');
                                 if (summary && summary.classList.contains('Mui-expanded')) {
-                                  (summary as HTMLElement).click();
+                                  (summary as HTMLElement & { click(): void }).click();
                                 }
                               }
                               // Call the section save handler
@@ -687,7 +687,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                               if (accordion) {
                                 const summary = accordion.querySelector('.MuiAccordionSummary-root');
                                 if (summary && !summary.classList.contains('Mui-expanded')) {
-                                  (summary as HTMLElement).click();
+                                  (summary as HTMLElement & { click(): void }).click();
                                 }
                               }
                               // Call the section edit handler
