@@ -386,19 +386,37 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         }}
       >
         <CardContent sx={{ p: 4, textAlign: 'center' }}>
-          <CheckCircleIcon
-            color="success"
-            sx={{ fontSize: 64, mb: 2 }}
-          />
-          <Typography variant="h5" gutterBottom>
-            Configuration Complete!
-          </Typography>
-          <Typography variant="body1" color="text.secondary" paragraph>
-            You have successfully configured your RAG chatbot. You are now ready to deploy your app!
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            You can always change configuration and files in the app settings after deployment.
-          </Typography>
+          {isDeploying ? (
+            <>
+              <CircularProgress
+                color="success"
+                sx={{ mb: 2 }}
+                size={64}
+              />
+              <Typography variant="h5" gutterBottom>
+                Deploying Your App...
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                Please wait while we deploy your RAG chatbot. This may take a few moments.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <CheckCircleIcon
+                color="success"
+                sx={{ fontSize: 64, mb: 2 }}
+              />
+              <Typography variant="h5" gutterBottom>
+                Ready to Launch!
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                You have successfully configured your RAG chatbot. Click the "Deploy App" button below to launch your app!
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                You can always change configuration and files in the app settings after deployment.
+              </Typography>
+            </>
+          )}
         </CardContent>
       </Card>
     );
@@ -418,10 +436,11 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     if (showCompletion) {
       return onDeploy;
     } else if (showDeploymentSettings) {
-      return () => {
+      // When clicking "Launch App" from deployment settings, go directly to deploy
+      return onDeploy || (() => {
         setShowDeploymentSettings(false);
         setShowCompletion(true);
-      };
+      });
     } else if (isLastStep) {
       return () => {
         if (deploymentSettingsComponent) {
@@ -440,7 +459,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     if (showCompletion) {
       return isDeploying ? 'Deploying...' : 'Deploy App';
     } else if (showDeploymentSettings) {
-      return 'Finish';
+      return 'Launch App';
     } else if (isLastStep) {
       return 'Next';
     } else {

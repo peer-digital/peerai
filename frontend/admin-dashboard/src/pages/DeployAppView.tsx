@@ -13,12 +13,19 @@ import {
   TextField,
   Grid,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Link,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Settings as SettingsIcon,
   Preview as PreviewIcon,
   CloudUpload as CloudUploadIcon,
+  CheckCircle as CheckCircleIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import appTemplatesApi, { AppTemplate } from '../api/appTemplates';
@@ -30,6 +37,7 @@ import { replacePlaceholders } from '../utils/templateHelpers';
 import DevicePreview from '../components/preview/DevicePreview';
 import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
 import ApiKeySelector from '../components/common/ApiKeySelector';
+import { showToast } from '../components/ui/Toast';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -73,6 +81,8 @@ const DeployAppView: React.FC = () => {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [deployedAppData, setDeployedAppData] = useState<{slug: string, name: string, public_url: string} | null>(null);
 
   // Check if user has permission to deploy apps
   const canDeployApps = user && hasPermission(user.permissions, Permission.DEPLOY_APPS);
@@ -88,8 +98,15 @@ const DeployAppView: React.FC = () => {
   const deployMutation = useMutation({
     mutationFn: (app: DeployedAppCreate) => deployedAppsApi.deployApp(app),
     onSuccess: (data) => {
-      // Navigate to the deployed app view
-      navigate(`/my-apps/${data.slug}`);
+      // Show success modal with link to the deployed app
+      setIsDeploying(false);
+      setDeployedAppData({
+        slug: data.slug,
+        name: data.name,
+        public_url: data.public_url || `/apps/${data.slug}`
+      });
+      setSuccessModalOpen(true);
+      showToast(`App "${data.name}" successfully deployed!`, 'success');
     },
     onError: (error) => {
       setDeployError((error as Error).message || 'Failed to deploy app');
@@ -371,6 +388,72 @@ const DeployAppView: React.FC = () => {
           </TabPanel>
         </Box>
       </Box>
+
+      {/* Success Modal */}
+      <Dialog
+        open={successModalOpen}
+        onClose={() => setSuccessModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+          <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+          App Successfully Deployed
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" paragraph>
+            Your RAG chatbot "{deployedAppData?.name}" has been successfully deployed and is now live!
+          </Typography>
+          <Typography variant="body2" paragraph>
+            You can access your app at:
+          </Typography>
+          <Box sx={{
+            p: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Link
+              href={deployedAppData?.public_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ wordBreak: 'break-all' }}
+            >
+              {deployedAppData?.public_url}
+            </Link>
+            <IconButton
+              color="primary"
+              onClick={() => window.open(deployedAppData?.public_url, '_blank')}
+              size="small"
+            >
+              <OpenInNewIcon />
+            </IconButton>
+          </Box>
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            You can manage your app, upload documents, and make changes in the "My Apps" section.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => navigate(`/my-apps/${deployedAppData?.slug}`)}
+            color="primary"
+          >
+            Go to App Settings
+          </Button>
+          <Button
+            onClick={() => window.open(deployedAppData?.public_url, '_blank')}
+            variant="contained"
+            color="primary"
+            endIcon={<OpenInNewIcon />}
+          >
+            Open App
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
