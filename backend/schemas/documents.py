@@ -73,6 +73,24 @@ class AppDocumentResponse(AppDocumentBase):
         from_attributes = True
 
 
+class TempDocumentCreate(BaseModel):
+    """Request model for creating a temporary document."""
+    session_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+
+
+class TempDocumentResponse(BaseModel):
+    """Response for temporary document upload endpoint."""
+    session_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    storage_path: str
+    message: str
+
+
 class DocumentUploadResponse(BaseModel):
     """Response for document upload endpoint."""
     document_id: int

@@ -133,6 +133,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Import routers
 from backend.routes import inference, auth, admin, rbac, referral, admin_models, documents, embeddings
+from backend.routes.temp_documents import router as temp_documents_router
 
 # No need to print API prefix
 
@@ -145,6 +146,7 @@ app.include_router(referral.router)      # NO prefix
 app.include_router(inference.router, prefix=f"{settings.API_V1_PREFIX}/llm") # ADDED LLM router here
 app.include_router(embeddings.router, prefix=f"{settings.API_V1_PREFIX}/embeddings") # Embeddings router
 app.include_router(documents.router, prefix=f"{settings.API_V1_PREFIX}") # Document management router
+app.include_router(temp_documents_router, prefix=f"{settings.API_V1_PREFIX}") # Temporary document storage router
 
 # App Store router (deprecated - kept for backward compatibility)
 from backend.routes.app_store import router as app_store_router

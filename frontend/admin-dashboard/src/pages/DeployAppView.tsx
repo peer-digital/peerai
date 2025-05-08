@@ -94,6 +94,44 @@ const DeployAppView: React.FC = () => {
     enabled: !!templateSlug,
   });
 
+  // Function to process temporary files after deployment
+  const processTemporaryFiles = async (appId: number) => {
+    try {
+      // Get the session ID from localStorage
+      const sessionId = localStorage.getItem('rag_chatbot_session_id');
+      if (!sessionId) {
+        console.log('No session ID found, no temporary files to process');
+        return;
+      }
+
+      console.log(`Processing temporary files for app ID ${appId} with session ID ${sessionId}`);
+
+      // Call the API to process temporary files
+      const token = localStorage.getItem('access_token');
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/v1/temp-documents/process/${appId}?session_id=${sessionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to process temporary files: ${response.status}`);
+        return;
+      }
+
+      const processedDocuments = await response.json();
+      console.log(`Successfully processed ${processedDocuments.length} temporary documents`);
+
+      // Clear the session ID to prevent duplicate processing
+      localStorage.removeItem('rag_chatbot_session_id');
+    } catch (err) {
+      console.error('Error processing temporary files:', err);
+    }
+  };
+
   // Deploy app mutation
   const deployMutation = useMutation({
     mutationFn: (app: DeployedAppCreate) => deployedAppsApi.deployApp(app),
@@ -105,6 +143,12 @@ const DeployAppView: React.FC = () => {
         name: data.name,
         public_url: data.public_url || `/apps/${data.slug}`
       });
+
+      // Process any temporary files that were uploaded before deployment
+      if (data.id) {
+        processTemporaryFiles(data.id);
+      }
+
       setSuccessModalOpen(true);
       showToast(`App "${data.name}" successfully deployed!`, 'success');
     },

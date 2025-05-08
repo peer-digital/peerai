@@ -32,12 +32,12 @@
       "documents": {
         "type": "object",
         "title": "Document Library",
-        "description": "After you deploy your chatbot, you'll be able to upload documents that it can use to answer questions.",
+        "description": "Upload documents that your chatbot can use to answer questions.",
         "properties": {
           "file_upload": {
             "type": "string",
             "title": "Upload Documents",
-            "description": "You'll be able to upload PDF, Word, text, and markdown files after deployment",
+            "description": "Upload PDF, Word, text, and markdown files",
             "format": "data-url"
           }
         }
@@ -249,17 +249,15 @@
     "documents": {
       "ui:expandable": true,
       "ui:expanded": true,
-      "ui:description": "You'll be able to upload documents after deployment",
-      "ui:disabled": true,
-      "ui:help": "After deployment, you can upload PDF, Word, text, and markdown files that your chatbot will use to answer questions",
+      "ui:description": "Upload documents for your chatbot to reference",
+      "ui:help": "Upload PDF, Word, text, and markdown files that your chatbot will use to answer questions",
       "file_upload": {
         "ui:widget": "fileUpload",
         "ui:options": {
           "accept": ".pdf,.txt,.docx,.md",
           "multiple": true
         },
-        "ui:disabled": true,
-        "ui:help": "This feature will be available after you deploy the app"
+        "ui:help": "Files uploaded here will be processed when the app is deployed"
       }
     },
     "content": {
