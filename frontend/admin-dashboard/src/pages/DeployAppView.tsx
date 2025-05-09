@@ -162,6 +162,16 @@ const DeployAppView: React.FC = () => {
         processTemporaryFiles(data.id);
       }
 
+      // Reset wizard page tracking in localStorage after successful deployment
+      if (templateSlug) {
+        // Clear all wizard-related localStorage items for this template
+        localStorage.removeItem(`rag_app_${templateSlug}_tab_value`);
+        localStorage.removeItem(`rag_app_${templateSlug}_active_section`);
+        localStorage.removeItem(`rag_app_${templateSlug}_show_completion`);
+        localStorage.removeItem(`rag_app_${templateSlug}_show_deployment`);
+        console.log('Wizard page tracking reset after successful app deployment');
+      }
+
       setSuccessModalOpen(true);
       showToast(`App "${data.name}" successfully deployed!`, 'success');
     },
@@ -455,7 +465,9 @@ const DeployAppView: React.FC = () => {
       {/* Success Modal */}
       <Dialog
         open={successModalOpen}
-        onClose={() => setSuccessModalOpen(false)}
+        onClose={() => {
+          setSuccessModalOpen(false);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -502,13 +514,19 @@ const DeployAppView: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => navigate(`/my-apps/${deployedAppData?.slug}`)}
+            onClick={() => {
+              // Navigate to app settings
+              navigate(`/my-apps/${deployedAppData?.slug}`);
+            }}
             color="primary"
           >
             Go to App Settings
           </Button>
           <Button
-            onClick={() => window.open(deployedAppData?.public_url, '_blank')}
+            onClick={() => {
+              // Open app in new tab
+              window.open(deployedAppData?.public_url, '_blank');
+            }}
             variant="contained"
             color="primary"
             endIcon={<OpenInNewIcon />}
