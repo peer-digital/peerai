@@ -1154,29 +1154,32 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                           />
                         )}
 
-                        <Button
-                          variant="contained"
-                          color="error"
-                          size="small"
-                          onClick={() => confirmDelete(file.id, false, false, file.documentId, file.filename)}
-                          disabled={file.status === 'uploading'}
-                          startIcon={<DeleteIcon fontSize="small" />}
-                          sx={{
-                            ml: 1,
-                            borderRadius: '4px',
-                            textTransform: 'none',
-                            minWidth: 'auto',
-                            px: 1.5,
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          Delete
-                        </Button>
+                        {/* In edit mode, only show delete button for files that are not processing */}
+                        {(isPreDeployment || file.status !== 'processing') && (
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            onClick={() => confirmDelete(file.id, false, false, file.documentId, file.filename)}
+                            disabled={file.status === 'uploading'}
+                            startIcon={<DeleteIcon fontSize="small" />}
+                            sx={{
+                              ml: 1,
+                              borderRadius: '4px',
+                              textTransform: 'none',
+                              minWidth: 'auto',
+                              px: 1.5,
+                              height: '24px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </Box>
                     }
                   >
@@ -1207,32 +1210,35 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                           </Tooltip>
                         )}
 
-                        <Button
-                          variant="contained"
-                          color="error"
-                          size="small"
-                          onClick={() => confirmDelete(doc.id, false, true, undefined, doc.filename)}
-                          disabled={removeDocumentMutation.isPending}
-                          startIcon={removeDocumentMutation.isPending ?
-                            <CircularProgress size={16} color="inherit" /> :
-                            <DeleteIcon fontSize="small" />
-                          }
-                          sx={{
-                            ml: 1,
-                            borderRadius: '4px',
-                            textTransform: 'none',
-                            minWidth: 'auto',
-                            px: 1.5,
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          Delete
-                        </Button>
+                        {/* In edit mode, only show delete button for documents that are fully processed or have errors */}
+                        {(isPreDeployment || doc.is_processed || doc.processing_error) && (
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            onClick={() => confirmDelete(doc.id, false, true, undefined, doc.filename)}
+                            disabled={removeDocumentMutation.isPending}
+                            startIcon={removeDocumentMutation.isPending ?
+                              <CircularProgress size={16} color="inherit" /> :
+                              <DeleteIcon fontSize="small" />
+                            }
+                            sx={{
+                              ml: 1,
+                              borderRadius: '4px',
+                              textTransform: 'none',
+                              minWidth: 'auto',
+                              px: 1.5,
+                              height: '24px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </Box>
                     }
                   >
