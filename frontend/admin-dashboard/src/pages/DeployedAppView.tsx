@@ -145,6 +145,15 @@ const DeployedAppView: React.FC = () => {
 
         setCustomUiSchema(originalUiSchema);
         console.log('Created custom UI schema for RAG app:', originalUiSchema);
+
+        // Ensure the documents section has the correct title "Knowledge Base"
+        if (app.template.template_config?.schema?.properties?.documents) {
+          const schemaConfig = JSON.parse(JSON.stringify(app.template.template_config.schema));
+          if (schemaConfig.properties.documents.title !== 'Knowledge Base') {
+            schemaConfig.properties.documents.title = 'Knowledge Base';
+            app.template.template_config.schema = schemaConfig;
+          }
+        }
       } else {
         // For other templates, use the original UI schema
         setCustomUiSchema(app.template.template_config?.uiSchema || {});

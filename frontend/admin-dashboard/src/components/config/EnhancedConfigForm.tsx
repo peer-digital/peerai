@@ -1161,27 +1161,30 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                             Save Changes
                           </Button>
                         ) : (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            onClick={() => {
-                              // Call the section edit handler
-                              onSectionEdit(section.key);
-                            }}
-                            disabled={false}
-                            sx={{
-                              borderRadius: '0.25rem',
-                              px: 1.5,
-                              borderColor: theme.palette.primary.main,
-                              color: theme.palette.primary.main,
-                              '&:hover': {
-                                backgroundColor: `${theme.palette.primary.main}10`,
-                              }
-                            }}
-                          >
-                            Edit Section
-                          </Button>
+                          // Only show Edit button if this is NOT the Knowledge Base section (documents)
+                          section.key !== 'documents' && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<EditIcon />}
+                              onClick={() => {
+                                // Call the section edit handler
+                                onSectionEdit(section.key);
+                              }}
+                              disabled={false}
+                              sx={{
+                                borderRadius: '0.25rem',
+                                px: 1.5,
+                                borderColor: theme.palette.primary.main,
+                                color: theme.palette.primary.main,
+                                '&:hover': {
+                                  backgroundColor: `${theme.palette.primary.main}10`,
+                                }
+                              }}
+                            >
+                              Edit Section
+                            </Button>
+                          )
                         )}
                       </Box>
                     )}

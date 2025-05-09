@@ -22,7 +22,7 @@ const StyledChip = styled(Chip, {
   fontWeight: 500,
   fontSize: '0.75rem',
   height: 24,
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: '4px',
   '.MuiChip-label': {
     padding: '0 8px',
   },
@@ -70,4 +70,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   );
 };
 
-export default StatusBadge; 
+export default StatusBadge;
