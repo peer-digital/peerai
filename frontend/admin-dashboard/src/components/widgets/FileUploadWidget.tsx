@@ -24,6 +24,7 @@ import {
   Error as ErrorIcon,
   Refresh as RefreshIcon,
   Warning as WarningIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { WidgetProps } from '@rjsf/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -78,9 +79,6 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<{id: number, isInMemory?: boolean, isDocument?: boolean, documentId?: number, filename?: string} | null>(null);
 
-  // Determine if we're in pre-deployment mode (no appId yet)
-  const isPreDeployment = !appId;
-
   // Store in-memory files for pre-deployment
   // Initialize from form value if available
   const [inMemoryFiles, setInMemoryFiles] = useState<UploadedFile[]>(() => {
@@ -90,6 +88,12 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     }
     return [];
   });
+
+  // Determine if we're in pre-deployment mode (no appId yet)
+  const isPreDeployment = !appId;
+
+  // Check if any files are in processing state
+  const hasProcessingFiles = inMemoryFiles.some(file => file.status === 'processing');
 
   // Fetch the app ID using the slug
   useEffect(() => {
@@ -853,7 +857,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       {inMemoryFiles.length > 0 && (
         <Paper variant="outlined" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
-            <Typography variant="subtitle1">Uploaded Files</Typography>
+            <Typography variant="subtitle1">Uploading Files</Typography>
           </Box>
           <Divider />
           <List>
@@ -923,6 +927,26 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
               </React.Fragment>
             ))}
           </List>
+
+          {/* Message for wizard mode when files are processing */}
+          {isPreDeployment && inMemoryFiles.some(file => file.status === 'processing') && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                p: 2,
+                backgroundColor: 'info.light',
+                color: 'info.contrastText',
+                borderTop: 1,
+                borderColor: 'divider'
+              }}
+            >
+              <InfoIcon sx={{ mr: 1 }} />
+              <Typography variant="body2">
+                You can proceed to the next step while your files are being processed in the background.
+              </Typography>
+            </Box>
+          )}
         </Paper>
       )}
 
