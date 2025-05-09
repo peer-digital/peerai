@@ -733,11 +733,13 @@
                         numericAppId = parseInt(appIdParam, 10);
                         console.log('Using app_id from URL query parameter:', numericAppId);
                     } else {
-                        // Last resort - prompt the user (for testing only)
-                        const userInput = prompt('Please enter the app ID (numeric only).\n\nThis is needed for RAG functionality to work correctly.');
-                        if (userInput && !isNaN(parseInt(userInput, 10))) {
-                            numericAppId = parseInt(userInput, 10);
-                            console.log('Using manually entered app ID:', numericAppId);
+                        // Check if we're in preview mode (in an iframe)
+                        const isPreviewMode = window !== window.parent || window.location.href.startsWith('about:srcdoc');
+
+                        if (isPreviewMode) {
+                            // In preview mode, use a default app ID instead of prompting
+                            numericAppId = 999; // Use a default ID for preview mode
+                            console.log('Using default app ID for preview mode:', numericAppId);
                         } else {
                             // Don't use a hardcoded default - extract from URL path
                             const pathMatch = window.location.pathname.match(/rag-chatbot-(\d+)/);
@@ -828,12 +830,20 @@
                         console.warn('Error accessing parent URL path:', e);
                     }
 
-                    // If we still don't have a valid app slug, prompt the user
+                    // If we still don't have a valid app slug, check if we're in preview mode
                     if (!appSlug || appSlug === 'srcdoc') {
-                        const userInput = prompt('Please enter your app slug (e.g., rag-chatbot-845):');
-                        if (userInput) {
-                            appSlug = userInput;
-                            console.log('Using manually entered app slug:', appSlug);
+                        // Check if we're in preview mode (in an iframe)
+                        const isPreviewMode = window !== window.parent || window.location.href.startsWith('about:srcdoc');
+
+                        if (isPreviewMode) {
+                            // In preview mode, use a default app slug instead of prompting
+                            if (numericAppId && !isNaN(numericAppId)) {
+                                appSlug = `rag-chatbot-${numericAppId}`;
+                                console.log('Using app slug constructed from numeric app ID for preview mode:', appSlug);
+                            } else {
+                                appSlug = 'rag-chatbot-999'; // Default slug for preview mode
+                                console.log('Using default app slug for preview mode:', appSlug);
+                            }
                         } else {
                             // Use the app ID we extracted earlier if available
                             if (numericAppId && !isNaN(numericAppId)) {
