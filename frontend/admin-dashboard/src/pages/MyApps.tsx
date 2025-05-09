@@ -337,23 +337,83 @@ const MyApps: React.FC = () => {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the app "{selectedApp?.name}"? This action cannot be
+      <Dialog
+        open={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: '0.375rem',
+            boxShadow: (theme) => theme.palette.mode === 'light'
+              ? '0 8px 12px -3px rgba(0,0,0,0.1), 0 3px 5px -2px rgba(0,0,0,0.05)'
+              : '0 8px 12px -3px rgba(255,255,255,0.05), 0 3px 5px -2px rgba(255,255,255,0.02)',
+            overflow: 'hidden',
+            maxWidth: '450px',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            py: 2,
+            px: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            color: 'error.main'
+          }}
+        >
+          <DeleteIcon color="error" />
+          <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+            Confirm Deletion
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, px: 3 }}>
+          <Typography sx={{ color: 'text.primary' }}>
+            Are you sure you want to delete the app <strong>"{selectedApp?.name}"</strong>? This action cannot be
             undone.
           </Typography>
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              borderRadius: '0.25rem',
+              border: '1px solid',
+              borderColor: 'error.main'
+            }}
+          >
+            <Typography variant="body2" fontWeight="medium" color="error.main">
+              Warning: This will permanently delete all app configuration and data.
+            </Typography>
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, py: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button
+            onClick={() => setIsDeleteModalOpen(false)}
+            color="primary"
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '0.25rem'
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleDeleteApp}
             color="error"
             variant="contained"
             disabled={deleteMutation.isPending}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '0.25rem'
+            }}
           >
-            {deleteMutation.isPending ? <CircularProgress size={24} /> : 'Delete'}
+            {deleteMutation.isPending ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

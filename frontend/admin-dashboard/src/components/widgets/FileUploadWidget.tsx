@@ -908,22 +908,65 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         onClose={handleCloseDialog}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            borderRadius: '0.375rem',
+            boxShadow: (theme) => theme.palette.mode === 'light'
+              ? '0 8px 12px -3px rgba(0,0,0,0.1), 0 3px 5px -2px rgba(0,0,0,0.05)'
+              : '0 8px 12px -3px rgba(255,255,255,0.05), 0 3px 5px -2px rgba(255,255,255,0.02)',
+            overflow: 'hidden',
+            maxWidth: '450px',
+            width: '100%'
+          }
+        }}
       >
-        <DialogTitle id="alert-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <DialogTitle
+          id="alert-dialog-title"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            py: 2,
+            px: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
           <WarningIcon color="warning" />
-          Confirm Deletion
+          <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+            Confirm Deletion
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete {fileToDelete?.filename || 'this file'}?
+        <DialogContent sx={{ pt: 3, px: 3 }}>
+          <DialogContentText id="alert-dialog-description" sx={{ color: 'text.primary' }}>
+            Are you sure you want to delete <strong>{fileToDelete?.filename || 'this file'}</strong>?
             This action cannot be undone and will permanently remove the file from your knowledge base.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
+        <DialogActions sx={{ px: 3, py: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button
+            onClick={handleCloseDialog}
+            color="primary"
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '0.25rem'
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={executeDelete} color="error" variant="contained" autoFocus>
+          <Button
+            onClick={executeDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '0.25rem'
+            }}
+          >
             Delete
           </Button>
         </DialogActions>
