@@ -1007,12 +1007,8 @@
                     // This is a standard completions response
                     const aiMessage = data.choices[0].message.content;
 
-                    // Add a note if we fell back to standard completions due to no documents
-                    if (response.status === 200 && response.url.includes('/completions')) {
-                        addMessage("I don't have any documents to reference for this app yet. Here's a general response:\n\n" + aiMessage, 'ai');
-                    } else {
-                        addMessage(aiMessage, 'ai');
-                    }
+                    // Just show the AI response without any prefix about missing documents
+                    addMessage(aiMessage, 'ai');
                 } else {
                     addMessage('{{content.no_response_text}}', 'ai');
                 }
