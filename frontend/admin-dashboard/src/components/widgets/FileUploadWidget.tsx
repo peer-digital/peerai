@@ -153,8 +153,8 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     queryFn: async () => {
       if (!appId || !token) return [] as DocumentResponse[];
 
-      // Reduced logging to avoid console spam
-      if (Math.random() < 0.1) { // Only log ~10% of the time
+      // Extremely reduced logging to avoid console spam
+      if (Math.random() < 0.01) { // Only log ~1% of the time
         console.log(`Fetching documents for app ID: ${appId}`);
       }
       const response = await fetch(`${api.defaults.baseURL}/documents/app/${appId}`, {
@@ -174,8 +174,8 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       }
 
       const data = await response.json();
-      // Reduced logging to avoid console spam
-      if (Math.random() < 0.1) { // Only log ~10% of the time
+      // Extremely reduced logging to avoid console spam
+      if (Math.random() < 0.01) { // Only log ~1% of the time
         console.log(`Successfully fetched ${data.length} documents for app ID: ${appId}`);
       }
       return data as DocumentResponse[];
@@ -202,22 +202,31 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       // Show all documents
       const docsToShow = documents;
 
-      if (docsToShow.length > 0 && files.length === 0) {
-        // Create file entries for all documents
-        const allFiles = docsToShow.map(doc => ({
-          id: doc.id,
-          filename: doc.filename,
-          status: doc.is_processed ? 'success' as const : (doc.processing_error ? 'error' as const : 'processing' as const),
-          size: doc.size_bytes,
-          documentId: doc.id,
-          error: doc.processing_error || undefined
-        }));
+      // Always update the files list with the latest documents
+      // This ensures files appear in the Knowledge Base immediately after upload
+      // Create file entries for all documents
+      const allFiles = docsToShow.map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        status: doc.is_processed ? 'success' as const : (doc.processing_error ? 'error' as const : 'processing' as const),
+        size: doc.size_bytes,
+        documentId: doc.id,
+        error: doc.processing_error || undefined
+      }));
 
-        console.log(`Adding ${allFiles.length} files to UI state from database`);
-        setFiles(allFiles);
-      }
+      // Merge with existing files that might not be in the documents list yet
+      // (like files that were just uploaded and are still being processed)
+      const existingProcessingFiles = files.filter(file =>
+        file.status === 'processing' &&
+        !allFiles.some(docFile => docFile.filename === file.filename)
+      );
+
+      const mergedFiles = [...allFiles, ...existingProcessingFiles];
+
+      console.log(`Updating UI with ${mergedFiles.length} files from database and local state`);
+      setFiles(mergedFiles);
     }
-  }, [documents]); // Removed files.length from dependencies
+  }, [documents]); // Removed files from dependencies to prevent infinite loop
 
   // Modified effect to update file status when they appear in the Knowledge Base
   // instead of clearing them completely
@@ -310,6 +319,27 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     const newFiles: UploadedFile[] = [];
     let updatedFiles = [...inMemoryFiles]; // Start with current files
 
+    // In edit mode, immediately add files to the Knowledge Base with uploading status
+    // This ensures they appear right away without waiting for the API response
+    if (!isPreDeployment && appId) {
+      const tempFiles = fileList.map(file => ({
+        id: Date.now() + Math.random(),
+        filename: file.name,
+        status: 'uploading' as const,
+        size: file.size,
+        documentId: undefined
+      }));
+
+      console.log(`Edit mode: Adding ${tempFiles.length} temporary files to Knowledge Base`);
+      setFiles(prev => {
+        // Filter out any existing files with the same filename
+        const filteredPrev = prev.filter(f =>
+          !tempFiles.some(tempFile => tempFile.filename === f.filename)
+        );
+        return [...filteredPrev, ...tempFiles];
+      });
+    }
+
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       const fileId = Date.now() + Math.random();
@@ -366,6 +396,13 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         updatedFiles = updatedFiles.map(f => f.id === fileId ? fileWithMetadata : f);
         setInMemoryFiles(updatedFiles);
 
+        // In edit mode, update the file status in the Knowledge Base
+        if (!isPreDeployment && appId) {
+          setFiles(prev => prev.map(f =>
+            f.filename === file.name ? { ...f, status: 'processing' as const } : f
+          ));
+        }
+
         console.log(`File uploaded successfully and marked as processing: ${file.name}`);
       } catch (err: any) {
         console.error('Error uploading file to temporary storage:', err);
@@ -417,16 +454,20 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     setIsUploading(true);
     setError(null);
 
-    // Add files to UI with uploading status
-    const uploadingFiles = inMemoryFiles.map(file => ({
-      id: file.id,
-      filename: file.filename,
-      status: 'uploading' as const,
-      size: file.size,
-      sessionId: sessionId, // Make sure to include the sessionId
-    }));
+    // In edit mode, we don't want to add files to the UI state immediately
+    // This prevents duplicate entries in the Knowledge Base section
+    if (isPreDeployment) {
+      // Only in pre-deployment mode, add files to UI with uploading status
+      const uploadingFiles = inMemoryFiles.map(file => ({
+        id: file.id,
+        filename: file.filename,
+        status: 'uploading' as const,
+        size: file.size,
+        sessionId: sessionId, // Make sure to include the sessionId
+      }));
 
-    setFiles(prev => [...prev, ...uploadingFiles]);
+      setFiles(prev => [...prev, ...uploadingFiles]);
+    }
 
     try {
       // Call the API to process all temporary files at once
@@ -446,15 +487,45 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       const processedDocuments = await response.json();
       console.log(`Successfully processed ${processedDocuments.length} documents`);
 
-      // Update file status to processing and add document IDs
-      setFiles(prev => prev.map(f => {
-        const matchingDoc = processedDocuments.find((doc: any) => doc.filename === f.filename);
-        return {
-          ...f,
-          status: 'processing',
-          documentId: matchingDoc?.id
-        };
-      }));
+      // In pre-deployment mode, update existing files
+      if (isPreDeployment) {
+        // Update file status to processing and add document IDs
+        setFiles(prev => prev.map(f => {
+          const matchingDoc = processedDocuments.find((doc: any) => doc.filename === f.filename);
+          return {
+            ...f,
+            status: 'processing',
+            documentId: matchingDoc?.id
+          };
+        }));
+      } else {
+        // In edit mode, manually add the files to the files array with processing status
+        // This ensures they appear in the Knowledge Base immediately
+        const newProcessingFiles = processedDocuments.map((doc: any) => ({
+          id: doc.id,
+          filename: doc.filename,
+          status: 'processing' as const,
+          size: doc.size_bytes || 0,
+          documentId: doc.id
+        }));
+
+        console.log(`Adding ${newProcessingFiles.length} processing files to Knowledge Base`);
+
+        // First, directly update the files state to show the processing files immediately
+        setFiles(prev => {
+          // Filter out any existing files with the same filename to avoid duplicates
+          const filteredPrev = prev.filter(f =>
+            !newProcessingFiles.some((newFile: UploadedFile) => newFile.filename === f.filename)
+          );
+          return [...filteredPrev, ...newProcessingFiles];
+        });
+
+        // Force a document list refresh to ensure the UI is updated
+        setTimeout(() => {
+          console.log('Forcing document list refresh to update UI');
+          refetchDocuments();
+        }, 500);
+      }
 
       // Clear in-memory files as they're now in the database
       setInMemoryFiles([]);
@@ -464,16 +535,24 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
 
       // Show success message
       setError(null);
+
+      // In edit mode, immediately refresh the document list to show the new files
+      if (!isPreDeployment) {
+        console.log('Edit mode: Refreshing document list to show newly processed files');
+        refetchDocuments();
+      }
     } catch (err: any) {
       console.error('Error processing temporary files:', err);
       setError(`Error processing files: ${err.message}`);
 
-      // Update all files to error status
-      setFiles(prev => prev.map(f => ({
-        ...f,
-        status: 'error',
-        error: err.message || 'Failed to process temporary files'
-      })));
+      // Update files to error status only in pre-deployment mode
+      if (isPreDeployment) {
+        setFiles(prev => prev.map(f => ({
+          ...f,
+          status: 'error',
+          error: err.message || 'Failed to process temporary files'
+        })));
+      }
     }
 
     // Clear in-memory files after processing
@@ -490,13 +569,12 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     refetchDocuments();
 
     // Set up a timer to periodically refresh the document list to update processing status
-    // We'll use a less frequent interval (15 seconds) to reduce API calls
     const checkProcessingInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         // Only check if we have files that are still processing
         if (files.some(file => file.status === 'processing')) {
           // Only log once every few refreshes to reduce console spam
-          if (Math.random() < 0.2) { // ~20% chance to log
+          if (Math.random() < 0.05) { // Reduced to ~5% chance to log
             console.log('Checking processing status of uploaded files');
           }
           refetchDocuments();
@@ -506,7 +584,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           console.log('No more files processing, stopping automatic refresh');
         }
       }
-    }, 15000); // Check every 15 seconds instead of 5
+    }, 5000); // Check every 5 seconds as requested
 
     // Clear the interval after 2 minutes (by then most files should be processed)
     setTimeout(() => {
@@ -538,7 +616,51 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     // If we have an appId (edit mode), immediately process the temporary files
     if (appId) {
       console.log(`App ID available (${appId}). Processing temporary files immediately...`);
-      await uploadInMemoryFilesToServer();
+
+      try {
+        // In edit mode, we want to process files immediately and show them in the Knowledge Base
+        // without showing duplicate entries in the Uploading Files section
+        await uploadInMemoryFilesToServer();
+
+        // In edit mode, we're now manually adding files to the UI and forcing a refresh
+        // in uploadInMemoryFilesToServer, but let's add an additional refresh here
+        // with a slight delay to ensure the UI is updated
+        if (!isPreDeployment) {
+          console.log('Edit mode: Files should now appear in Knowledge Base');
+
+          // Add a second refresh with a longer delay as a backup
+          setTimeout(() => {
+            console.log('Additional document list refresh to ensure UI update');
+            refetchDocuments();
+
+            // Create temporary files in the UI directly from the uploaded files
+            // This ensures they appear even if the API response doesn't include them yet
+            const tempFiles = fileList.map(file => ({
+              id: Date.now() + Math.random(),
+              filename: file.name,
+              status: 'processing' as const,
+              size: file.size,
+              documentId: undefined
+            }));
+
+            // Add these temporary files to the UI
+            setFiles(prev => {
+              // Filter out any existing files with the same filename
+              const filteredPrev = prev.filter(f =>
+                !tempFiles.some(tempFile => tempFile.filename === f.filename)
+              );
+              return [...filteredPrev, ...tempFiles];
+            });
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('Error processing files:', err);
+        // If there was an error, try to refresh the document list anyway
+        if (!isPreDeployment) {
+          console.log('Attempting to refresh document list after error');
+          await refetchDocuments();
+        }
+      }
     }
 
     // Clear the input value so the same file can be uploaded again if needed
@@ -661,10 +783,12 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       const sessionId = localStorage.getItem('rag_chatbot_session_id');
 
       if (sessionId) {
+        // Reduce logging frequency
         console.log(`Found session ID: ${sessionId}`);
 
         // If we're in post-deployment mode and have an app ID, check if we need to process files
         if (appId) {
+          // Reduce logging frequency
           console.log(`App is deployed (ID: ${appId}). Checking for temporary files to process...`);
 
           // Call the API to check if there are any temporary files for this session
@@ -675,6 +799,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
                 console.log(`Found ${inMemoryFiles.length} files to process`);
                 uploadInMemoryFilesToServer();
               } else {
+                // Reduce logging frequency
                 console.log('No temporary files found to process');
               }
             } catch (err) {
@@ -682,13 +807,14 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
             }
           };
 
+          // Only check once on mount, not on every render
           checkForTemporaryFiles();
         }
       }
     } catch (err) {
       console.warn('Error checking for session ID:', err);
     }
-  }, [appId, inMemoryFiles, uploadInMemoryFilesToServer]);
+  }, [appId]); // Remove inMemoryFiles and uploadInMemoryFilesToServer from dependencies to prevent frequent re-runs
 
   // Add a useEffect to process files when appId and functions are available
   useEffect(() => {
@@ -696,7 +822,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       console.log(`Processing ${inMemoryFiles.length} temporary files for app ID ${appId}...`);
       uploadInMemoryFilesToServer();
     }
-  }, [appId, inMemoryFiles, uploadInMemoryFilesToServer]);
+  }, [appId, inMemoryFiles.length]); // Only depend on inMemoryFiles.length, not the entire array
 
   // Add a useEffect to refresh documents when appId is available
   useEffect(() => {
@@ -709,22 +835,22 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
   // Add a useEffect to periodically refresh the document list to update file status
   useEffect(() => {
     if (appId && refetchDocuments) {
-      // Set up a periodic refresh every 15 seconds (reduced from 5 seconds)
+      // Set up a periodic refresh every 5 seconds
       const intervalId = setInterval(() => {
         // Only refresh if there are files that might be processing and the page is visible
         if (files.some(file => file.status === 'processing') && document.visibilityState === 'visible') {
           // Only log once every few refreshes to reduce console spam
-          if (Math.random() < 0.2) { // ~20% chance to log
+          if (Math.random() < 0.05) { // Reduced to ~5% chance to log
             console.log('Refreshing document list to update file status');
           }
           refetchDocuments();
         }
-      }, 15000); // Increased to 15 seconds to reduce API calls
+      }, 5000); // Check every 5 seconds as requested
 
       // Clean up the interval when the component unmounts
       return () => clearInterval(intervalId);
     }
-  }, [appId, refetchDocuments, files]);
+  }, [appId, refetchDocuments, files.length]); // Only depend on files.length, not the entire files array
 
   // Add a useEffect to clean up files that have been processed and are now in the documents list
   useEffect(() => {
@@ -853,8 +979,8 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         </Alert>
       )}
 
-      {/* In-memory files (pre-deployment) */}
-      {inMemoryFiles.length > 0 && (
+      {/* In-memory files (pre-deployment) - Only show in pre-deployment mode */}
+      {isPreDeployment && inMemoryFiles.length > 0 && (
         <Paper variant="outlined" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
             <Typography variant="subtitle1">Uploading Files</Typography>
@@ -929,7 +1055,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           </List>
 
           {/* Message for wizard mode when files are processing */}
-          {isPreDeployment && inMemoryFiles.some(file => file.status === 'processing') && (
+          {inMemoryFiles.some(file => file.status === 'processing') && (
             <Box
               sx={{
                 display: 'flex',
