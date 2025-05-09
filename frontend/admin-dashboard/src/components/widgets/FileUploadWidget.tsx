@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +36,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 interface UploadedFile {
   id: number;
   filename: string;
-  status: 'uploading' | 'success' | 'error' | 'pending';
+  status: 'uploading' | 'success' | 'error' | 'pending' | 'processing';
   error?: string;
   size: number;
   content?: string; // Base64 encoded file content for pre-deployment storage
@@ -132,14 +132,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     fetchAppId();
   }, [appSlug, token]);
 
-  // Add a useEffect to check for appId changes and process temporary files if needed
-  useEffect(() => {
-    // When appId becomes available (app is deployed), process any temporary files
-    if (appId && inMemoryFiles.length > 0) {
-      console.log(`App ID ${appId} is now available. Processing ${inMemoryFiles.length} temporary files...`);
-      uploadInMemoryFilesToServer();
-    }
-  }, [appId]);
+  // We'll add an effect to refresh documents after refetchDocuments is defined
 
   // Add a useEffect to check for session ID on component mount
   useEffect(() => {
@@ -203,24 +196,76 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     enabled: !!appId && !!token,
   });
 
-  // Effect to clear "Recently Uploaded Files" when they appear in the Knowledge Base
+  // Add a useEffect to check for appId changes and refresh documents
+  useEffect(() => {
+    // When appId becomes available (app is deployed), refresh the document list
+    if (appId) {
+      console.log(`App ID ${appId} is now available.`);
+      // Refresh the document list to ensure we have the latest data
+      refetchDocuments();
+    }
+  }, [appId, refetchDocuments]);
+
+  // Effect to ensure files persist across page refreshes
+  useEffect(() => {
+    if (documents && documents.length > 0) {
+      // Show all documents
+      const docsToShow = documents;
+
+      if (docsToShow.length > 0 && files.length === 0) {
+        // Create file entries for all documents
+        const allFiles = docsToShow.map(doc => ({
+          id: doc.id,
+          filename: doc.filename,
+          status: doc.is_processed ? 'success' as const : (doc.processing_error ? 'error' as const : 'processing' as const),
+          size: doc.size_bytes,
+          documentId: doc.id,
+          error: doc.processing_error || undefined
+        }));
+
+        console.log(`Adding ${allFiles.length} files to UI state from database`);
+        setFiles(allFiles);
+      }
+    }
+  }, [documents, files.length]);
+
+  // Modified effect to update file status when they appear in the Knowledge Base
+  // instead of clearing them completely
   useEffect(() => {
     // Only run this effect when we have both documents and files
     if (documents && documents.length > 0 && files.length > 0) {
-      // Get document IDs from the knowledge base
-      const knowledgeBaseDocIds = documents.map(doc => doc.id);
+      // Get document IDs and their processing status from the knowledge base
+      const knowledgeBaseDocInfo = documents.reduce((acc, doc) => {
+        acc[doc.id] = { isProcessed: doc.is_processed, error: doc.processing_error };
+        return acc;
+      }, {} as Record<number, { isProcessed: boolean, error: string | null }>);
 
-      // Check if any of our "Recently Uploaded Files" have matching document IDs
-      const hasMatchingFiles = files.some(file =>
-        file.status === 'success' &&
-        file.documentId &&
-        knowledgeBaseDocIds.includes(file.documentId)
-      );
+      // Check if any of our files have matching document IDs and update their status
+      let updatedFiles = false;
+      const newFiles = files.map(file => {
+        if (file.documentId && knowledgeBaseDocInfo[file.documentId]) {
+          const docInfo = knowledgeBaseDocInfo[file.documentId];
 
-      // If we found matching files, clear the "Recently Uploaded Files" list
-      if (hasMatchingFiles) {
-        console.log('Clearing recently uploaded files as they now appear in the knowledge base');
-        setFiles([]);
+          // Only update if the status would change
+          if ((docInfo.isProcessed && file.status !== 'success') ||
+              (!docInfo.isProcessed && docInfo.error && file.status !== 'error')) {
+            updatedFiles = true;
+
+            // Update status based on document processing status
+            return {
+              ...file,
+              status: docInfo.isProcessed ? 'success' : (docInfo.error ? 'error' : file.status),
+              error: docInfo.error || file.error
+            };
+          }
+        }
+        return file;
+      });
+
+      // If we updated any files, update the state
+      if (updatedFiles) {
+        console.log('Updating file status based on knowledge base information');
+        setFiles(newFiles);
       }
     }
   }, [documents, files]);
@@ -409,10 +454,14 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       const processedDocuments = await response.json();
       console.log(`Successfully processed ${processedDocuments.length} documents`);
 
-      // Clear the files list completely instead of just updating status
-      setFiles([]);
+      // Update file status instead of clearing them
+      setFiles(prev => prev.map(f => ({
+        ...f,
+        status: 'processing',
+        documentId: processedDocuments.find((doc: any) => doc.filename === f.filename)?.id
+      })));
 
-      // Clear in-memory files as well
+      // Clear in-memory files as they're now in the database
       setInMemoryFiles([]);
 
       // Clear the session ID to prevent duplicate processing
@@ -537,13 +586,20 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           console.log('Associate response:', associateData);
 
           // Update file status by ID instead of index
+          // We now use 'processing' status to indicate the file is being processed
           setFiles(prev => prev.map(f =>
             f.id === fileId ? {
               ...f,
-              status: 'success',
+              status: 'processing',
               documentId: data.document_id
             } : f
           ));
+
+          // Trigger a refresh of the document list to ensure the file appears in the Knowledge Base
+          // even if the user doesn't click Save Changes
+          setTimeout(() => {
+            refetchDocuments();
+          }, 1000); // Small delay to allow the server to process the file
         }
       } catch (err: any) {
         console.error('Error uploading file:', err);
@@ -569,12 +625,9 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     // Refresh the document list
     refetchDocuments();
 
-    // Clear the "Recently Uploaded Files" list for files that were successfully uploaded
-    const successfullyUploadedFiles = files.filter(f => f.status === 'success' && f.documentId);
-    if (successfullyUploadedFiles.length > 0) {
-      console.log('Clearing successfully uploaded files from the Recently Uploaded Files list');
-      setFiles(prev => prev.filter(f => f.status !== 'success'));
-    }
+    // We no longer clear files after successful upload
+    // Instead, we keep them visible in the Knowledge Base section
+    console.log('Files will remain visible in the Knowledge Base section');
   };
 
   // Show delete confirmation dialog
@@ -685,6 +738,87 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       day: 'numeric',
     });
   };
+
+  // Add a useEffect to process files when appId and functions are available
+  useEffect(() => {
+    if (appId && inMemoryFiles.length > 0) {
+      console.log(`Processing ${inMemoryFiles.length} temporary files for app ID ${appId}...`);
+      uploadInMemoryFilesToServer();
+    }
+  }, [appId, inMemoryFiles, uploadInMemoryFilesToServer]);
+
+  // Add a useEffect to refresh documents when appId is available
+  useEffect(() => {
+    if (appId && refetchDocuments) {
+      console.log('Refreshing document list');
+      refetchDocuments();
+    }
+  }, [appId, refetchDocuments]);
+
+  // Add a useEffect to periodically refresh the document list to update file status
+  useEffect(() => {
+    if (appId && refetchDocuments) {
+      // Set up a periodic refresh every 5 seconds
+      const intervalId = setInterval(() => {
+        // Only refresh if there are files that might be processing
+        if (files.some(file => file.status === 'processing')) {
+          console.log('Refreshing document list to update file status');
+          refetchDocuments();
+        }
+      }, 5000);
+
+      // Clean up the interval when the component unmounts
+      return () => clearInterval(intervalId);
+    }
+  }, [appId, refetchDocuments, files]);
+
+  // Add a useEffect to clean up files that have been processed and are now in the documents list
+  useEffect(() => {
+    if (documents && documents.length > 0 && files && files.length > 0) {
+      // Create a map of filenames to document info
+      const filenameToDocInfo = new Map<string, { id: number, isProcessed: boolean, error: string | null }>();
+
+      // Populate the map with document info
+      documents.forEach(doc => {
+        filenameToDocInfo.set(doc.filename, {
+          id: doc.id,
+          isProcessed: doc.is_processed,
+          error: doc.processing_error
+        });
+      });
+
+      // Filter out files that have a matching filename in the documents array and are not still uploading
+      const filesToKeep = files.filter(file => {
+        // Always keep files that are still uploading
+        if (file.status === 'uploading') {
+          return true;
+        }
+
+        // Check if there's a document with the same filename
+        const docInfo = filenameToDocInfo.get(file.filename);
+
+        // If there's no document with this filename, keep the file
+        if (!docInfo) {
+          return true;
+        }
+
+        // If the document is still processing (not processed and no error), keep the file
+        if (!docInfo.isProcessed && !docInfo.error) {
+          return true;
+        }
+
+        // If the document is processed or has an error, remove the file from the files array
+        // as it will be shown in the documents list
+        return false;
+      });
+
+      // If we filtered out any files, update the state
+      if (filesToKeep.length < files.length) {
+        console.log(`Removing ${files.length - filesToKeep.length} processed files that are now in the documents list`);
+        setFiles(filesToKeep);
+      }
+    }
+  }, [documents, files]);
 
   return (
     <Box sx={{ mt: 1 }}>
@@ -832,74 +966,9 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         </Paper>
       )}
 
-      {/* Currently uploading files (post-deployment) */}
-      {files.length > 0 && (
-        <Paper variant="outlined" sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
-            <Typography variant="subtitle1">Currently training</Typography>
-          </Box>
-          <Divider />
-          <List>
-            {files.map((file, index) => (
-              <React.Fragment key={file.id}>
-                {index > 0 && <Divider />}
-                <ListItem
-                  secondaryAction={
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
-                      {file.status === 'uploading' ? (
-                        <CircularProgress size={24} />
-                      ) : (
-                        <StatusBadge
-                          status={file.status === 'success' ? 'success' : file.status === 'error' ? 'error' : 'default'}
-                          label={file.status === 'success' ? 'Uploaded' : file.status === 'error' ? 'Failed' : 'Pending'}
-                          size="small"
-                        />
-                      )}
+      {/* We've removed the "Currently training" section as it's now merged with the Knowledge base */}
 
-                      {file.status === 'error' && (
-                        <Tooltip title={file.error || 'Upload failed'}>
-                          <ErrorIcon color="error" fontSize="small" sx={{ ml: 1 }} />
-                        </Tooltip>
-                      )}
-
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => confirmDelete(file.id, false, false, file.documentId, file.filename)}
-                        disabled={file.status === 'uploading'}
-                        startIcon={<DeleteIcon fontSize="small" />}
-                        sx={{
-                          ml: 1,
-                          borderRadius: '4px',
-                          textTransform: 'none',
-                          minWidth: 'auto',
-                          px: 1.5,
-                          height: '24px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  }
-                >
-                  <ListItemText
-                    primary={file.filename}
-                    secondary={formatFileSize(file.size)}
-                  />
-                </ListItem>
-              </React.Fragment>
-            ))}
-          </List>
-        </Paper>
-      )}
-
-      {/* Existing documents */}
+      {/* Knowledge base - showing all files (both processing and processed) */}
       <Paper variant="outlined" sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
           <Typography variant="subtitle1">Knowledge base</Typography>
@@ -922,72 +991,152 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
               Document history will be available soon.
             </Typography>
           </Box>
-        ) : isLoadingDocuments ? (
+        ) : isLoadingDocuments && (!files || files.length === 0) && (!documents || documents.length === 0) ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress />
           </Box>
-        ) : isDocumentsError ? (
+        ) : isDocumentsError && (!files || files.length === 0) ? (
           <Box sx={{ p: 2 }}>
             <Alert severity="error">
               Error loading documents. Please try refreshing.
             </Alert>
           </Box>
-        ) : documents && documents.length > 0 ? (
+        ) : ((files && files.length > 0) || (documents && documents.length > 0)) ? (
           <List>
-            {documents.map((doc, index) => (
-              <React.Fragment key={doc.id}>
-                {index > 0 && <Divider />}
-                <ListItem
-                  secondaryAction={
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
-                      <StatusBadge
-                        status={doc.is_processed ? 'success' : 'error'}
-                        label={doc.is_processed ? 'Processed' : 'Failed'}
-                        size="small"
-                      />
+            {/* Create a map of filenames to determine which files to show */}
+            {(() => {
+              // Create a map to track which filenames are being processed
+              const processingFiles = new Map<string, UploadedFile>();
+              const failedOrSuccessFiles = new Map<string, DocumentResponse>();
 
-                      {doc.processing_error && (
-                        <Tooltip title={doc.processing_error}>
-                          <ErrorIcon color="error" fontSize="small" sx={{ ml: 1 }} />
-                        </Tooltip>
-                      )}
+              // First, add all processing files to the map
+              if (files) {
+                files.filter(file => file.status === 'uploading' || file.status === 'processing')
+                  .forEach(file => {
+                    processingFiles.set(file.filename, file);
+                  });
+              }
 
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => confirmDelete(doc.id, false, true, undefined, doc.filename)}
-                        disabled={removeDocumentMutation.isPending}
-                        startIcon={removeDocumentMutation.isPending ?
-                          <CircularProgress size={16} color="inherit" /> :
-                          <DeleteIcon fontSize="small" />
-                        }
-                        sx={{
-                          ml: 1,
-                          borderRadius: '4px',
-                          textTransform: 'none',
-                          minWidth: 'auto',
-                          px: 1.5,
-                          height: '24px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
+              // Then, add all documents to the map, but don't overwrite processing files
+              if (documents) {
+                documents.forEach(doc => {
+                  // Only add the document if there's no processing file with the same name
+                  if (!processingFiles.has(doc.filename)) {
+                    failedOrSuccessFiles.set(doc.filename, doc);
                   }
-                >
-                  <ListItemText
-                    primary={doc.filename}
-                    secondary={`${formatFileSize(doc.size_bytes)} • ${formatDate(doc.created_at)}`}
-                  />
-                </ListItem>
-              </React.Fragment>
-            ))}
+                });
+              }
+
+              // Now render the processing files first
+              const processingFileElements = Array.from(processingFiles.values()).map((file, index) => (
+                <React.Fragment key={`file-${file.id}`}>
+                  {index > 0 && <Divider />}
+                  <ListItem
+                    secondaryAction={
+                      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
+                        {file.status === 'uploading' ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <StatusBadge
+                            status={file.status === 'processing' ? 'warning' : 'default'}
+                            label={file.status === 'processing' ? 'Processing' : 'Pending'}
+                            size="small"
+                          />
+                        )}
+
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          onClick={() => confirmDelete(file.id, false, false, file.documentId, file.filename)}
+                          disabled={file.status === 'uploading'}
+                          startIcon={<DeleteIcon fontSize="small" />}
+                          sx={{
+                            ml: 1,
+                            borderRadius: '4px',
+                            textTransform: 'none',
+                            minWidth: 'auto',
+                            px: 1.5,
+                            height: '24px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    }
+                  >
+                    <ListItemText
+                      primary={file.filename}
+                      secondary={formatFileSize(file.size)}
+                    />
+                  </ListItem>
+                </React.Fragment>
+              ));
+
+              // Then render the failed or success files
+              const documentElements = Array.from(failedOrSuccessFiles.values()).map((doc, index) => (
+                <React.Fragment key={`doc-${doc.id}`}>
+                  {(index > 0 || processingFileElements.length > 0) && <Divider />}
+                  <ListItem
+                    secondaryAction={
+                      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
+                        <StatusBadge
+                          status={doc.is_processed ? 'success' : 'error'}
+                          label={doc.is_processed ? 'Processed' : 'Failed'}
+                          size="small"
+                        />
+
+                        {doc.processing_error && (
+                          <Tooltip title={doc.processing_error}>
+                            <ErrorIcon color="error" fontSize="small" sx={{ ml: 1 }} />
+                          </Tooltip>
+                        )}
+
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          onClick={() => confirmDelete(doc.id, false, true, undefined, doc.filename)}
+                          disabled={removeDocumentMutation.isPending}
+                          startIcon={removeDocumentMutation.isPending ?
+                            <CircularProgress size={16} color="inherit" /> :
+                            <DeleteIcon fontSize="small" />
+                          }
+                          sx={{
+                            ml: 1,
+                            borderRadius: '4px',
+                            textTransform: 'none',
+                            minWidth: 'auto',
+                            px: 1.5,
+                            height: '24px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    }
+                  >
+                    <ListItemText
+                      primary={doc.filename}
+                      secondary={`${formatFileSize(doc.size_bytes)} • ${formatDate(doc.created_at)}`}
+                    />
+                  </ListItem>
+                </React.Fragment>
+              ));
+
+              // Return all elements
+              return [...processingFileElements, ...documentElements];
+            })()}
           </List>
         ) : (
           <Box sx={{ p: 3, textAlign: 'center' }}>
