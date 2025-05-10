@@ -7,7 +7,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   useTheme,
-  Divider,
   Tooltip,
   IconButton,
   Alert,
@@ -103,7 +102,7 @@ const CustomFieldTemplate = (props: FieldTemplateProps) => {
           </Typography>
 
           {/* Help icon for additional information - only show when help text is available and meaningful */}
-          {help && help !== description && typeof help === 'string' && help.trim() !== "" && (
+          {help && help !== description && typeof help === 'string' && (help as string).trim() !== "" && (
             <Tooltip title={help}>
               <IconButton
                 size="small"
@@ -139,7 +138,7 @@ const CustomFieldTemplate = (props: FieldTemplateProps) => {
       )}
 
       {/* Expandable help text - only show when help text is available and meaningful */}
-      {help && help !== description && typeof help === 'string' && help.trim() !== "" && showHelp && (
+      {help && help !== description && typeof help === 'string' && (help as string).trim() !== "" && showHelp && (
         <Box
           sx={{
             p: 1.5,
