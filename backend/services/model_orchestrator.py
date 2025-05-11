@@ -4,9 +4,11 @@ import httpx
 import logging
 import os
 import json
-from typing import Dict, Any, Optional, List
+import asyncio
+from typing import Dict, Any, Optional, List, AsyncGenerator, Union
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
 
 from models.models import ModelProvider, AIModel, ModelRequestMapping
 from models.usage import UsageRecord
@@ -243,7 +245,8 @@ class ModelOrchestrator:
         model_name: Optional[str] = None,
         api_key: Optional[APIKey] = None,
         endpoint: str = "/completions",
-    ) -> Dict[str, Any]:
+        stream: bool = False,
+    ) -> Union[Dict[str, Any], AsyncGenerator[bytes, None]]:
         """
         Call a model with the given request data.
 
@@ -252,9 +255,11 @@ class ModelOrchestrator:
             model_name: The name of the model to use, or None to use the default
             api_key: The API key used for the request (for usage tracking)
             endpoint: The API endpoint being called (for usage tracking)
+            stream: Whether to stream the response (only supported by some models)
 
         Returns:
-            A dictionary with the model's response in a unified format
+            If stream=False: A dictionary with the model's response in a unified format
+            If stream=True: An AsyncGenerator yielding chunks of the streaming response
         """
         start_time = __import__("time").time()
 
@@ -278,6 +283,10 @@ class ModelOrchestrator:
             # Transform the request
             transformed_request = self._transform_request(model, request_data)
 
+            # Add streaming parameter if requested
+            if stream:
+                transformed_request["stream"] = True
+
             # Get the API key
             provider_api_key = self._get_api_key(provider)
 
@@ -289,27 +298,69 @@ class ModelOrchestrator:
                 # Override the URL for embeddings
                 api_url = "https://api.mistral.ai/v1/embeddings"
                 logger.info(f"Using embeddings endpoint: {api_url}")
+                # Streaming is not supported for embeddings
+                if stream:
+                    raise ValueError("Streaming is not supported for embedding models")
 
             # Make the API call
             logger.info(f"Calling {provider.name} model {model.name}")
 
-            response = await self.http_client.post(
-                api_url,
-                headers={"Authorization": f"Bearer {provider_api_key}"},
-                json=transformed_request,
-                timeout=30.0,
-            )
+            if stream and provider.name == "mistral":
+                # For streaming, we need to return a generator function that can be used with StreamingResponse
+                async def stream_generator():
+                    try:
+                        # Create a copy of the API key info to avoid session issues
+                        api_key_copy = None
+                        if api_key:
+                            try:
+                                # Extract only the necessary fields
+                                api_key_copy = {
+                                    "key": getattr(api_key, "key", None),
+                                    "id": getattr(api_key, "id", None),
+                                    "user_id": getattr(api_key, "user_id", None)
+                                }
+                            except Exception as e:
+                                logger.error(f"Failed to copy API key info: {str(e)}")
 
-            # Log only the response status
-            logger.info(f"Response status: {response.status_code}")
+                        async for chunk in self._handle_streaming_response(
+                            api_url,
+                            provider_api_key,
+                            transformed_request,
+                            provider.name,
+                            model.name,
+                            api_key_copy,  # Pass the copy instead of the original
+                            endpoint
+                        ):
+                            yield chunk
+                    except Exception as e:
+                        logger.error(f"Error in stream_generator: {str(e)}")
+                        # Yield an error message as a JSON chunk
+                        error_chunk = json.dumps({
+                            "error": True,
+                            "message": f"Streaming error: {str(e)}"
+                        })
+                        yield (error_chunk + "\n").encode("utf-8")
 
-            response.raise_for_status()
-            result = response.json()
+                return stream_generator
+            else:
+                # Standard non-streaming request
+                response = await self.http_client.post(
+                    api_url,
+                    headers={"Authorization": f"Bearer {provider_api_key}"},
+                    json=transformed_request,
+                    timeout=30.0,
+                )
 
-            # Transform the response to a unified format
-            unified_response = self._transform_response(
-                provider.name, model.name, result
-            )
+                # Log only the response status
+                logger.info(f"Response status: {response.status_code}")
+
+                response.raise_for_status()
+                result = response.json()
+
+                # Transform the response to a unified format
+                unified_response = self._transform_response(
+                    provider.name, model.name, result
+                )
 
             # Calculate latency
             latency_ms = int((__import__("time").time() - start_time) * 1000)
@@ -447,6 +498,132 @@ class ModelOrchestrator:
         )
         self.db.add(usage)
         self.db.commit()
+
+    async def _handle_streaming_response(
+        self,
+        api_url: str,
+        provider_api_key: str,
+        transformed_request: Dict[str, Any],
+        provider_name: str,
+        model_name: str,
+        api_key: Optional[Union[APIKey, Dict[str, Any]]] = None,
+        endpoint: str = "/completions",
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        Handle streaming response from the model provider.
+
+        Args:
+            api_url: The API URL to call
+            provider_api_key: The API key for the provider
+            transformed_request: The transformed request data
+            provider_name: The name of the provider
+            model_name: The name of the model
+            api_key: The API key used for the request (for usage tracking)
+            endpoint: The API endpoint being called (for usage tracking)
+
+        Returns:
+            An async generator that yields chunks of the response
+        """
+        logger.info(f"Streaming response from {provider_name} model {model_name}")
+
+        # Extract API key information before streaming starts to avoid session issues
+        api_key_info = None
+        if api_key:
+            try:
+                # Check if api_key is already a dictionary (from stream_generator)
+                if isinstance(api_key, dict):
+                    api_key_info = api_key
+                else:
+                    # Store the necessary information to record usage later
+                    api_key_info = {
+                        "key": getattr(api_key, "key", None),
+                        "id": getattr(api_key, "id", None),
+                        "user_id": getattr(api_key, "user_id", None)
+                    }
+            except Exception as e:
+                # If we can't access the API key attributes, log the error and continue
+                logger.error(f"Failed to extract API key info: {str(e)}")
+                # Create a minimal info dict with None values
+                api_key_info = {
+                    "key": None,
+                    "id": None,
+                    "user_id": None
+                }
+
+        # Create a new client with stream=True
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                api_url,
+                headers={"Authorization": f"Bearer {provider_api_key}"},
+                json=transformed_request,
+                timeout=60.0,
+            ) as response:
+                response.raise_for_status()
+
+                # Track total tokens for usage recording
+                total_tokens = 0
+
+                # Add sources field to the first chunk to ensure frontend gets it
+                sources_added = False
+
+                async for chunk in response.aiter_lines():
+                    if chunk.strip():
+                        # Process the chunk (remove "data: " prefix if present)
+                        if chunk.startswith("data: "):
+                            chunk = chunk[6:]
+
+                        # Skip "[DONE]" message
+                        if chunk == "[DONE]":
+                            continue
+
+                        try:
+                            # Parse the chunk as JSON
+                            chunk_data = json.loads(chunk)
+
+                            # Extract token count if available
+                            if "usage" in chunk_data and "total_tokens" in chunk_data["usage"]:
+                                total_tokens = chunk_data["usage"]["total_tokens"]
+
+                            # For RAG responses, add empty sources array to first chunk
+                            # This helps the frontend know it's a RAG response
+                            if not sources_added and endpoint == "/rag" and "choices" in chunk_data:
+                                # Add empty sources array that will be populated by the follow-up request
+                                chunk_data["sources"] = []
+                                sources_added = True
+                                # Re-serialize the modified chunk
+                                chunk = json.dumps(chunk_data)
+
+                            # Yield the chunk
+                            yield (chunk + "\n").encode("utf-8")
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse chunk as JSON: {chunk}")
+                            # Still yield the chunk even if it's not valid JSON
+                            yield (chunk + "\n").encode("utf-8")
+
+                # Record usage if we have API key info
+                if api_key_info and api_key_info["key"] != "test_key_123":
+                    try:
+                        # Calculate latency
+                        latency_ms = int((response.elapsed.total_seconds()) * 1000)
+
+                        # Create usage record directly instead of using _record_usage
+                        usage = UsageRecord(
+                            user_id=api_key_info["user_id"],
+                            api_key_id=api_key_info["id"],
+                            endpoint=endpoint,
+                            model=model_name,
+                            tokens_used=total_tokens,
+                            latency_ms=latency_ms,
+                            status_code=200,
+                            error=False
+                        )
+                        self.db.add(usage)
+                        self.db.commit()
+                    except Exception as e:
+                        # Log but don't fail if usage recording fails
+                        logger.error(f"Failed to record streaming usage: {str(e)}")
+                        # Don't re-raise the exception to avoid breaking the streaming response
 
     def get_available_models(self, model_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get a list of available models."""

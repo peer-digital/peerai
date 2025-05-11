@@ -867,7 +867,8 @@
                     temperature: TEMPERATURE,
                     model: MODEL,
                     top_k: parseInt('{{rag_settings.top_k_results}}') || 5,
-                    similarity_threshold: parseFloat('{{rag_settings.similarity_threshold}}') || 0.7
+                    similarity_threshold: parseFloat('{{rag_settings.similarity_threshold}}') || 0.7,
+                    stream: true // Enable streaming
                 };
 
                 // Get the app ID from the template - this is the correct ID set by the backend
@@ -933,7 +934,25 @@
                     console.log('Making RAG API request to:', RAG_API_URL);
 
                     try {
-                        response = await fetch(RAG_API_URL, {
+                        // Create a message div for the AI response that we'll update incrementally
+                        const aiMessageDiv = document.createElement('div');
+                        aiMessageDiv.className = 'message ai-message';
+                        aiMessageDiv.id = 'streaming-message';
+
+                        // Remove typing indicator
+                        const indicator = document.getElementById('typing-indicator');
+                        if (indicator) {
+                            chatContainer.removeChild(indicator);
+                        }
+
+                        // Add the empty message div to the chat
+                        chatContainer.appendChild(aiMessageDiv);
+
+                        // Scroll to bottom
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                        // Make the streaming request
+                        const streamResponse = await fetch(RAG_API_URL, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify(ragRequestBody),
@@ -941,11 +960,18 @@
                             mode: 'cors',
                             credentials: 'include'
                         });
-                        console.log('RAG API response status:', response.status);
+
+                        console.log('RAG API stream response status:', streamResponse.status);
 
                         // Handle 404 error (no documents found) by falling back to standard completions API
-                        if (response.status === 404) {
+                        if (streamResponse.status === 404) {
                             console.log('No documents found for this app. Falling back to standard completions API.');
+
+                            // Remove the streaming message div
+                            chatContainer.removeChild(aiMessageDiv);
+
+                            // Add back the typing indicator
+                            chatContainer.appendChild(typingIndicator);
 
                             // Prepare request body for standard completions API
                             const completionsRequestBody = {
@@ -975,7 +1001,119 @@
                             });
 
                             console.log('Completions API response status:', response.status);
+                            return; // Exit this block and continue with normal JSON processing
                         }
+
+                        if (!streamResponse.ok) {
+                            throw new Error(`API error: ${streamResponse.status}`);
+                        }
+
+                        // Process the streaming response
+                        const reader = streamResponse.body.getReader();
+                        const decoder = new TextDecoder();
+                        let accumulatedResponse = '';
+                        let sources = [];
+
+                        // Read the stream
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            // Decode the chunk
+                            const chunk = decoder.decode(value, { stream: true });
+                            console.log('Received chunk:', chunk);
+
+                            // Split the chunk by newlines to get individual JSON objects
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                if (!line.trim()) continue;
+
+                                try {
+                                    // Parse the JSON
+                                    const data = JSON.parse(line);
+
+                                    // Check if this is a delta update from Mistral API
+                                    if (data.choices && data.choices[0]) {
+                                        // Handle both delta format (streaming) and message format (non-streaming)
+                                        const contentUpdate = data.choices[0].delta?.content || data.choices[0].message?.content;
+
+                                        // If there's content, add it to our accumulated response
+                                        if (contentUpdate) {
+                                            accumulatedResponse += contentUpdate;
+
+                                            // Update the message div with the accumulated response
+                                            // Process markdown-like formatting
+                                            let formattedText = accumulatedResponse
+                                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                                                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                                                .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                                                .replace(/\n/g, '<br>');                           // Line breaks
+
+                                            aiMessageDiv.innerHTML = formattedText;
+
+                                            // Scroll to bottom
+                                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                                        }
+                                    }
+
+                                    // Check if this contains sources information
+                                    if (data.sources) {
+                                        sources = data.sources;
+                                    }
+                                } catch (e) {
+                                    console.warn('Error parsing streaming JSON:', e, line);
+                                }
+                            }
+                        }
+
+                        // After the stream is done, update the message with sources if available
+                        if (sources.length > 0) {
+                            // Remove the streaming message div
+                            chatContainer.removeChild(aiMessageDiv);
+
+                            // Add a complete message with sources
+                            addMessage(accumulatedResponse, 'ai', sources);
+                        } else if (accumulatedResponse) {
+                            // If we have a response but no sources, keep the streaming message as is
+                            // This ensures we don't lose the streamed content
+                            console.log('Stream completed with content but no sources');
+
+                            // For RAG responses, we need to make an additional request to get the sources
+                            // since they might not be included in the streaming response
+                            try {
+                                console.log('Fetching sources for completed streaming response');
+                                // Make a non-streaming request to get sources
+                                const sourcesRequestBody = {...ragRequestBody, stream: false};
+                                const sourcesResponse = await fetch(RAG_API_URL, {
+                                    method: 'POST',
+                                    headers: headers,
+                                    body: JSON.stringify(sourcesRequestBody)
+                                });
+
+                                if (sourcesResponse.ok) {
+                                    const sourcesData = await sourcesResponse.json();
+                                    if (sourcesData.sources && sourcesData.sources.length > 0) {
+                                        console.log('Retrieved sources:', sourcesData.sources);
+                                        // Remove the streaming message div
+                                        chatContainer.removeChild(aiMessageDiv);
+                                        // Add a complete message with sources
+                                        addMessage(accumulatedResponse, 'ai', sourcesData.sources);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Failed to fetch sources for streaming response:', e);
+                                // Keep the streaming message without sources
+                            }
+                        } else {
+                            // If we have no accumulated response, show an error
+                            chatContainer.removeChild(aiMessageDiv);
+                            addMessage('{{content.error_message}}', 'ai');
+                        }
+
+                        // Set response to a dummy object to skip the normal JSON processing
+                        response = { ok: true, streaming: true, json: () => ({ streaming: true }) };
+
                     } catch (fetchError) {
                         console.error('Error calling backend directly:', fetchError);
                         throw new Error('Failed to connect to backend server. Please make sure the server is running on port 8000.');
@@ -1001,26 +1139,31 @@
                     throw new Error(`API error: ${response.status}`);
                 }
 
-                const data = await response.json();
-                console.log('API response data:', data);
+                // Only process JSON response for non-streaming responses
+                if (!response.streaming) {
+                    const data = await response.json();
+                    console.log('API response data:', data);
 
-                if (data.answer) {
-                    // This is a RAG response
-                    // Pass the sources to the addMessage function
-                    addMessage(data.answer, 'ai', data.sources);
+                    if (data.answer) {
+                        // This is a RAG response
+                        // Pass the sources to the addMessage function
+                        addMessage(data.answer, 'ai', data.sources);
 
-                    // Log sources for debugging
-                    if (data.sources && data.sources.length > 0) {
-                        console.log('Sources used for answer:', data.sources);
+                        // Log sources for debugging
+                        if (data.sources && data.sources.length > 0) {
+                            console.log('Sources used for answer:', data.sources);
+                        }
+                    } else if (data.choices && data.choices.length > 0) {
+                        // This is a standard completions response
+                        const aiMessage = data.choices[0].message.content;
+
+                        // Just show the AI response without any prefix about missing documents
+                        addMessage(aiMessage, 'ai');
+                    } else {
+                        addMessage('{{content.no_response_text}}', 'ai');
                     }
-                } else if (data.choices && data.choices.length > 0) {
-                    // This is a standard completions response
-                    const aiMessage = data.choices[0].message.content;
-
-                    // Just show the AI response without any prefix about missing documents
-                    addMessage(aiMessage, 'ai');
                 } else {
-                    addMessage('{{content.no_response_text}}', 'ai');
+                    console.log('Streaming response completed');
                 }
             } catch (error) {
                 console.error('Error:', error);

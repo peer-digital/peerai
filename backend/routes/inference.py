@@ -11,7 +11,9 @@ from fastapi import (
     Header,
     WebSocket,
     Query,
+    Response,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, validator
 import time
@@ -19,6 +21,7 @@ import random
 import httpx
 import logging
 import asyncio  # Required for sleep in retry logic
+import json
 from sqlalchemy import func
 
 from backend.models.auth import APIKey, User, DBSystemSettings
@@ -47,6 +50,7 @@ class TextCompletionRequest(BaseModel):
     stop: Optional[Union[str, List[str]]] = None
     random_seed: Optional[int] = None
     model: Optional[str] = None  # Model name to use, or None for default
+    stream: Optional[bool] = Field(default=False)  # Whether to stream the response
     # mock_mode is only available in development environment
     mock_mode: Optional[bool] = Field(default=False, exclude=settings.ENVIRONMENT != "development")
 
@@ -480,6 +484,10 @@ async def create_completion(
         record_usage(db, api_key, "/completions", response, 200)
         return response
 
+    # Handle streaming response
+    if hasattr(request, 'stream') and request.stream:
+        return await create_streaming_completion(request, api_key, db, orchestrator)
+
     # Check rate limits
     await check_rate_limits(api_key, db)
 
@@ -544,10 +552,15 @@ async def create_rag_completion(
     request: RAGCompletionRequest,
     api_key: APIKey = Depends(get_api_key),
     db: Session = Depends(get_db),
+    orchestrator: ModelOrchestrator = Depends(get_orchestrator),
 ):
     """Create a RAG-based completion using document context"""
     # Record start time for latency tracking
     start_time = time.time()
+
+    # Handle streaming response separately
+    if request.stream:
+        return await create_streaming_rag_completion(request, api_key, db, orchestrator)
 
     # Handle mock mode
     if request.mock_mode or settings.MOCK_MODE:
@@ -819,6 +832,254 @@ async def create_rag_completion(
             detail=detail
         )
 
+
+async def create_streaming_completion(
+    request: TextCompletionRequest,
+    api_key: APIKey,
+    db: Session,
+    orchestrator: ModelOrchestrator,
+):
+    """Create a streaming completion for the given prompt or messages"""
+    try:
+        # Check rate limits
+        await check_rate_limits(api_key, db)
+
+        # Prepare request data
+        request_data = {}
+
+        # Include either prompt or messages
+        if request.prompt:
+            request_data["prompt"] = request.prompt
+        elif request.messages:
+            request_data["messages"] = request.messages
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Either prompt or messages must be provided"
+            )
+
+        # Add other parameters
+        request_data["temperature"] = request.temperature
+
+        # Get system settings for max_tokens if not provided
+        system_settings = db.query(DBSystemSettings).first()
+        if request.max_tokens is not None:
+            request_data["max_tokens"] = request.max_tokens
+        elif system_settings and system_settings.models and "maxTokens" in system_settings.models:
+            # Use system settings for max_tokens
+            request_data["max_tokens"] = system_settings.models["maxTokens"]
+
+        if request.top_p is not None:
+            request_data["top_p"] = request.top_p
+        if request.stop is not None:
+            request_data["stop"] = request.stop
+        if request.random_seed is not None:
+            request_data["random_seed"] = request.random_seed
+
+        # Call the model with streaming enabled
+        # This now returns a generator function, not an async generator
+        generator_func = await orchestrator.call_model(
+            request_data=request_data,
+            model_name=request.model,
+            api_key=api_key,
+            endpoint="/completions",
+            stream=True
+        )
+
+        # Return a streaming response with the generator function
+        return StreamingResponse(
+            generator_func(),
+            media_type="application/json"
+        )
+
+    except Exception as e:
+        # Record error
+        error_record = UsageRecord(
+            user_id=api_key.user_id,
+            api_key_id=api_key.id,
+            endpoint="/completions",
+            model="error",
+            tokens_used=0,
+            latency_ms=0,
+            status_code=500,
+            error=True,
+            error_message=str(e)
+        )
+        db.add(error_record)
+        db.commit()
+
+        # Log the error for debugging
+        logger.error(f"Streaming completion request failed: {str(e)}")
+
+        # Provide more specific error messages for common issues
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            detail = "Rate limit exceeded. The system is experiencing high demand. Please try again in a few moments."
+        elif "token limit" in str(e).lower() or "context length" in str(e).lower():
+            detail = "The input is too large for the model. Try using a shorter prompt or fewer messages."
+        else:
+            detail = f"Error processing streaming completion request: {str(e)}"
+
+        raise HTTPException(
+            status_code=500,
+            detail=detail
+        )
+
+
+async def create_streaming_rag_completion(
+    request: RAGCompletionRequest,
+    api_key: APIKey,
+    db: Session,
+    orchestrator: ModelOrchestrator,
+):
+    """Create a streaming RAG-based completion using document context"""
+    try:
+        # Initialize document processor
+        doc_processor = DocumentProcessor(db)
+
+        # Determine app_id to use
+        app_id_to_use = None
+        app_documents = None
+
+        # If app_id is provided, use it directly
+        if request.app_id:
+            app_id_to_use = request.app_id
+            logger.info(f"Using provided app_id: {app_id_to_use}")
+
+        # Try to get app_id from app_slug
+        elif hasattr(request, 'app_slug') and request.app_slug:
+            from backend.models.deployed_apps import DeployedApp
+            app = db.query(DeployedApp).filter(DeployedApp.slug == request.app_slug).first()
+            if app:
+                app_id_to_use = app.id
+                logger.info(f"Found app_id {app_id_to_use} for slug {request.app_slug}")
+                # Store the app_id for future use
+                request.app_id = app_id_to_use
+
+        # Try to extract app_id from app_slug if it's in the format "rag-chatbot-123"
+        if not app_id_to_use and hasattr(request, 'app_slug') and request.app_slug:
+            import re
+            match = re.search(r'(\d+)$', request.app_slug)
+            if match:
+                extracted_id = int(match.group(1))
+                logger.info(f"Extracted app_id {extracted_id} from slug {request.app_slug}")
+
+                # Check if this ID exists in the database
+                from backend.models.deployed_apps import DeployedApp
+                app = db.query(DeployedApp).filter(DeployedApp.id == extracted_id).first()
+                if app:
+                    app_id_to_use = extracted_id
+                    logger.info(f"Found app with extracted ID {app_id_to_use}")
+                    # Store the app_id for future use
+                    request.app_id = app_id_to_use
+
+        # Now get the app documents using the app_id we determined
+        if app_id_to_use:
+            app_documents = db.query(AppDocument).filter(
+                AppDocument.app_id == app_id_to_use,
+                AppDocument.is_active.is_(True)
+            ).all()
+            logger.info(f"Found {len(app_documents)} documents for app_id {app_id_to_use}")
+
+        if not app_documents or len(app_documents) == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No documents found for this app. Please upload documents first."
+            )
+
+        # Get the app ID to use for searching
+        if not request.app_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Either app_id or app_slug must be provided"
+            )
+
+        search_app_id = request.app_id
+        logger.info(f"Using app_id {search_app_id} for document search")
+
+        # Search for relevant document chunks
+        relevant_chunks = await doc_processor.search_similar_chunks(
+            query=request.query,
+            app_id=search_app_id,
+            top_k=request.top_k or 3,
+            threshold=request.similarity_threshold or 0.7
+        )
+
+        # Convert chunks to the format expected by the model
+        context = "\n\n".join([chunk["text"] for chunk in relevant_chunks])
+
+        # Prepare messages for the model
+        system_prompt = "You are a helpful assistant that answers questions based on the provided document context. When answering, use the information from the documents when available. If the answer is not in the documents, say so clearly and provide a general response based on your knowledge."
+
+        messages = [
+            {"role": "system", "content": f"{system_prompt}\n\nDocument Context:\n{context}"},
+            {"role": "user", "content": request.query}
+        ]
+
+        if request.messages:
+            # Add any additional conversation history
+            messages.extend(request.messages)
+
+        # Prepare request data for the model
+        model_name = request.model or settings.EXTERNAL_MODEL
+
+        # Create request data
+        request_data = {
+            "messages": messages,
+            "temperature": request.temperature or 0.7,
+        }
+
+        if request.max_tokens:
+            request_data["max_tokens"] = request.max_tokens
+        if request.top_p:
+            request_data["top_p"] = request.top_p
+
+        # Call the model with streaming enabled
+        # This now returns a generator function, not an async generator
+        generator_func = await orchestrator.call_model(
+            request_data=request_data,
+            model_name=model_name,
+            api_key=api_key,
+            endpoint="/rag",
+            stream=True
+        )
+
+        # Return a streaming response with the generator function
+        return StreamingResponse(
+            generator_func(),
+            media_type="application/json"
+        )
+
+    except Exception as e:
+        # Record error
+        error_record = UsageRecord(
+            user_id=api_key.user_id,
+            api_key_id=api_key.id,
+            endpoint="/rag",
+            model="error",
+            tokens_used=0,
+            latency_ms=0,
+            status_code=500,
+            error=True,
+            error_message=str(e)
+        )
+        db.add(error_record)
+        db.commit()
+
+        # Log the error for debugging
+        logger.error(f"Streaming RAG request failed: {str(e)}")
+
+        # Provide more specific error messages for common issues
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            detail = "Rate limit exceeded. The system is experiencing high demand. Please try again in a few moments."
+        elif "token limit" in str(e).lower() or "context length" in str(e).lower():
+            detail = "The document context is too large for the model. Try using fewer or smaller documents."
+        else:
+            detail = f"Error processing streaming RAG request: {str(e)}"
+
+        raise HTTPException(
+            status_code=500,
+            detail=detail
+        )
 
 @router.get("/models", response_model=List[Dict[str, Any]])
 async def get_available_models(

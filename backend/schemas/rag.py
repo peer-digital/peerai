@@ -18,6 +18,7 @@ class RAGCompletionRequest(BaseModel):
     top_k: Optional[int] = Field(default=5, ge=1, le=20)
     similarity_threshold: Optional[float] = Field(default=0.7, ge=0.0, le=1.0)
     model: Optional[str] = None  # Model name to use, or None for default
+    stream: Optional[bool] = Field(default=False)  # Whether to stream the response
     # mock_mode is only available in development environment
     mock_mode: Optional[bool] = Field(default=False)
 
