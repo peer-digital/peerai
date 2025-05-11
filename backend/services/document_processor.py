@@ -80,10 +80,8 @@ class DocumentProcessor:
                 chunk_token_count = self._count_tokens(chunk)
                 logger.info(f"Processing chunk {i+1}/{len(chunks)} with {chunk_token_count} tokens")
 
-                # Add a delay between chunks to respect rate limits (1 RPS)
-                if i > 0:
-                    logger.info(f"Waiting 1.1 seconds before processing next chunk to respect rate limits")
-                    await asyncio.sleep(1.1)  # Slightly more than 1 second to be safe
+                # No delay between chunks as we now have upgraded our rate limits
+                # The retry logic in _generate_embedding will handle any rate limiting issues
 
                 try:
                     embedding = await self._generate_embedding(chunk)
@@ -410,7 +408,7 @@ class DocumentProcessor:
     async def _generate_embedding(self, text: str, max_retries: int = 5) -> List[float]:
         """
         Generate an embedding for a text chunk using the ModelOrchestrator.
-        Includes retry logic for rate limiting.
+        Includes enhanced retry logic for rate limiting with exponential backoff and jitter.
 
         Args:
             text: Text to generate embedding for.
@@ -437,6 +435,7 @@ class DocumentProcessor:
         # Import the ModelOrchestrator
         from backend.services.model_orchestrator import ModelOrchestrator
         from backend.models.auth import APIKey
+        import random
 
         # Create a test API key for usage tracking
         # In a production environment, you would use a real API key
@@ -454,7 +453,8 @@ class DocumentProcessor:
         orchestrator = ModelOrchestrator(self.db)
 
         retries = 0
-        base_delay = 1  # Start with a 1-second delay (respecting 1 RPS limit)
+        base_delay = 0.5  # Start with a shorter delay since we've upgraded our rate limits
+        max_delay = 30    # Maximum delay in seconds
 
         while retries <= max_retries:
             try:
@@ -494,11 +494,28 @@ class DocumentProcessor:
             except Exception as e:
                 logger.error(f"Error generating embedding: {str(e)}")
 
-                # For rate limit errors, retry with backoff
+                # Extract retry-after header if available in the error
+                retry_after = None
+                if hasattr(e, 'response') and hasattr(e.response, 'headers'):
+                    retry_after = e.response.headers.get('retry-after')
+                    if retry_after:
+                        try:
+                            retry_after = float(retry_after)
+                            logger.info(f"Received retry-after header: {retry_after} seconds")
+                        except (ValueError, TypeError):
+                            retry_after = None
+
+                # For rate limit errors (429), retry with backoff
                 if "429" in str(e) or "rate limit" in str(e).lower():
                     if retries < max_retries:
-                        delay = base_delay * (2 ** retries)
-                        logger.warning(f"Rate limit hit. Retrying in {delay} seconds (attempt {retries+1}/{max_retries})")
+                        # Use retry-after if available, otherwise use exponential backoff with jitter
+                        if retry_after:
+                            delay = min(retry_after, max_delay)
+                        else:
+                            # Calculate exponential backoff with jitter
+                            delay = min(base_delay * (2 ** retries) * (0.5 + random.random()), max_delay)
+
+                        logger.warning(f"Rate limit hit. Retrying in {delay:.2f} seconds (attempt {retries+1}/{max_retries})")
                         await asyncio.sleep(delay)
                         retries += 1
                         continue
@@ -518,16 +535,16 @@ class DocumentProcessor:
                     except Exception as parse_error:
                         logger.error(f"Error parsing token count from error message: {str(parse_error)}")
 
-                # For other errors, retry a few times
+                # For other errors, retry with exponential backoff and jitter
                 if retries < max_retries:
-                    delay = base_delay * (2 ** retries)
-                    logger.warning(f"Unexpected error. Retrying in {delay} seconds (attempt {retries+1}/{max_retries})")
+                    # Calculate exponential backoff with jitter
+                    delay = min(base_delay * (2 ** retries) * (0.5 + random.random()), max_delay)
+                    logger.warning(f"Unexpected error. Retrying in {delay:.2f} seconds (attempt {retries+1}/{max_retries})")
                     await asyncio.sleep(delay)
                     retries += 1
                 else:
                     # Fallback to random vector if API call fails after all retries
-                    import random
-                    logger.warning("Using random vector as fallback due to embedding generation failure")
+                    logger.warning("Using random vector as fallback due to embedding generation failure after all retries")
 
                     # Close the orchestrator's HTTP client
                     await orchestrator.close()
@@ -540,7 +557,7 @@ class DocumentProcessor:
         # Close the orchestrator's HTTP client
         await orchestrator.close()
 
-        import random
+        # Return a random vector as fallback
         return [random.random() for _ in range(1024)]
 
     async def search_similar_chunks(
