@@ -603,6 +603,37 @@
                 return;
             }
 
+            // Create loading indicator early so it's available throughout the function
+            const loadingIndicator = document.createElement('span');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.innerHTML = '&#8226;'; // Dot character (bullet point)
+            loadingIndicator.style.animation = 'pulse 1.5s infinite';
+
+            // Add a style for the pulsating animation if it doesn't exist
+            if (!document.querySelector('style#loading-animation')) {
+                const style = document.createElement('style');
+                style.id = 'loading-animation';
+                style.textContent = `
+                    @keyframes pulse {
+                        0% { opacity: 0.3; transform: scale(0.7); }
+                        50% { opacity: 1; transform: scale(1.3); }
+                        100% { opacity: 0.3; transform: scale(0.7); }
+                    }
+                    .loading-indicator {
+                        display: inline-block;
+                        margin-left: 3px;
+                        margin-right: 1px;
+                        font-weight: bold;
+                        color: var(--primary-color, #4a6cf7);
+                        font-size: 1.5em; /* Increase the size */
+                        line-height: 0.7; /* Adjust line height to align properly */
+                        position: relative;
+                        top: 0.1em; /* Fine-tune vertical alignment */
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
             console.log('Sending message:', message);
 
             // Add user message to chat
@@ -945,7 +976,12 @@
                             chatContainer.removeChild(indicator);
                         }
 
-                        // Add the empty message div to the chat
+                        // Add the empty message div to the chat with a blinking cursor
+                        // This shows the user that the system is ready to start streaming
+                        const initialCursor = loadingIndicator.cloneNode(true);
+                        aiMessageDiv.appendChild(initialCursor);
+
+                        // Add the message div to the chat
                         chatContainer.appendChild(aiMessageDiv);
 
                         // Scroll to bottom
@@ -1014,25 +1050,7 @@
                         let accumulatedResponse = '';
                         let sources = [];
 
-                        // Add a loading indicator to show streaming is active
-                        const loadingIndicator = document.createElement('span');
-                        loadingIndicator.className = 'loading-indicator';
-                        loadingIndicator.textContent = '▋'; // Cursor-like indicator
-                        loadingIndicator.style.animation = 'blink 1s infinite';
-
-                        // Add a style for the blinking animation if it doesn't exist
-                        if (!document.querySelector('style#loading-animation')) {
-                            const style = document.createElement('style');
-                            style.id = 'loading-animation';
-                            style.textContent = `
-                                @keyframes blink {
-                                    0% { opacity: 1; }
-                                    50% { opacity: 0; }
-                                    100% { opacity: 1; }
-                                }
-                            `;
-                            document.head.appendChild(style);
-                        }
+                        // Loading indicator is already created at the beginning of the function
 
                         // Helper function to process a chunk with a small delay
                         // This helps prevent UI blocking and ensures more frequent visual updates
