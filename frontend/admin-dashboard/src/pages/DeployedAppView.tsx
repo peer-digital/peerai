@@ -18,6 +18,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  TextField,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -84,6 +87,11 @@ const DeployedAppView: React.FC = () => {
   const [customUiSchema, setCustomUiSchema] = useState<any>(null);
   const [editingSections, setEditingSections] = useState<string[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [appSettings, setAppSettings] = useState({
+    name: '',
+    is_active: true
+  });
+  const [isEditingAppSettings, setIsEditingAppSettings] = useState(false);
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -123,6 +131,12 @@ const DeployedAppView: React.FC = () => {
   useEffect(() => {
     if (app) {
       setFormData(app.configuration || {});
+
+      // Initialize app settings
+      setAppSettings({
+        name: app.name,
+        is_active: app.is_active
+      });
 
       // Check if this is a RAG chatbot template and create a custom UI schema
       if (app.template.slug === 'rag-chatbot' && app.template.template_config?.uiSchema) {
@@ -212,6 +226,46 @@ const DeployedAppView: React.FC = () => {
       onSuccess: () => {
         // Show success toast
         showToast(`${getSectionTitle(sectionKey)} settings saved successfully`, 'success');
+      }
+    });
+  };
+
+  // Handle app settings input changes
+  const handleAppSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, checked } = e.target;
+    setAppSettings((prev) => ({
+      ...prev,
+      [name]: name === 'is_active' ? checked : value,
+    }));
+  };
+
+  // Handle app settings edit toggle
+  const toggleAppSettingsEdit = () => {
+    setIsEditingAppSettings(!isEditingAppSettings);
+
+    // If we're canceling the edit, reset to original values
+    if (isEditingAppSettings && app) {
+      setAppSettings({
+        name: app.name,
+        is_active: app.is_active
+      });
+    }
+  };
+
+  // Handle app settings save
+  const saveAppSettings = () => {
+    if (!app) return;
+
+    updateMutation.mutate({
+      slug: app.slug,
+      updates: {
+        name: appSettings.name,
+        is_active: appSettings.is_active,
+      },
+    }, {
+      onSuccess: () => {
+        setIsEditingAppSettings(false);
+        showToast('App settings saved successfully', 'success');
       }
     });
   };
@@ -428,6 +482,68 @@ const DeployedAppView: React.FC = () => {
 
         <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
           <TabPanel value={tabValue} index={0}>
+            {/* App Settings Section */}
+            <Paper sx={{ p: 3, mb: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">App Settings</Typography>
+                {canConfigureApps && (
+                  <Button
+                    variant="outlined"
+                    color={isEditingAppSettings ? "primary" : "inherit"}
+                    onClick={toggleAppSettingsEdit}
+                  >
+                    {isEditingAppSettings ? "Cancel" : "Edit"}
+                  </Button>
+                )}
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {isEditingAppSettings ? (
+                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <TextField
+                    label="App Name"
+                    name="name"
+                    value={appSettings.name}
+                    onChange={handleAppSettingsChange}
+                    fullWidth
+                    required
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={appSettings.is_active}
+                        onChange={handleAppSettingsChange}
+                        name="is_active"
+                        color="primary"
+                      />
+                    }
+                    label="Active"
+                  />
+
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={saveAppSettings}
+                      disabled={updateMutation.isPending}
+                    >
+                      {updateMutation.isPending ? <CircularProgress size={24} /> : 'Save Changes'}
+                    </Button>
+                  </Box>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography><strong>App Name:</strong> {app.name}</Typography>
+                  <Typography>
+                    <strong>Status:</strong> {app.is_active ? 'Active' : 'Inactive'}
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+
+            {/* App Configuration */}
             {app.template.template_config?.schema && (
               <EnhancedConfigForm
                 schema={app.template.template_config.schema as JSONSchema7}

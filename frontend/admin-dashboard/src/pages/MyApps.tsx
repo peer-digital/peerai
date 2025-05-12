@@ -30,9 +30,10 @@ import {
   Delete as DeleteIcon,
   Settings as SettingsIcon,
   Close as CloseIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import deployedAppsApi, { DeployedApp, DeployedAppDetail, DeployedAppUpdate } from '../api/deployedApps';
+import deployedAppsApi, { DeployedApp, DeployedAppDetail } from '../api/deployedApps';
 import { EmptyState, PageTitle, SearchField } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
@@ -45,13 +46,7 @@ const MyApps: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<DeployedAppDetail | null>(null);
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [configFormData, setConfigFormData] = useState<DeployedAppUpdate>({
-    name: '',
-    is_active: true,
-    configuration: {},
-  });
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -60,16 +55,6 @@ const MyApps: React.FC = () => {
   const { data: deployedApps, isLoading, error, refetch } = useQuery({
     queryKey: ['deployed-apps'],
     queryFn: () => deployedAppsApi.getDeployedApps(),
-  });
-
-  // Update app mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ slug, data }: { slug: string; data: DeployedAppUpdate }) =>
-      deployedAppsApi.updateDeployedApp(slug, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deployed-apps'] });
-      setIsConfigModalOpen(false);
-    },
   });
 
   // Delete app mutation
@@ -81,23 +66,6 @@ const MyApps: React.FC = () => {
     },
   });
 
-  // Handle opening the config modal
-  const handleOpenConfigModal = async (app: DeployedApp) => {
-    try {
-      // Fetch detailed app info
-      const appDetail = await deployedAppsApi.getDeployedApp(app.slug);
-      setSelectedApp(appDetail);
-      setConfigFormData({
-        name: appDetail.name,
-        is_active: appDetail.is_active,
-        configuration: appDetail.configuration || {},
-      });
-      setIsConfigModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching app details:', error);
-    }
-  };
-
   // Handle opening the delete modal
   const handleOpenDeleteModal = async (app: DeployedApp) => {
     try {
@@ -108,25 +76,6 @@ const MyApps: React.FC = () => {
     } catch (error) {
       console.error('Error fetching app details:', error);
     }
-  };
-
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, checked } = e.target;
-    setConfigFormData((prev) => ({
-      ...prev,
-      [name]: name === 'is_active' ? checked : value,
-    }));
-  };
-
-  // Handle form submission
-  const handleSubmitConfig = () => {
-    if (!selectedApp) return;
-
-    updateMutation.mutate({
-      slug: selectedApp.slug,
-      data: configFormData,
-    });
   };
 
   // Handle app deletion
@@ -227,7 +176,8 @@ const MyApps: React.FC = () => {
                   <Button
                     size="small"
                     color="primary"
-                    onClick={() => navigate(`/my-apps/${app.slug}`)}
+                    onClick={() => window.open(app.public_url || '', '_blank')}
+                    endIcon={<OpenInNewIcon />}
                   >
                     Open
                   </Button>
@@ -237,8 +187,8 @@ const MyApps: React.FC = () => {
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => handleOpenConfigModal(app)}
-                          title="Configure"
+                          onClick={() => navigate(`/my-apps/${app.slug}`)}
+                          title="Settings"
                         >
                           <SettingsIcon />
                         </IconButton>
@@ -272,69 +222,7 @@ const MyApps: React.FC = () => {
         />
       )}
 
-      {/* Configuration Modal */}
-      <Dialog open={isConfigModalOpen} onClose={() => setIsConfigModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Configure App: {selectedApp?.name}</Typography>
-            <IconButton edge="end" color="inherit" onClick={() => setIsConfigModalOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <Divider />
-        <DialogContent>
-          {updateMutation.error ? (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {(updateMutation.error as Error).message}
-            </Alert>
-          ) : null}
 
-          <TextField
-            label="App Name"
-            name="name"
-            value={configFormData.name}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-            required
-          />
-
-          <FormControlLabel
-            control={
-              <Switch
-                checked={configFormData.is_active}
-                onChange={handleInputChange}
-                name="is_active"
-                color="primary"
-              />
-            }
-            label="Active"
-            sx={{ mt: 2 }}
-          />
-
-          {/* Add configuration fields based on app requirements */}
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              App Configuration
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              No configurable options available for this app.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setIsConfigModalOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmitConfig}
-            disabled={updateMutation.isPending}
-          >
-            {updateMutation.isPending ? <CircularProgress size={24} /> : 'Save Changes'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog
