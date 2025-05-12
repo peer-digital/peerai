@@ -31,6 +31,7 @@ import {
   Settings as SettingsIcon,
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedApp, DeployedAppDetail } from '../api/deployedApps';
@@ -117,13 +118,26 @@ const MyApps: React.FC = () => {
         </Alert>
       ) : null}
 
-      <Box sx={{ mb: 3 }}>
-        <SearchField
-          placeholder="Search my apps..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onClear={() => setSearchQuery('')}
-        />
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ flexGrow: 1, mr: 2 }}>
+          <SearchField
+            placeholder="Search my apps..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onClear={() => setSearchQuery('')}
+          />
+        </Box>
+        {canConfigureApps && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/app-library')}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            Create New App
+          </Button>
+        )}
       </Box>
 
       {isLoading ? (
@@ -215,9 +229,9 @@ const MyApps: React.FC = () => {
           description={
             searchQuery
               ? "No apps match your search criteria."
-              : "You haven't deployed any apps yet. Visit the App Library to create and deploy apps."
+              : "You haven't deployed any apps yet. Create your first app to get started."
           }
-          actionText="Go to App Library"
+          actionText="Create your first app"
           onAction={() => navigate('/app-library')}
         />
       )}
