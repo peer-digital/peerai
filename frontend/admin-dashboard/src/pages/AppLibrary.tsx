@@ -12,11 +12,15 @@ import {
   CircularProgress,
   Alert,
   Stack,
+  Paper,
   useTheme,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Code as CodeIcon,
+  DesignServices as DesignServicesIcon,
+  Rocket as RocketIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState, PageContainer, SearchField } from '../components/ui';
@@ -104,6 +108,134 @@ const AppLibrary: React.FC = () => {
           </Stack>
         )}
       </Box>
+
+      {/* App Creation Timeline */}
+      <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: theme.shadows[2] }}>
+        <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+          Create Your App in Minutes
+        </Typography>
+
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          {/* Step 1 */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            flex: 1,
+            mb: { xs: 3, md: 0 }
+          }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              color: 'white',
+              mb: 2
+            }}>
+              <CodeIcon fontSize="large" />
+            </Box>
+            <Typography variant="h6" sx={{ mb: 1 }}>1. Select Template</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 220 }}>
+              Choose from our pre-built templates to get started quickly
+            </Typography>
+          </Box>
+
+          {/* Connector Line - Desktop */}
+          <Box sx={{
+            flex: 0.5,
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            height: '60px'
+          }}>
+            <Box sx={{ height: '2px', width: '100%', bgcolor: 'divider' }} />
+            <CheckCircleIcon sx={{
+              position: 'absolute',
+              color: 'primary.main',
+              bgcolor: theme.palette.background.paper,
+              borderRadius: '50%'
+            }} />
+          </Box>
+
+          {/* Step 2 */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            flex: 1,
+            mb: { xs: 3, md: 0 }
+          }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              color: 'white',
+              mb: 2
+            }}>
+              <DesignServicesIcon fontSize="large" />
+            </Box>
+            <Typography variant="h6" sx={{ mb: 1 }}>2. Style & Configure</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 220 }}>
+              Customize your app's appearance and functionality
+            </Typography>
+          </Box>
+
+          {/* Connector Line - Desktop */}
+          <Box sx={{
+            flex: 0.5,
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            height: '60px'
+          }}>
+            <Box sx={{ height: '2px', width: '100%', bgcolor: 'divider' }} />
+            <CheckCircleIcon sx={{
+              position: 'absolute',
+              color: 'primary.main',
+              bgcolor: theme.palette.background.paper,
+              borderRadius: '50%'
+            }} />
+          </Box>
+
+          {/* Step 3 */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            flex: 1
+          }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              color: 'white',
+              mb: 2
+            }}>
+              <RocketIcon fontSize="large" />
+            </Box>
+            <Typography variant="h6" sx={{ mb: 1 }}>3. Deploy</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 220 }}>
+              Launch your app and share it with your team or organization
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
 
       <Typography variant="h5" sx={{ mb: 2, mt: 4 }}>
         App Templates
