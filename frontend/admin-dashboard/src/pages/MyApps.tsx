@@ -38,7 +38,7 @@ import deployedAppsApi, { DeployedApp, DeployedAppDetail } from '../api/deployed
 import { EmptyState, PageTitle, SearchField } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const MyApps: React.FC = () => {
   const theme = useTheme();
@@ -51,6 +51,9 @@ const MyApps: React.FC = () => {
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
+
+  // Check if user has permission to deploy apps (needed for Content Manager access)
+  const canDeployApps = user && hasPermission(user.permissions, Permission.DEPLOY_APPS);
 
   // Fetch deployed apps
   const { data: deployedApps, isLoading, error, refetch } = useQuery({
@@ -117,6 +120,26 @@ const MyApps: React.FC = () => {
           Error loading your apps. Please check your connection and try again.
         </Alert>
       ) : null}
+
+      {/* Content Manager Banner - only shown to users with deploy permissions */}
+      {canDeployApps && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              component={Link}
+              to="/content-manager"
+            >
+              Visit
+            </Button>
+          }
+        >
+          Need to create new AI-powered applications? Visit the Content Manager to get started.
+        </Alert>
+      )}
 
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ flexGrow: 1, mr: 2 }}>

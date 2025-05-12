@@ -32,6 +32,7 @@ const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesManagement'));
 const MyApps = React.lazy(() => import('./pages/MyApps'));
 const AppLibrary = React.lazy(() => import('./pages/AppLibrary'));
+const ContentManagerLanding = React.lazy(() => import('./pages/ContentManagerLanding'));
 const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const DeployAppView = React.lazy(() => import('./pages/DeployAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
@@ -171,6 +172,13 @@ function App() {
                     <Route path="/my-apps/:slug" element={
                       <PermissionGuard requiredPermissions={[Permission.USE_APP_STORE]}>
                         <DeployedAppView />
+                      </PermissionGuard>
+                    } />
+
+                    {/* Content Manager Landing */}
+                    <Route path="/content-manager" element={
+                      <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
+                        <ContentManagerLanding />
                       </PermissionGuard>
                     } />
 
