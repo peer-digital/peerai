@@ -4,11 +4,10 @@ import httpx
 import logging
 import os
 import json
-import asyncio
+import time
 from typing import Dict, Any, Optional, List, AsyncGenerator, Union
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 
 from models.models import ModelProvider, AIModel, ModelRequestMapping
 from models.usage import UsageRecord
@@ -564,42 +563,98 @@ class ModelOrchestrator:
                 # Track total tokens for usage recording
                 total_tokens = 0
 
-                # Add sources field to the first chunk to ensure frontend gets it
+                # Track if we've added sources to any chunk
                 sources_added = False
+                # Track if we've seen the final chunk with finish_reason="stop"
+                final_chunk_seen = False
+                # Store all chunks to identify the last one
+                chunks = []
+                # Store the final chunk data for modification
+                final_chunk_data = None
+                # Store the chunk ID for creating additional chunks
+                chunk_id = None
 
+                # First collect all chunks
                 async for chunk in response.aiter_lines():
                     if chunk.strip():
-                        # Process the chunk (remove "data: " prefix if present)
-                        if chunk.startswith("data: "):
-                            chunk = chunk[6:]
+                        chunks.append(chunk)
 
-                        # Skip "[DONE]" message
-                        if chunk == "[DONE]":
-                            continue
+                # Now process each chunk
+                for i, chunk in enumerate(chunks):
+                    # Process the chunk (remove "data: " prefix if present)
+                    if chunk.startswith("data: "):
+                        chunk = chunk[6:]
 
-                        try:
-                            # Parse the chunk as JSON
-                            chunk_data = json.loads(chunk)
+                    # Skip "[DONE]" message
+                    if chunk == "[DONE]":
+                        continue
 
-                            # Extract token count if available
-                            if "usage" in chunk_data and "total_tokens" in chunk_data["usage"]:
-                                total_tokens = chunk_data["usage"]["total_tokens"]
+                    try:
+                        # Parse the chunk as JSON
+                        chunk_data = json.loads(chunk)
 
-                            # For RAG responses, add empty sources array to first chunk
-                            # This helps the frontend know it's a RAG response
-                            if not sources_added and endpoint == "/rag" and "choices" in chunk_data:
-                                # Add empty sources array that will be populated by the follow-up request
-                                chunk_data["sources"] = []
-                                sources_added = True
-                                # Re-serialize the modified chunk
-                                chunk = json.dumps(chunk_data)
+                        # Store the chunk ID for creating additional chunks if needed
+                        if "id" in chunk_data and chunk_id is None:
+                            chunk_id = chunk_data["id"]
 
-                            # Yield the chunk
-                            yield (chunk + "\n").encode("utf-8")
-                        except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse chunk as JSON: {chunk}")
-                            # Still yield the chunk even if it's not valid JSON
-                            yield (chunk + "\n").encode("utf-8")
+                        # Extract token count if available
+                        if "usage" in chunk_data and "total_tokens" in chunk_data["usage"]:
+                            total_tokens = chunk_data["usage"]["total_tokens"]
+                            logger.info(f"Found usage in chunk: {chunk_data['usage']}")
+
+                        # Check if this is the final chunk (has finish_reason="stop")
+                        is_final_chunk = False
+                        if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
+                            if chunk_data["choices"][0].get("finish_reason") == "stop":
+                                is_final_chunk = True
+                                final_chunk_seen = True
+                                final_chunk_data = chunk_data
+                                logger.info(f"Found final chunk with finish_reason=stop")
+
+                                # For the final chunk, add the sources
+                                if endpoint == "/rag" and "sources" in transformed_request:
+                                    logger.info(f"Adding sources to final chunk: {len(transformed_request['sources'])}")
+                                    chunk_data["sources"] = transformed_request.get("sources", [])
+                                    # Re-serialize the modified chunk
+                                    chunk = json.dumps(chunk_data)
+
+                        # For RAG responses, handle sources for the first chunk
+                        if endpoint == "/rag" and "choices" in chunk_data and not sources_added:
+                            # For the first chunk, add an empty sources array to indicate it's a RAG response
+                            chunk_data["sources"] = []
+                            sources_added = True
+                            logger.info(f"Added empty sources array to first chunk for RAG response")
+                            # Re-serialize the modified chunk
+                            chunk = json.dumps(chunk_data)
+
+                        # Yield the chunk
+                        yield (chunk + "\n").encode("utf-8")
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse chunk as JSON: {chunk}")
+                        # Still yield the chunk even if it's not valid JSON
+                        yield (chunk + "\n").encode("utf-8")
+
+                # If we didn't see a final chunk with finish_reason="stop", but we have sources,
+                # create and yield an additional chunk with the sources
+                if not final_chunk_seen and "sources" in transformed_request and endpoint == "/rag":
+                    logger.info(f"No final chunk with finish_reason=stop found, creating additional chunk with sources")
+
+                    # Create a new chunk with the sources
+                    additional_chunk = {
+                        "id": chunk_id or "additional-chunk",
+                        "object": "chat.completion.chunk",
+                        "created": int(time.time()),
+                        "model": "mistral-large-latest",
+                        "choices": [{"index": 0, "delta": {"content": ""}, "finish_reason": "stop"}],
+                        "sources": transformed_request.get("sources", [])
+                    }
+
+                    # Add usage if we have it
+                    if total_tokens > 0:
+                        additional_chunk["usage"] = {"total_tokens": total_tokens}
+
+                    # Yield the additional chunk
+                    yield (json.dumps(additional_chunk) + "\n").encode("utf-8")
 
                 # Record usage if we have API key info
                 if api_key_info and api_key_info["key"] != "test_key_123":

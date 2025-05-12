@@ -933,6 +933,82 @@ async def create_streaming_rag_completion(
 ):
     """Create a streaming RAG-based completion using document context"""
     try:
+        # Handle mock mode
+        if request.mock_mode or settings.MOCK_MODE:
+            logger.info("Using mock mode for streaming RAG completion")
+
+            # Create mock sources
+            mock_sources = [
+                DocumentChunkResponse(
+                    text="This is a sample document chunk that contains relevant information about the query.",
+                    metadata={
+                        "document_id": 1,
+                        "document_name": "sample_document.pdf",
+                        "chunk_index": 0,
+                        "similarity_score": 0.92
+                    }
+                ),
+                DocumentChunkResponse(
+                    text="Another relevant document chunk that provides additional context for the answer.",
+                    metadata={
+                        "document_id": 2,
+                        "document_name": "another_document.txt",
+                        "chunk_index": 3,
+                        "similarity_score": 0.85
+                    }
+                )
+            ]
+
+            # Create a streaming response with mock data
+            async def mock_stream_generator():
+                # First chunk with empty sources
+                first_chunk = {
+                    "id": "mock-id",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": "mock-rag-model",
+                    "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": None}],
+                    "sources": []
+                }
+                yield (json.dumps(first_chunk) + "\n").encode("utf-8")
+
+                # Content chunks
+                content_parts = [
+                    "Based on the documents, ",
+                    "the answer to your query is that ",
+                    "RAG (Retrieval Augmented Generation) ",
+                    "combines document retrieval with generative AI ",
+                    "to provide more accurate and contextual responses."
+                ]
+
+                for part in content_parts:
+                    content_chunk = {
+                        "id": "mock-id",
+                        "object": "chat.completion.chunk",
+                        "created": int(time.time()),
+                        "model": "mock-rag-model",
+                        "choices": [{"index": 0, "delta": {"content": part}, "finish_reason": None}]
+                    }
+                    yield (json.dumps(content_chunk) + "\n").encode("utf-8")
+                    await asyncio.sleep(0.1)  # Simulate delay between chunks
+
+                # Final chunk with sources
+                final_chunk = {
+                    "id": "mock-id",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": "mock-rag-model",
+                    "choices": [{"index": 0, "delta": {"content": ""}, "finish_reason": "stop"}],
+                    "sources": [source.model_dump() for source in mock_sources],
+                    "usage": {"prompt_tokens": 150, "completion_tokens": 50, "total_tokens": 200}
+                }
+                yield (json.dumps(final_chunk) + "\n").encode("utf-8")
+
+            return StreamingResponse(
+                mock_stream_generator(),
+                media_type="application/json"
+            )
+
         # Initialize document processor
         doc_processor = DocumentProcessor(db)
 
@@ -1033,6 +1109,22 @@ async def create_streaming_rag_completion(
         if request.top_p:
             request_data["top_p"] = request.top_p
 
+        # Add sources to the request data so they can be included in the streaming response
+        # Convert relevant chunks to the response format
+        sources = [
+            DocumentChunkResponse(
+                text=chunk["text"],
+                metadata=chunk["metadata"]
+            )
+            for chunk in relevant_chunks
+        ]
+        # Use model_dump() instead of dict() to avoid deprecation warning
+        request_data["sources"] = [source.model_dump() for source in sources]
+
+        # Log the sources for debugging
+        logger.info(f"Adding {len(sources)} sources to request_data for streaming RAG response")
+        logger.info(f"First source: {sources[0].model_dump() if sources else 'None'}")
+
         # Call the model with streaming enabled
         # This now returns a generator function, not an async generator
         generator_func = await orchestrator.call_model(
@@ -1043,9 +1135,56 @@ async def create_streaming_rag_completion(
             stream=True
         )
 
-        # Return a streaming response with the generator function
+        # Create a wrapper generator that adds sources to the final chunk
+        async def wrapper_generator():
+            # Track if we've seen the final chunk
+            final_chunk_seen = False
+            # Store all chunks
+            chunks = []
+
+            # Process each chunk from the original generator
+            async for chunk_bytes in generator_func():
+                chunk_str = chunk_bytes.decode('utf-8').strip()
+
+                try:
+                    # Parse the chunk as JSON
+                    chunk_data = json.loads(chunk_str)
+
+                    # Check if this is the final chunk (has finish_reason="stop")
+                    if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
+                        if chunk_data["choices"][0].get("finish_reason") == "stop":
+                            final_chunk_seen = True
+                            # Add sources to the final chunk
+                            chunk_data["sources"] = [source.model_dump() for source in sources]
+                            # Re-serialize the modified chunk
+                            chunk_str = json.dumps(chunk_data)
+
+                    # Yield the chunk
+                    yield (chunk_str + "\n").encode("utf-8")
+                except json.JSONDecodeError:
+                    # If we can't parse the chunk, just yield it as is
+                    yield (chunk_str + "\n").encode("utf-8")
+
+            # If we didn't see a final chunk, add an additional chunk with sources
+            if not final_chunk_seen:
+                logger.info(f"No final chunk seen, adding additional chunk with sources")
+
+                # Create a new chunk with the sources
+                additional_chunk = {
+                    "id": "additional-sources-chunk",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": model_name,
+                    "choices": [{"index": 0, "delta": {"content": ""}, "finish_reason": "stop"}],
+                    "sources": [source.model_dump() for source in sources]
+                }
+
+                # Yield the additional chunk
+                yield (json.dumps(additional_chunk) + "\n").encode("utf-8")
+
+        # Return a streaming response with the wrapper generator
         return StreamingResponse(
-            generator_func(),
+            wrapper_generator(),
             media_type="application/json"
         )
 

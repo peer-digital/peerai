@@ -1059,6 +1059,7 @@
 
                                     // Check if this contains sources information
                                     if (data.sources) {
+                                        console.log('Found sources in streaming response chunk:', data.sources.length);
                                         sources = data.sources;
                                     }
                                 } catch (e) {
@@ -1074,37 +1075,15 @@
 
                             // Add a complete message with sources
                             addMessage(accumulatedResponse, 'ai', sources);
+                            console.log('Stream completed with content and sources:', sources.length);
                         } else if (accumulatedResponse) {
                             // If we have a response but no sources, keep the streaming message as is
                             // This ensures we don't lose the streamed content
                             console.log('Stream completed with content but no sources');
 
-                            // For RAG responses, we need to make an additional request to get the sources
-                            // since they might not be included in the streaming response
-                            try {
-                                console.log('Fetching sources for completed streaming response');
-                                // Make a non-streaming request to get sources
-                                const sourcesRequestBody = {...ragRequestBody, stream: false};
-                                const sourcesResponse = await fetch(RAG_API_URL, {
-                                    method: 'POST',
-                                    headers: headers,
-                                    body: JSON.stringify(sourcesRequestBody)
-                                });
-
-                                if (sourcesResponse.ok) {
-                                    const sourcesData = await sourcesResponse.json();
-                                    if (sourcesData.sources && sourcesData.sources.length > 0) {
-                                        console.log('Retrieved sources:', sourcesData.sources);
-                                        // Remove the streaming message div
-                                        chatContainer.removeChild(aiMessageDiv);
-                                        // Add a complete message with sources
-                                        addMessage(accumulatedResponse, 'ai', sourcesData.sources);
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn('Failed to fetch sources for streaming response:', e);
-                                // Keep the streaming message without sources
-                            }
+                            // Just keep the streaming message without sources
+                            // The backend should now include sources in the streaming response
+                            // so we shouldn't need to make a second API call
                         } else {
                             // If we have no accumulated response, show an error
                             chatContainer.removeChild(aiMessageDiv);
