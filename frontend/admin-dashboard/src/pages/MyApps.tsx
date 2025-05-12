@@ -121,7 +121,7 @@ const MyApps: React.FC = () => {
         </Alert>
       ) : null}
 
-      {/* Content Manager Banner - only shown to users with deploy permissions */}
+      {/* Get Started Banner - only shown to users with deploy permissions */}
       {canDeployApps && (
         <Alert
           severity="info"
@@ -137,7 +137,7 @@ const MyApps: React.FC = () => {
             </Button>
           }
         >
-          Need to create new AI-powered applications? Visit the Content Manager to get started.
+          Need to create new AI-powered applications? Visit the Get Started page to begin.
         </Alert>
       )}
 

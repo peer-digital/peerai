@@ -118,7 +118,7 @@ const AppLibrary: React.FC = () => {
           Choose from the templates below to create your new application. The setup process takes just minutes to complete.
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Need help? Visit the <Link to="/content-manager" style={{ color: theme.palette.primary.main }}>Content Manager</Link> page for detailed instructions and information.
+          Need help? Visit the <Link to="/content-manager" style={{ color: theme.palette.primary.main }}>Get Started</Link> page for detailed instructions and information.
         </Typography>
       </Paper>
 

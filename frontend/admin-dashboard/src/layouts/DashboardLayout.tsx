@@ -333,8 +333,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     {
       title: 'Apps',
       items: [
+        { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
-        { text: 'Content Manager', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         ...(user?.role === Role.SUPER_ADMIN ? [
           {

@@ -42,7 +42,7 @@ const ContentManagerLanding: React.FC = () => {
       {/* Hero Section */}
       <Box sx={{ mb: 6, textAlign: 'center' }}>
         <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-          Content Manager Portal
+          Get Started
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: 800, mx: 'auto' }}>
           Create and manage AI-powered applications for your organization without writing any code.
@@ -56,7 +56,7 @@ const ContentManagerLanding: React.FC = () => {
           Create Your App in Minutes
         </Typography>
 
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'center', md: 'flex-start' } }}>
           {/* Step 1 */}
           <Box sx={{
             display: 'flex',
@@ -261,7 +261,7 @@ const ContentManagerLanding: React.FC = () => {
         borderRadius: '0.375rem'
       }}>
         <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>
-          Department Examples
+          Examples
         </Typography>
         <Typography variant="body1" sx={{ mb: 4 }}>
           See how different departments can create their own standalone chat applications with custom styling,
