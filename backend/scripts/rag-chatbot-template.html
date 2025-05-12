@@ -1014,6 +1014,98 @@
                         let accumulatedResponse = '';
                         let sources = [];
 
+                        // Add a loading indicator to show streaming is active
+                        const loadingIndicator = document.createElement('span');
+                        loadingIndicator.className = 'loading-indicator';
+                        loadingIndicator.textContent = '▋'; // Cursor-like indicator
+                        loadingIndicator.style.animation = 'blink 1s infinite';
+
+                        // Add a style for the blinking animation if it doesn't exist
+                        if (!document.querySelector('style#loading-animation')) {
+                            const style = document.createElement('style');
+                            style.id = 'loading-animation';
+                            style.textContent = `
+                                @keyframes blink {
+                                    0% { opacity: 1; }
+                                    50% { opacity: 0; }
+                                    100% { opacity: 1; }
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }
+
+                        // Helper function to process a chunk with a small delay
+                        // This helps prevent UI blocking and ensures more frequent visual updates
+                        const processChunkWithDelay = async (chunk) => {
+                            return new Promise(resolve => {
+                                // Use a minimal timeout to allow the browser to render between chunks
+                                // This is especially important in iframe environments
+                                setTimeout(() => {
+                                    // Split the chunk by newlines to get individual JSON objects
+                                    const lines = chunk.split('\n');
+
+                                    for (const line of lines) {
+                                        if (!line.trim()) continue;
+
+                                        try {
+                                            // Parse the JSON
+                                            const data = JSON.parse(line);
+
+                                            // Check if this is a delta update from Mistral API
+                                            if (data.choices && data.choices[0]) {
+                                                // Handle both delta format (streaming) and message format (non-streaming)
+                                                const contentUpdate = data.choices[0].delta?.content || data.choices[0].message?.content;
+
+                                                // If there's content, add it to our accumulated response
+                                                if (contentUpdate) {
+                                                    // Log the exact content update for debugging
+                                                    console.log('Content update received:', JSON.stringify(contentUpdate));
+
+                                                    // Add to accumulated response
+                                                    accumulatedResponse += contentUpdate;
+
+                                                    // Process markdown-like formatting
+                                                    let formattedText = accumulatedResponse
+                                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                                                        .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                                                        .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                                                        .replace(/\n/g, '<br>');                           // Line breaks
+
+                                                    // Update the UI immediately
+                                                    aiMessageDiv.innerHTML = formattedText;
+
+                                                    // Add the loading indicator at the end of the text
+                                                    if (aiMessageDiv.querySelector('.loading-indicator')) {
+                                                        aiMessageDiv.querySelector('.loading-indicator').remove();
+                                                    }
+                                                    const indicatorClone = loadingIndicator.cloneNode(true);
+                                                    aiMessageDiv.appendChild(indicatorClone);
+
+                                                    // Force a reflow to ensure the browser renders the update
+                                                    void aiMessageDiv.offsetHeight;
+
+                                                    // Scroll to bottom
+                                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                                                    // Log timestamp for debugging
+                                                    console.log('UI updated at:', new Date().toISOString());
+                                                }
+                                            }
+
+                                            // Check if this contains sources information
+                                            if (data.sources) {
+                                                console.log('Found sources in streaming response chunk:', data.sources.length);
+                                                sources = data.sources;
+                                            }
+                                        } catch (e) {
+                                            console.warn('Error parsing streaming JSON:', e, line);
+                                        }
+                                    }
+                                    resolve();
+                                }, 5); // 5ms delay is minimal but helps with rendering
+                            });
+                        };
+
                         // Read the stream
                         while (true) {
                             const { done, value } = await reader.read();
@@ -1023,52 +1115,17 @@
                             const chunk = decoder.decode(value, { stream: true });
                             console.log('Received chunk:', chunk);
 
-                            // Split the chunk by newlines to get individual JSON objects
-                            const lines = chunk.split('\n');
-
-                            for (const line of lines) {
-                                if (!line.trim()) continue;
-
-                                try {
-                                    // Parse the JSON
-                                    const data = JSON.parse(line);
-
-                                    // Check if this is a delta update from Mistral API
-                                    if (data.choices && data.choices[0]) {
-                                        // Handle both delta format (streaming) and message format (non-streaming)
-                                        const contentUpdate = data.choices[0].delta?.content || data.choices[0].message?.content;
-
-                                        // If there's content, add it to our accumulated response
-                                        if (contentUpdate) {
-                                            accumulatedResponse += contentUpdate;
-
-                                            // Update the message div with the accumulated response
-                                            // Process markdown-like formatting
-                                            let formattedText = accumulatedResponse
-                                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
-                                                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
-                                                .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
-                                                .replace(/\n/g, '<br>');                           // Line breaks
-
-                                            aiMessageDiv.innerHTML = formattedText;
-
-                                            // Scroll to bottom
-                                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                                        }
-                                    }
-
-                                    // Check if this contains sources information
-                                    if (data.sources) {
-                                        console.log('Found sources in streaming response chunk:', data.sources.length);
-                                        sources = data.sources;
-                                    }
-                                } catch (e) {
-                                    console.warn('Error parsing streaming JSON:', e, line);
-                                }
-                            }
+                            // Process the chunk with a small delay to allow for UI updates
+                            await processChunkWithDelay(chunk);
                         }
 
                         // After the stream is done, update the message with sources if available
+                        console.log('Stream completed, finalizing message');
+
+                        // Remove any loading indicators
+                        const loadingIndicators = aiMessageDiv.querySelectorAll('.loading-indicator');
+                        loadingIndicators.forEach(indicator => indicator.remove());
+
                         if (sources.length > 0) {
                             // Remove the streaming message div
                             chatContainer.removeChild(aiMessageDiv);
@@ -1084,6 +1141,16 @@
                             // Just keep the streaming message without sources
                             // The backend should now include sources in the streaming response
                             // so we shouldn't need to make a second API call
+
+                            // Make sure the final message doesn't have a loading indicator
+                            // Process markdown-like formatting one final time
+                            let finalFormattedText = accumulatedResponse
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                                .replace(/`(.*?)`/g, '<code>$1</code>')            // Code
+                                .replace(/\n/g, '<br>');                           // Line breaks
+
+                            aiMessageDiv.innerHTML = finalFormattedText;
                         } else {
                             // If we have no accumulated response, show an error
                             chatContainer.removeChild(aiMessageDiv);
