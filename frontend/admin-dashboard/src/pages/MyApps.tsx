@@ -121,26 +121,6 @@ const MyApps: React.FC = () => {
         </Alert>
       ) : null}
 
-      {/* Get Started Banner - only shown to users with deploy permissions */}
-      {canDeployApps && (
-        <Alert
-          severity="info"
-          sx={{ mb: 3 }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              component={Link}
-              to="/content-manager"
-            >
-              Visit
-            </Button>
-          }
-        >
-          Need to create new AI-powered applications? Visit the Get Started page to begin.
-        </Alert>
-      )}
-
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ flexGrow: 1, mr: 2 }}>
           <SearchField
