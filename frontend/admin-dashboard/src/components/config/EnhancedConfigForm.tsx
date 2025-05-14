@@ -395,33 +395,14 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     return null;
   };
 
-  // State to track the currently active section
-  const [activeSection, setActiveSection] = useState<number>(() => {
-    const appSlug = getAppSlugFromUrl();
-    if (appSlug) {
-      const savedSection = localStorage.getItem(`rag_app_${appSlug}_active_section`);
-      return savedSection ? parseInt(savedSection, 10) : 0;
-    }
-    return 0;
-  });
+  // State to track the currently active section - always start at 0
+  const [activeSection, setActiveSection] = useState<number>(0);
 
   // State to track if we're in the completion step (after all sections)
-  const [showCompletion, setShowCompletion] = useState<boolean>(() => {
-    const appSlug = getAppSlugFromUrl();
-    if (appSlug) {
-      return localStorage.getItem(`rag_app_${appSlug}_show_completion`) === 'true';
-    }
-    return false;
-  });
+  const [showCompletion, setShowCompletion] = useState<boolean>(false);
 
   // State to track if we're in the deployment settings step (before completion)
-  const [showDeploymentSettings, setShowDeploymentSettings] = useState<boolean>(() => {
-    const appSlug = getAppSlugFromUrl();
-    if (appSlug) {
-      return localStorage.getItem(`rag_app_${appSlug}_show_deployment`) === 'true';
-    }
-    return false;
-  });
+  const [showDeploymentSettings, setShowDeploymentSettings] = useState<boolean>(false);
 
   // Refs for each accordion
   const accordionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -462,7 +443,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   const getSections = () => {
     if (!schema.properties) return [];
 
-    return Object.entries(schema.properties).map(([key, value]) => {
+    // Get all sections first
+    const allSections = Object.entries(schema.properties).map(([key, value]) => {
       if (typeof value === 'object' && value.type === 'object' && value.properties) {
         // This is a section with nested properties
         return {
@@ -482,6 +464,37 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
         isObject: false,
       };
     });
+
+    // If we're in wizard mode, filter sections for the wizard
+    if (isWizardMode) {
+      // For RAG chatbot template, always use our custom order regardless of ui:wizardOrder
+      if (window.location.pathname.includes('deploy-app/rag-chatbot')) {
+        console.log('Using simplified wizard for RAG chatbot template');
+        // Only include app_settings and documents sections for RAG chatbot
+        const wizardSections = ['app_settings', 'documents'];
+        const filteredSections = allSections.filter(section => wizardSections.includes(section.key));
+
+        // Sort sections in the specified order
+        return filteredSections.sort((a, b) => {
+          return wizardSections.indexOf(a.key) - wizardSections.indexOf(b.key);
+        });
+      }
+      // If there's a wizardOrder in the uiSchema, use it for other templates
+      else if (uiSchema && uiSchema['ui:wizardOrder'] && Array.isArray(uiSchema['ui:wizardOrder'])) {
+        const wizardOrder = uiSchema['ui:wizardOrder'];
+
+        // Filter sections to only include those in the wizardOrder
+        const filteredSections = allSections.filter(section => wizardOrder.includes(section.key));
+
+        // Sort sections according to the wizardOrder
+        return filteredSections.sort((a, b) => {
+          return wizardOrder.indexOf(a.key) - wizardOrder.indexOf(b.key);
+        });
+      }
+    }
+
+    // Otherwise, return all sections
+    return allSections;
   };
 
   const sections = getSections();
@@ -498,6 +511,24 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
 
     // If there's a UI schema for this section in the provided uiSchema, use it
     if (uiSchema && uiSchema[sectionKey]) {
+      // For RAG chatbot in wizard mode, ensure documents section is not disabled
+      if (isWizardMode && window.location.pathname.includes('deploy-app/rag-chatbot') && sectionKey === 'documents') {
+        const documentsUiSchema = {
+          ...uiSchema[sectionKey],
+          'ui:disabled': false, // Ensure documents section is not disabled in wizard
+        };
+
+        // Also ensure the file_upload widget is not disabled
+        if (documentsUiSchema.file_upload) {
+          documentsUiSchema.file_upload['ui:disabled'] = false;
+        }
+
+        return {
+          ...baseUiSchema,
+          ...documentsUiSchema,
+        };
+      }
+
       return {
         ...baseUiSchema,
         ...uiSchema[sectionKey],
@@ -548,75 +579,24 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       setActiveSection(newActiveSection);
       setShowCompletion(false);
       setShowDeploymentSettings(false);
-
-      // Save the active section to localStorage
-      const appSlug = getAppSlugFromUrl();
-      if (appSlug) {
-        localStorage.setItem(`rag_app_${appSlug}_active_section`, newActiveSection.toString());
-      }
     } else if (activeSection === sections.length - 1) {
-      // We're at the last section, move to deployment settings if available
-      if (deploymentSettingsComponent) {
-        setShowDeploymentSettings(true);
-        setShowCompletion(false);
-
-        // Save the state to localStorage
-        const appSlug = getAppSlugFromUrl();
-        if (appSlug) {
-          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'true');
-          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
-        }
-      } else {
-        // No deployment settings, go straight to completion
-        setShowCompletion(true);
-        setShowDeploymentSettings(false);
-
-        // Save the state to localStorage
-        const appSlug = getAppSlugFromUrl();
-        if (appSlug) {
-          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'false');
-          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'true');
-        }
-      }
+      // We're at the last section, skip deployment settings and go straight to completion
+      setShowCompletion(true);
+      setShowDeploymentSettings(false);
     }
   };
 
   // Handle navigation to the previous section
   const handlePrevious = () => {
     if (showCompletion) {
-      // If we're in the completion step, go back to deployment settings if available
-      if (deploymentSettingsComponent) {
-        setShowDeploymentSettings(true);
-        setShowCompletion(false);
-
-        // Save the state to localStorage
-        const appSlug = getAppSlugFromUrl();
-        if (appSlug) {
-          localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'true');
-          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
-        }
-      } else {
-        // No deployment settings, go back to the last section
-        setShowCompletion(false);
-
-        // Save the state to localStorage
-        const appSlug = getAppSlugFromUrl();
-        if (appSlug) {
-          localStorage.setItem(`rag_app_${appSlug}_show_completion`, 'false');
-        }
-      }
+      // If we're in the completion step, go back to the last section
+      setShowCompletion(false);
       return;
     }
 
     if (showDeploymentSettings) {
       // If we're in the deployment settings step, go back to the last section
       setShowDeploymentSettings(false);
-
-      // Save the state to localStorage
-      const appSlug = getAppSlugFromUrl();
-      if (appSlug) {
-        localStorage.setItem(`rag_app_${appSlug}_show_deployment`, 'false');
-      }
       return;
     }
 
@@ -641,12 +621,6 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
 
       const newActiveSection = activeSection - 1;
       setActiveSection(newActiveSection);
-
-      // Save the active section to localStorage
-      const appSlug = getAppSlugFromUrl();
-      if (appSlug) {
-        localStorage.setItem(`rag_app_${appSlug}_active_section`, newActiveSection.toString());
-      }
     }
   };
 
@@ -863,33 +837,9 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                   mb: 3,
                 }}
               >
-                You have successfully configured your RAG chatbot. Click the "Deploy App" button below to launch your app!
+                Your app is ready! Press Launch App to make the app accessible. You can edit all settings in the app settings page after deployment, including additional settings for AI behavior, suggested questions, styling, and more.
               </Typography>
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: '0.375rem', // Match app's card border radius
-                  backgroundColor: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.05)'
-                    : 'rgba(0, 0, 0, 0.03)',
-                  border: `1px solid ${theme.palette.divider}`,
-                  maxWidth: 500,
-                  mx: 'auto',
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  <InfoIcon sx={{ fontSize: 18, mr: 1, color: theme.palette.info.main }} />
-                  You can always change configuration and files in the app settings after deployment.
-                </Typography>
-              </Box>
+
             </>
           )}
         </CardContent>
@@ -918,11 +868,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       });
     } else if (isLastStep) {
       return () => {
-        if (deploymentSettingsComponent) {
-          setShowDeploymentSettings(true);
-        } else {
-          setShowCompletion(true);
-        }
+        // Skip deployment settings and go straight to completion
+        setShowCompletion(true);
       };
     } else {
       return handleNext;
@@ -932,7 +879,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   // Determine the next button text
   const getNextButtonText = () => {
     if (showCompletion) {
-      return isDeploying ? 'Deploying...' : 'Deploy App';
+      return isDeploying ? 'Deploying...' : 'Launch App';
     } else if (showDeploymentSettings) {
       return 'Launch App';
     } else if (isLastStep) {
@@ -1293,7 +1240,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                 }}
               >
                 {showCompletion
-                  ? 'Ready to deploy'
+                  ? 'Ready to launch'
                   : showDeploymentSettings
                     ? 'Final settings'
                     : `Step ${activeSection + 1} of ${sections.length}`}

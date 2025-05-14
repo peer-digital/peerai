@@ -38,6 +38,7 @@ import validator from '@rjsf/validator-ajv8';
 import { replacePlaceholders } from '../utils/templateHelpers';
 import DevicePreview from '../components/preview/DevicePreview';
 import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
+import ApiKeySelector from '../components/common/ApiKeySelector';
 import { showToast } from '../components/ui/Toast';
 
 interface TabPanelProps {
@@ -89,7 +90,8 @@ const DeployedAppView: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [appSettings, setAppSettings] = useState({
     name: '',
-    is_active: true
+    is_active: true,
+    api_key: ''
   });
   const [isEditingAppSettings, setIsEditingAppSettings] = useState(false);
 
@@ -135,7 +137,8 @@ const DeployedAppView: React.FC = () => {
       // Initialize app settings
       setAppSettings({
         name: app.name,
-        is_active: app.is_active
+        is_active: app.is_active,
+        api_key: app.configuration?.api_key || ''
       });
 
       // Check if this is a RAG chatbot template and create a custom UI schema
@@ -143,19 +146,21 @@ const DeployedAppView: React.FC = () => {
         // Create a deep copy of the original UI schema
         const originalUiSchema = JSON.parse(JSON.stringify(app.template.template_config.uiSchema));
 
-        // Enable the documents section for deployed apps
-        if (originalUiSchema.documents) {
-          // Enable the documents section
-          originalUiSchema.documents['ui:disabled'] = false;
+        // Enable all sections that might have been disabled in the wizard
+        const sectionsToEnable = ['documents', 'quick_actions', 'ai_settings', 'styling'];
 
-          // Enable the file upload widget
-          if (originalUiSchema.documents.file_upload) {
-            originalUiSchema.documents.file_upload['ui:disabled'] = false;
-            originalUiSchema.documents.file_upload['ui:help'] = 'Upload files in supported formats to enable document-based answers';
+        sectionsToEnable.forEach(section => {
+          if (originalUiSchema[section]) {
+            // Enable the section
+            originalUiSchema[section]['ui:disabled'] = false;
+
+            // For documents section, also enable the file upload widget
+            if (section === 'documents' && originalUiSchema.documents.file_upload) {
+              originalUiSchema.documents.file_upload['ui:disabled'] = false;
+              originalUiSchema.documents.file_upload['ui:help'] = 'Upload files in supported formats to enable document-based answers';
+            }
           }
-
-          // No description needed
-        }
+        });
 
         setCustomUiSchema(originalUiSchema);
         console.log('Created custom UI schema for RAG app:', originalUiSchema);
@@ -247,7 +252,8 @@ const DeployedAppView: React.FC = () => {
     if (isEditingAppSettings && app) {
       setAppSettings({
         name: app.name,
-        is_active: app.is_active
+        is_active: app.is_active,
+        api_key: app.configuration?.api_key || ''
       });
     }
   };
@@ -256,16 +262,41 @@ const DeployedAppView: React.FC = () => {
   const saveAppSettings = () => {
     if (!app) return;
 
+    // Validate API key
+    if (!appSettings.api_key.trim()) {
+      showToast('Please select a valid API key', 'error');
+      return;
+    }
+
+    // Create a copy of the current configuration with the updated API key
+    const updatedConfiguration = {
+      ...app.configuration,
+      api_key: appSettings.api_key
+    };
+
+    // Log the update for debugging
+    console.log('Updating app settings with API key:', appSettings.api_key);
+
     updateMutation.mutate({
       slug: app.slug,
       updates: {
         name: appSettings.name,
         is_active: appSettings.is_active,
+        configuration: updatedConfiguration,
       },
     }, {
       onSuccess: () => {
         setIsEditingAppSettings(false);
         showToast('App settings saved successfully', 'success');
+
+        // Force a refresh of the form data to ensure the API key is updated
+        setFormData({
+          ...formData,
+          api_key: appSettings.api_key
+        });
+      },
+      onError: (error) => {
+        showToast(`Failed to save settings: ${(error as Error).message}`, 'error');
       }
     });
   };
@@ -522,6 +553,16 @@ const DeployedAppView: React.FC = () => {
                     label="Active"
                   />
 
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>API Key</Typography>
+                    <ApiKeySelector
+                      value={appSettings.api_key}
+                      onChange={(value) => setAppSettings(prev => ({ ...prev, api_key: value }))}
+                      helperText="Select an API key for this application"
+                      fullWidth
+                    />
+                  </Box>
+
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
                     <Button
                       variant="contained"
@@ -538,6 +579,11 @@ const DeployedAppView: React.FC = () => {
                   <Typography><strong>App Name:</strong> {app.name}</Typography>
                   <Typography>
                     <strong>Status:</strong> {app.is_active ? 'Active' : 'Inactive'}
+                  </Typography>
+                  <Typography>
+                    <strong>API Key:</strong> {app.configuration?.api_key ?
+                      `${app.configuration.api_key.slice(0, 4)}•••••${app.configuration.api_key.slice(-4)}` :
+                      'Not set'}
                   </Typography>
                 </Box>
               )}

@@ -330,8 +330,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       title: 'Content Management',
       items: [
         { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS] },
-        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
-        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS] }
+        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] }
       ]
     }
   ] : [
@@ -347,7 +346,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       items: [
         { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
-        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         ...(user?.role === Role.SUPER_ADMIN ? [
           {
             text: 'App Templates',

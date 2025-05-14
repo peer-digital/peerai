@@ -245,6 +245,12 @@ const DeployAppView: React.FC = () => {
 
   // Validate form before deployment
   const validateForm = () => {
+    // For RAG chatbot template, we'll use default values if not provided
+    if (templateSlug === 'rag-chatbot') {
+      return true;
+    }
+
+    // For other templates, validate as usual
     const errors: Record<string, string> = {};
 
     if (!deploymentData.name.trim()) {
@@ -266,23 +272,62 @@ const DeployAppView: React.FC = () => {
   };
 
   // Handle deploy
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     if (!template || !canDeployApps || !validateForm()) return;
 
     setIsDeploying(true);
     setDeployError(null);
 
     try {
+      // For RAG chatbot template, use default values if not provided
+      let appName = deploymentData.name;
+      let appSlug = deploymentData.slug;
+      let appApiKey = apiKey;
+
+      // If this is the RAG chatbot template and values are missing, use defaults
+      if (templateSlug === 'rag-chatbot') {
+        // Use default name if not provided
+        if (!appName.trim()) {
+          appName = `RAG Chatbot ${Math.floor(Math.random() * 1000)}`;
+        }
+
+        // Use default slug if not provided or invalid
+        if (!appSlug.trim() || !/^[a-z0-9-]+$/.test(appSlug)) {
+          appSlug = `rag-chatbot-${Math.floor(Math.random() * 10000)}`;
+        }
+
+        // Use default API key if not provided (this should be a valid API key from your system)
+        if (!appApiKey.trim()) {
+          // Try to get a default API key from localStorage or use a placeholder
+          const savedApiKeys = localStorage.getItem('saved_api_keys');
+          if (savedApiKeys) {
+            try {
+              const keys = JSON.parse(savedApiKeys);
+              if (keys.length > 0) {
+                appApiKey = keys[0].key;
+              } else {
+                // If no saved keys, use a placeholder (this will likely cause issues in production)
+                appApiKey = '';
+              }
+            } catch (e) {
+              appApiKey = '';
+            }
+          } else {
+            appApiKey = '';
+          }
+        }
+      }
+
       // Include the API key in the configuration
       const updatedFormData = {
         ...formData,
-        api_key: apiKey // This matches the {{api_key}} placeholder in the templates
+        api_key: appApiKey // This matches the {{api_key}} placeholder in the templates
       };
 
       const deployData: DeployedAppCreate = {
         template_id: template.id,
-        name: deploymentData.name,
-        slug: deploymentData.slug,
+        name: appName,
+        slug: appSlug,
         configuration: updatedFormData,
         custom_code: template.template_code,
       };
@@ -304,7 +349,7 @@ const DeployAppView: React.FC = () => {
         // Include the API key in the configuration for preview
         const previewConfig = {
           ...formData,
-          api_key: apiKey || 'preview-api-key' // Use the current API key or a placeholder
+          api_key: apiKey || '' // Use the current API key or an empty string
         };
 
         // Use the helper function to replace all placeholders, including nested ones

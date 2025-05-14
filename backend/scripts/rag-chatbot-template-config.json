@@ -234,6 +234,7 @@
       "norender": true
     },
     "ui:order": ["app_settings", "content", "quick_actions", "ai_settings", "documents", "styling"],
+    "ui:wizardOrder": ["app_settings", "content"],
     "app_settings": {
       "ui:order": ["app_title", "app_description", "language"],
       "ui:expandable": true,
@@ -249,7 +250,7 @@
     "documents": {
       "ui:expandable": true,
       "ui:expanded": true,
-
+      "ui:disabled": true,
       "ui:help": "Upload files in supported formats to enable document-based answers",
       "file_upload": {
         "ui:widget": "fileUpload",
@@ -293,6 +294,7 @@
     "quick_actions": {
       "ui:expandable": true,
       "ui:expanded": false,
+      "ui:disabled": true,
       "ui:help": "Create clickable question buttons to help users get started",
       "quick_action1": {
         "ui:help": "This question helps users discover the main topics or themes in their documents. Good for initial exploration."
@@ -313,6 +315,7 @@
     "ai_settings": {
       "ui:expandable": true,
       "ui:expanded": true,
+      "ui:disabled": true,
       "ui:help": "Control how the AI responds to questions",
       "system_prompt": {
         "ui:widget": "textarea",
@@ -322,6 +325,7 @@
     "styling": {
       "ui:expandable": true,
       "ui:expanded": false,
+      "ui:disabled": true,
       "ui:help": "Customize colors, fonts, and other visual elements",
       "primary_color": {
         "ui:help": "This color is used for buttons, user message bubbles, and the header. Choose a color that matches your brand."
