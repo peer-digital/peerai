@@ -92,7 +92,7 @@ function App() {
                       </PrivateRoute>
                     }
                   >
-                    <Route index element={<Navigate to="/dashboard" replace />} />
+                    <Route index element={<IndexRedirect />} />
 
                     {/* Dashboard - different views based on role */}
                     <Route path="/dashboard" element={
@@ -241,13 +241,18 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
 // Route guard for public routes (accessible only when not authenticated)
 function PublicRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
+    // Redirect content managers to content-manager page
+    if (user?.role === Role.CONTENT_MANAGER) {
+      return <Navigate to="/content-manager" replace />;
+    }
+    // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -256,13 +261,18 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 
 // Layout for guest users that applies DashboardLayout
 function GuestLayout({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
+    // Redirect content managers to content-manager page
+    if (user?.role === Role.CONTENT_MANAGER) {
+      return <Navigate to="/content-manager" replace />;
+    }
+    // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -275,13 +285,18 @@ function GuestLayout({ children }: { children: JSX.Element }) {
 
 // Root redirect component that sends authenticated users to dashboard and guests to get-started
 function RootRedirect() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <MobileLoadingIndicator />;
   }
 
   if (isAuthenticated) {
+    // Redirect content managers to content-manager page
+    if (user?.role === Role.CONTENT_MANAGER) {
+      return <Navigate to="/content-manager" replace />;
+    }
+    // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -307,6 +322,19 @@ function GetStartedRoute() {
 function ReferralRedirect() {
   const { referralCode } = useParams();
   return <Navigate to={`/register/${referralCode}`} replace />;
+}
+
+// Index redirect component that handles role-based redirects
+function IndexRedirect() {
+  const { user } = useAuth();
+
+  // Redirect content managers to content-manager page
+  if (user?.role === Role.CONTENT_MANAGER) {
+    return <Navigate to="/content-manager" replace />;
+  }
+
+  // Redirect other users to dashboard
+  return <Navigate to="/dashboard" replace />;
 }
 
 export default App;

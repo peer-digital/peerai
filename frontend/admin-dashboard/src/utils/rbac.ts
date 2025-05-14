@@ -13,6 +13,14 @@ const rolePermissions: Record<Role, Permission[]> = {
     Permission.MANAGE_TEAM_BILLING,
     Permission.VIEW_TEAM_USAGE,
   ],
+  [Role.CONTENT_MANAGER]: [
+    Permission.VIEW_DOCS,
+    Permission.MANAGE_OWN_ACCOUNT,
+    Permission.VIEW_APP_STORE,
+    Permission.USE_APP_STORE,
+    Permission.DEPLOY_APPS,
+    Permission.CONFIGURE_APPS,
+  ],
   [Role.USER]: [
     Permission.VIEW_DOCS,
     Permission.VIEW_OWN_USAGE,
@@ -50,10 +58,10 @@ const rolePermissions: Record<Role, Permission[]> = {
  */
 export const hasPermission = (user: User, permission: Permission): boolean => {
   if (!user || !user.role) return false;
-  
+
   const userRole = user.role;
   const permissions = rolePermissions[userRole] || [];
-  
+
   return permissions.includes(permission);
 };
 
@@ -90,4 +98,4 @@ export const hasRole = (user: User, role: Role): boolean => {
  */
 export const hasAnyRole = (user: User, roles: Role[]): boolean => {
   return roles.some(role => hasRole(user, role));
-}; 
+};

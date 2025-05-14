@@ -224,6 +224,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Check if user has admin or super admin role
   const isAdmin = user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
   const isSuperAdmin = user?.role === Role.SUPER_ADMIN;
+  const isContentManager = user?.role === Role.CONTENT_MANAGER;
 
   // Close drawer on mobile by default
   useEffect(() => {
@@ -323,7 +324,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   // @important: Menu items with required permissions grouped by category
-  const menuGroups: MenuGroup[] = [
+  const menuGroups: MenuGroup[] = isContentManager ? [
+    // Special simplified menu for Content Managers
+    {
+      title: 'Content Management',
+      items: [
+        { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS] },
+        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS] }
+      ]
+    }
+  ] : [
+    // Regular menu for other roles
     {
       title: 'Main',
       items: [

@@ -13,10 +13,12 @@ const ROLE_MAPPING = {
   'user': Role.USER,
   'user_admin': Role.USER_ADMIN,
   'super_admin': Role.SUPER_ADMIN,
+  'content_manager': Role.CONTENT_MANAGER,
   'GUEST': Role.GUEST,
   'USER': Role.USER,
   'USER_ADMIN': Role.USER_ADMIN,
-  'SUPER_ADMIN': Role.SUPER_ADMIN
+  'SUPER_ADMIN': Role.SUPER_ADMIN,
+  'CONTENT_MANAGER': Role.CONTENT_MANAGER
 } as const;
 
 class AuthService {
