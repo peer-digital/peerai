@@ -245,14 +245,19 @@ const DeployAppView: React.FC = () => {
 
   // Validate form before deployment
   const validateForm = () => {
-    // For RAG chatbot template, we'll use default values if not provided
+    const errors: Record<string, string> = {};
+
+    // For RAG chatbot template, only validate API key
     if (templateSlug === 'rag-chatbot') {
+      if (!apiKey.trim()) {
+        errors.apiKey = 'API key is required for RAG chatbot deployment';
+        setFormErrors(errors);
+        return false;
+      }
       return true;
     }
 
-    // For other templates, validate as usual
-    const errors: Record<string, string> = {};
-
+    // For other templates, validate all fields
     if (!deploymentData.name.trim()) {
       errors.name = 'App name is required';
     }
@@ -497,6 +502,8 @@ const DeployAppView: React.FC = () => {
                 deploymentSettingsComponent={<DeploymentSettingsComponent />}
                 isDeploying={isDeploying}
                 wizardMode={true}
+                apiKey={apiKey}
+                onApiKeyChange={setApiKey}
               />
             )}
           </TabPanel>

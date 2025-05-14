@@ -16,6 +16,7 @@ import {
   CardContent,
   FormHelperText,
   CircularProgress,
+  Divider,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -26,6 +27,7 @@ import {
   CheckCircle as CheckCircleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Edit as EditIcon,
+  Key as KeyIcon,
   Save as SaveIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
@@ -35,6 +37,7 @@ import validator from '@rjsf/validator-ajv8';
 import { IChangeEvent } from '@rjsf/core';
 import { FieldTemplateProps } from '@rjsf/utils';
 import customWidgets from '../widgets';
+import ApiKeySelector from '../common/ApiKeySelector';
 
 // Custom field template with enhanced visual hierarchy
 const CustomFieldTemplate = (props: FieldTemplateProps) => {
@@ -249,6 +252,14 @@ interface EnhancedConfigFormProps {
    * Optional array of section keys that are currently being edited
    */
   editingSections?: string[];
+  /**
+   * API key for the application
+   */
+  apiKey?: string;
+  /**
+   * Callback for when the API key changes
+   */
+  onApiKeyChange?: (key: string) => void;
 }
 
 // Add global styles for form fields with enhanced styling
@@ -373,6 +384,8 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   onSectionEdit,
   onSectionSave,
   editingSections = [],
+  apiKey = '',
+  onApiKeyChange,
 }) => {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
@@ -840,6 +853,38 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
                 Your app is ready! Press Launch App to make the app accessible. You can edit all settings in the app settings page after deployment, including additional settings for AI behavior, suggested questions, styling, and more.
               </Typography>
 
+              {/* API Key Selector for RAG Chatbot */}
+              {window.location.pathname.includes('deploy-app/rag-chatbot') && (
+                <Box
+                  sx={{
+                    maxWidth: 400,
+                    mx: 'auto',
+                    mb: 3,
+                    p: 3,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '0.375rem',
+                    backgroundColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : 'rgba(0, 0, 0, 0.02)',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <KeyIcon color="primary" sx={{ mr: 1 }} />
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Select API Key
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Your app needs an API key to function. Please select an API key below:
+                  </Typography>
+                  <ApiKeySelector
+                    value={apiKey}
+                    onChange={onApiKeyChange || (() => {})}
+                    helperText="Required for your app to function properly"
+                    fullWidth
+                  />
+                </Box>
+              )}
             </>
           )}
         </CardContent>
@@ -891,7 +936,19 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
 
   // Determine if the next button should be disabled
   const isNextButtonDisabled = () => {
-    return showCompletion && isDeploying;
+    // Disable if deploying
+    if (showCompletion && isDeploying) {
+      return true;
+    }
+
+    // For RAG chatbot, disable if no API key is selected in the completion step
+    if (showCompletion &&
+        window.location.pathname.includes('deploy-app/rag-chatbot') &&
+        (!apiKey || apiKey.trim() === '')) {
+      return true;
+    }
+
+    return false;
   };
 
   // Determine the next button color
