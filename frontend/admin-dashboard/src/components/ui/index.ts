@@ -54,3 +54,6 @@ export * from './FilterBar';
 
 export { PageContainer, SectionContainer } from './PageContainer';
 export * from './PageContainer';
+
+export { default as AppTemplateIcon } from './AppTemplateIcon';
+export * from './AppTemplateIcon';

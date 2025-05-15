@@ -22,6 +22,7 @@ import {
   Rocket as RocketIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { AppTemplateIcon } from '../components/ui';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState, PageContainer, SearchField } from '../components/ui';
 import appTemplatesApi, { AppTemplate } from '../api/appTemplates';
@@ -144,42 +145,70 @@ const AppLibrary: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '0.75rem',
+                  overflow: 'hidden',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: theme.shadows[8],
                   },
                 }}>
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={
-                    theme.palette.mode === 'dark' && template.dark_icon_url
-                      ? template.dark_icon_url
-                      : template.icon_url || 'https://via.placeholder.com/300x150?text=App+Template'
-                  }
-                  alt={template.name}
-                  sx={{ objectFit: 'contain', bgcolor: theme.palette.background.paper, p: 2 }}
-                />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h6" component="div" noWrap>
-                    {template.name}
-                  </Typography>
+                <Box
+                  sx={{
+                    height: 150, // Increased from 140 to provide more space
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? 'rgba(69, 137, 255, 0.08)'
+                      : 'rgba(15, 98, 254, 0.04)',
+                    p: 3, // Increased padding from 2 to 3
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 16,
+                      left: 16,
+                      zIndex: 1
+                    }}
+                  >
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 700,
+                        color: theme.palette.text.primary
+                      }}
+                    >
+                      {template.name}
+                    </Typography>
+                  </Box>
+                  <AppTemplateIcon
+                    iconType={template.icon_type}
+                    size="large"
+                    variant="gradient"
+                  />
+                </Box>
+                <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Typography
-                    variant="body2"
+                    variant="body1"
                     color="text.secondary"
                     sx={{
-                      mb: 2,
+                      mb: 3,
                       display: '-webkit-box',
                       WebkitLineClamp: 3,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       height: '4.5em',
+                      lineHeight: 1.6
                     }}
                   >
                     {template.description || 'No description available.'}
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 'auto' }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mt: 'auto' }}>
                     {template.tags?.map((tag, index) => (
                       <Chip
                         key={index}
@@ -190,23 +219,38 @@ const AppLibrary: React.FC = () => {
                             theme.palette.mode === 'dark'
                               ? 'rgba(255, 255, 255, 0.1)'
                               : 'rgba(0, 0, 0, 0.05)',
+                          borderRadius: '4px',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
                         }}
                       />
                     ))}
                   </Box>
                 </CardContent>
-                <CardActions sx={{ p: 2 }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<CloudUploadIcon />}
-                    fullWidth
-                    disabled={!canDeployApps}
-                    onClick={() => handleSelectTemplate(template)}
-                  >
-                    Configure & Deploy
-                  </Button>
-                </CardActions>
+                <Box sx={{ px: 3, pb: 1 }}>
+                  <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, pt: 2, pb: 1 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<CloudUploadIcon />}
+                      fullWidth
+                      disabled={!canDeployApps}
+                      onClick={() => handleSelectTemplate(template)}
+                      sx={{
+                        py: 1.2,
+                        fontWeight: 600,
+                        borderRadius: '6px',
+                        boxShadow: theme.shadows[2],
+                        '&:hover': {
+                          boxShadow: theme.shadows[4],
+                          color: 'white'
+                        }
+                      }}
+                    >
+                      Configure & Deploy
+                    </Button>
+                  </Box>
+                </Box>
               </Card>
             </Grid>
           ))}

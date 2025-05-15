@@ -6,8 +6,9 @@ export interface AppTemplate {
   slug: string;
   name: string;
   description?: string;
-  icon_url?: string;
-  dark_icon_url?: string;
+  icon_url?: string;  // Deprecated
+  dark_icon_url?: string;  // Deprecated
+  icon_type?: string;
   template_config: {
     schema: any;
     default_values: any;
@@ -24,8 +25,9 @@ export interface AppTemplateCreate {
   slug: string;
   name: string;
   description?: string;
-  icon_url?: string;
-  dark_icon_url?: string;
+  icon_url?: string;  // Deprecated
+  dark_icon_url?: string;  // Deprecated
+  icon_type?: string;
   template_config: {
     schema: any;
     default_values: any;
@@ -39,8 +41,9 @@ export interface AppTemplateCreate {
 export interface AppTemplateUpdate {
   name?: string;
   description?: string;
-  icon_url?: string;
-  dark_icon_url?: string;
+  icon_url?: string;  // Deprecated
+  dark_icon_url?: string;  // Deprecated
+  icon_type?: string;
   template_config?: {
     schema: any;
     default_values: any;

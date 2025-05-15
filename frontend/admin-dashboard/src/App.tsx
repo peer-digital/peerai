@@ -75,7 +75,7 @@ function App() {
                   <Route path="/verify-email/:token" element={<EmailVerification />} />
                   <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="/404" element={<NotFound />} />
-                  <Route path="/get-started" element={<GetStarted />} />
+                  <Route path="/get-started" element={<GetStartedRoute />} />
                   <Route path="/policy" element={<LegalPages />} />
 
                   {/* Public App route - accessible without authentication */}
@@ -248,9 +248,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
+    // Redirect content managers to get-started page
     if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+      return <Navigate to="/get-started" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -268,9 +268,9 @@ function GuestLayout({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
+    // Redirect content managers to get-started page
     if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+      return <Navigate to="/get-started" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -292,9 +292,9 @@ function RootRedirect() {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
+    // Redirect content managers to get-started page
     if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+      return <Navigate to="/get-started" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -328,9 +328,9 @@ function ReferralRedirect() {
 function IndexRedirect() {
   const { user } = useAuth();
 
-  // Redirect content managers to content-manager page
+  // Redirect content managers to get-started page
   if (user?.role === Role.CONTENT_MANAGER) {
-    return <Navigate to="/content-manager" replace />;
+    return <Navigate to="/get-started" replace />;
   }
 
   // Redirect other users to dashboard

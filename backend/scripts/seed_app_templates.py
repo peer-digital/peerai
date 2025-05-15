@@ -42,6 +42,7 @@ SAMPLE_TEMPLATES = [
         "description": "A simple app that allows users to ask questions about documents and get AI-powered answers.",
         "icon_url": "https://via.placeholder.com/300x150?text=Document+QA&bg=FFFFFF&fg=000000",
         "dark_icon_url": "https://via.placeholder.com/300x150?text=Document+QA&bg=333333&fg=FFFFFF",
+        "icon_type": "Description",
         "template_config": {
             "schema": {
                 "title": "Document Q&A Configuration",
@@ -209,6 +210,7 @@ SAMPLE_TEMPLATES = [
         "description": "Search through your company's knowledge base and get AI-powered answers to your questions.",
         "icon_url": "https://via.placeholder.com/300x150?text=Knowledge+Base&bg=FFFFFF&fg=000000",
         "dark_icon_url": "https://via.placeholder.com/300x150?text=Knowledge+Base&bg=333333&fg=FFFFFF",
+        "icon_type": "Search",
         "template_config": {
             "schema": {
                 "title": "Knowledge Base Search Configuration",
@@ -528,6 +530,8 @@ SAMPLE_TEMPLATES = [
         "name": "Intelligent Chatbot",
         "description": "A modern, customizable chatbot with a beautiful UI. Perfect for customer support, knowledge base search, and automated conversations.",
         "icon_url": "https://via.placeholder.com/300x150?text=Intelligent+Chatbot",
+        "dark_icon_url": "https://via.placeholder.com/300x150?text=Intelligent+Chatbot&bg=333333&fg=FFFFFF",
+        "icon_type": "SmartToy",
         "template_config": intelligent_chatbot_template_config,
         "template_code": intelligent_chatbot_template_html,
         "tags": ["chatbot", "ai", "customer-support", "modern-ui"],
@@ -538,6 +542,8 @@ SAMPLE_TEMPLATES = [
         "name": "RAG Chatbot",
         "description": "An advanced chatbot that can answer questions based on your uploaded documents. Perfect for creating a custom knowledge base or document assistant.",
         "icon_url": "https://via.placeholder.com/300x150?text=RAG+Chatbot",
+        "dark_icon_url": "https://via.placeholder.com/300x150?text=RAG+Chatbot&bg=333333&fg=FFFFFF",
+        "icon_type": "Storage",
         "template_config": rag_chatbot_template_config,
         "template_code": rag_chatbot_template_html,
         "tags": ["chatbot", "rag", "documents", "ai", "knowledge-base"],

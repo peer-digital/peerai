@@ -24,6 +24,11 @@ import {
   Alert,
   Tooltip,
   useTheme,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  FormHelperText,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,6 +38,8 @@ import {
   Apps as AppsIcon,
   Code as CodeIcon,
 } from '@mui/icons-material';
+import { availableIconTypes } from '../utils/iconMapping';
+import { AppTemplateIcon } from '../components/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import appTemplatesApi, { AppTemplate, AppTemplateCreate, AppTemplateUpdate } from '../api/appTemplates';
 import { EmptyState, PageContainer } from '../components/ui';
@@ -42,8 +49,9 @@ interface TemplateFormData {
   slug: string;
   name: string;
   description: string;
-  icon_url: string;
-  dark_icon_url: string;
+  icon_url: string;  // Deprecated
+  dark_icon_url: string;  // Deprecated
+  icon_type: string;
   template_code: string;
   template_config: {
     schema: any;
@@ -59,6 +67,7 @@ const initialFormData: TemplateFormData = {
   description: '',
   icon_url: '',
   dark_icon_url: '',
+  icon_type: 'Apps',
   template_code: '<div class="app-template">{{content}}</div>',
   template_config: {
     schema: {
@@ -150,6 +159,7 @@ const AppTemplatesManagement: React.FC = () => {
       description: template.description || '',
       icon_url: template.icon_url || '',
       dark_icon_url: template.dark_icon_url || '',
+      icon_type: template.icon_type || 'Apps',
       template_code: template.template_code,
       template_config: template.template_config,
       tags: template.tags ? template.tags.join(', ') : '',
@@ -252,6 +262,7 @@ const AppTemplatesManagement: React.FC = () => {
       description: formData.description || undefined,
       icon_url: formData.icon_url || undefined,
       dark_icon_url: formData.dark_icon_url || undefined,
+      icon_type: formData.icon_type,
       template_code: formData.template_code,
       template_config: formData.template_config,
       tags: formData.tags ? formData.tags.split(',').map((tag) => tag.trim()) : undefined,
@@ -506,9 +517,37 @@ const AppTemplatesManagement: React.FC = () => {
                   rows={3}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="icon-type-label">Icon Type</InputLabel>
+                  <Select
+                    labelId="icon-type-label"
+                    id="icon-type"
+                    name="icon_type"
+                    value={formData.icon_type}
+                    onChange={handleInputChange}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AppTemplateIcon iconType={selected} size="small" variant="default" />
+                        <span>{selected}</span>
+                      </Box>
+                    )}
+                  >
+                    {availableIconTypes.map((iconType) => (
+                      <MenuItem key={iconType} value={iconType}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AppTemplateIcon iconType={iconType} size="small" variant="default" />
+                          <span>{iconType}</span>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>Select an icon for the template</FormHelperText>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} sx={{ display: 'none' }}>
                 <TextField
-                  label="Light Mode Icon URL"
+                  label="Light Mode Icon URL (Deprecated)"
                   name="icon_url"
                   value={formData.icon_url}
                   onChange={handleInputChange}
@@ -518,9 +557,9 @@ const AppTemplatesManagement: React.FC = () => {
                   helperText={formErrors.icon_url || 'Must start with http:// or https://'}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={6} sx={{ display: 'none' }}>
                 <TextField
-                  label="Dark Mode Icon URL"
+                  label="Dark Mode Icon URL (Deprecated)"
                   name="dark_icon_url"
                   value={formData.dark_icon_url}
                   onChange={handleInputChange}
