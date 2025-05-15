@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -226,7 +226,24 @@ function App() {
 
 // Route guard for authenticated users
 function PrivateRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [shouldRender, setShouldRender] = React.useState(false);
+
+  React.useEffect(() => {
+    // If user is a content manager and not on the content-manager page, redirect
+    if (isAuthenticated && !isLoading && user?.role === Role.CONTENT_MANAGER) {
+      if (location.pathname !== '/content-manager') {
+        // Use navigate instead of Navigate component for better handling
+        navigate('/content-manager', { replace: true });
+        return;
+      }
+    }
+
+    // If we reach here, we should render the children
+    setShouldRender(true);
+  }, [isAuthenticated, isLoading, user, location.pathname, navigate]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -234,6 +251,11 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Only render children after we've determined we should
+  if (!shouldRender) {
+    return <PageLoader />;
   }
 
   return children;
