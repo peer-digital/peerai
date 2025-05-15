@@ -44,7 +44,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
-  const { referralCode: urlReferralCode } = useParams();
+  const { referralCode: urlReferralCode, rolePath } = useParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -57,6 +57,7 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
   const [validationMessage, setValidationMessage] = useState("");
   const [debouncedReferralCode] = useDebounce(referralCode, 500);
   const [showInvalidCodeDialog, setShowInvalidCodeDialog] = useState(false);
+  const [roleFromPath, setRoleFromPath] = useState<string | null>(null);
 
   // Check if we're in development mode
   const isDevelopment = import.meta.env.VITE_DEV_MODE === 'true';
@@ -101,6 +102,27 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
     setMode(initialMode);
   }, [initialMode]);
 
+  // Handle role path parameter
+  useEffect(() => {
+    if (rolePath) {
+      // Set registration mode if we have a role path
+      setMode('register');
+
+      // Validate the role path - only allow specific valid roles
+      const validRoles = ["content_manager"]; // Keep in sync with the backend role_mapping
+
+      if (validRoles.includes(rolePath)) {
+        // Store the role path for use during registration
+        setRoleFromPath(rolePath);
+        console.log(`Registration with role path: ${rolePath}`);
+      } else {
+        // If invalid role path, show an error and don't set the role
+        console.error(`Invalid role path: ${rolePath}`);
+        setError(`Invalid role path: ${rolePath}. Registration will proceed with default role.`);
+      }
+    }
+  }, [rolePath]);
+
   const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }) => {
     try {
       setError(null);
@@ -118,9 +140,31 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
         console.log('Login successful:', result);
         console.log('Token:', localStorage.getItem('access_token'));
       } else {
-        const result = await register(credentials);
-        console.log('Registration successful:', result);
-        console.log('Token:', localStorage.getItem('access_token'));
+        // If we have a role path, use the role-specific registration endpoint
+        if (roleFromPath) {
+          // Validate the role path again for security
+          const validRoles = ["content_manager"]; // Keep in sync with the backend role_mapping
+
+          if (validRoles.includes(roleFromPath)) {
+            console.log(`Registering with role path: ${roleFromPath}`);
+            // Use the auth service to register with the role path
+            const result = await register(credentials, roleFromPath);
+            console.log('Role-specific registration successful:', result);
+            console.log('Token:', localStorage.getItem('access_token'));
+          } else {
+            // If invalid role path, use standard registration
+            console.error(`Invalid role path detected during submission: ${roleFromPath}`);
+            setError(`Invalid role path. Registration will proceed with default role.`);
+            const result = await register(credentials);
+            console.log('Standard registration used due to invalid role path:', result);
+            console.log('Token:', localStorage.getItem('access_token'));
+          }
+        } else {
+          // Standard registration
+          const result = await register(credentials);
+          console.log('Registration successful:', result);
+          console.log('Token:', localStorage.getItem('access_token'));
+        }
       }
 
       navigate('/dashboard');
@@ -150,10 +194,18 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
           navigate('/login', { replace: true });
         }
       } else {
-        // If there's a referral code, include it in the register URL too
-        if (urlReferralCode) {
+        // For register mode, consider both role path and referral code
+        if (roleFromPath && urlReferralCode) {
+          // Both role path and referral code
+          navigate(`/register/${roleFromPath}/${urlReferralCode}`, { replace: true });
+        } else if (roleFromPath) {
+          // Only role path
+          navigate(`/register/${roleFromPath}`, { replace: true });
+        } else if (urlReferralCode) {
+          // Only referral code
           navigate(`/register/${urlReferralCode}`, { replace: true });
         } else {
+          // Neither
           navigate('/register', { replace: true });
         }
       }
@@ -233,6 +285,12 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
             >
               PeerAI {mode === 'login' ? 'Login' : 'Register'}
             </Typography>
+
+            {roleFromPath && (
+              <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
+                You are registering for a {roleFromPath.replace('_', ' ')} account.
+              </Alert>
+            )}
 
             {error && (
               <Alert severity="error" sx={{ mb: 2, width: '100%' }}>

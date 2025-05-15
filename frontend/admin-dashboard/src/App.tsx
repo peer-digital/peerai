@@ -70,6 +70,9 @@ function App() {
                   <Route path="/login/:referralCode" element={<Login />} />
                   <Route path="/register" element={<Login initialMode="register" />} />
                   <Route path="/register/:referralCode" element={<Login initialMode="register" />} />
+                  {/* Role-specific registration routes */}
+                  <Route path="/register/:rolePath" element={<Login initialMode="register" />} />
+                  <Route path="/register/:rolePath/:referralCode" element={<Login initialMode="register" />} />
                   {/* Redirect /referral/:referralCode to /register/:referralCode */}
                   <Route path="/referral/:referralCode" element={<ReferralRedirect />} />
                   <Route path="/verify-email/:token" element={<EmailVerification />} />

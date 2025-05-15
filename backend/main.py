@@ -224,6 +224,78 @@ async def redirect_register(referral_code: str):
     # Redirect to the frontend registration page with referral code
     return RedirectResponse(url=f"{frontend_url}/register/{referral_code}")
 
+
+@app.get("/register/{role_path}/{referral_code}")
+async def redirect_register_with_role(role_path: str, referral_code: str = None):
+    """
+    Redirect the role-specific registration link to the frontend application.
+    This allows registration with a specific role based on the URL path.
+    """
+    from fastapi.responses import RedirectResponse
+    import os
+
+    # Validate the role path - only allow specific valid roles
+    valid_roles = ["content_manager"]  # Keep in sync with the backend role_mapping
+
+    if role_path not in valid_roles:
+        # If invalid role path, redirect to standard registration
+        # This prevents users from using invalid role paths
+        if settings.ENVIRONMENT == "production":
+            frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+        else:
+            frontend_url = "http://localhost:3000"
+
+        if referral_code:
+            return RedirectResponse(url=f"{frontend_url}/register/{referral_code}")
+        else:
+            return RedirectResponse(url=f"{frontend_url}/register")
+
+    # Determine the frontend URL based on environment
+    if settings.ENVIRONMENT == "production":
+        frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+    else:
+        # Use the frontend URL (not the backend URL)
+        frontend_url = "http://localhost:3000"  # Frontend runs on port 3000 in dev
+
+    # Redirect to the frontend registration page with role path and optional referral code
+    if referral_code:
+        return RedirectResponse(url=f"{frontend_url}/register/{role_path}/{referral_code}")
+    else:
+        return RedirectResponse(url=f"{frontend_url}/register/{role_path}")
+
+
+@app.get("/register/{role_path}")
+async def redirect_register_role_only(role_path: str):
+    """
+    Redirect the role-specific registration link to the frontend application.
+    This allows registration with a specific role based on the URL path.
+    """
+    from fastapi.responses import RedirectResponse
+    import os
+
+    # Validate the role path - only allow specific valid roles
+    valid_roles = ["content_manager"]  # Keep in sync with the backend role_mapping
+
+    if role_path not in valid_roles:
+        # If invalid role path, redirect to standard registration
+        # This prevents users from using invalid role paths
+        if settings.ENVIRONMENT == "production":
+            frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+        else:
+            frontend_url = "http://localhost:3000"
+
+        return RedirectResponse(url=f"{frontend_url}/register")
+
+    # Determine the frontend URL based on environment
+    if settings.ENVIRONMENT == "production":
+        frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
+    else:
+        # Use the frontend URL (not the backend URL)
+        frontend_url = "http://localhost:3000"  # Frontend runs on port 3000 in dev
+
+    # Redirect to the frontend registration page with role path
+    return RedirectResponse(url=f"{frontend_url}/register/{role_path}")
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Peer AI API"}

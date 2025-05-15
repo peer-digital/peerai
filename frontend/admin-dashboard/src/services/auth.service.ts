@@ -237,8 +237,15 @@ class AuthService {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
   }
 
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+  async register(credentials: RegisterCredentials, rolePath?: string): Promise<AuthResponse> {
     try {
+      // Determine the endpoint based on whether we have a role path
+      const endpoint = rolePath
+        ? `/auth/register/${rolePath}`
+        : '/auth/register';
+
+      console.log(`Registering user with endpoint: ${endpoint}`);
+
       const response = await api.post<{
         access_token: string;
         token_type: string;
@@ -253,7 +260,7 @@ class AuthService {
           default_api_key?: string;
         };
       }>(
-        '/auth/register',
+        endpoint,
         credentials
       );
 
