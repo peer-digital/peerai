@@ -235,7 +235,7 @@ async def redirect_register_with_role(role_path: str, referral_code: str = None)
     import os
 
     # Validate the role path - only allow specific valid roles
-    valid_roles = ["content_manager"]  # Keep in sync with the backend role_mapping
+    valid_roles = ["app_manager"]  # Keep in sync with the backend role_mapping
 
     if role_path not in valid_roles:
         # If invalid role path, redirect to standard registration
@@ -273,18 +273,23 @@ async def redirect_register_role_only(role_path: str):
     from fastapi.responses import RedirectResponse
     import os
 
+    # Log the request for debugging
+    print(f"Received registration request with role_path: {role_path}")
+
     # Validate the role path - only allow specific valid roles
-    valid_roles = ["content_manager"]  # Keep in sync with the backend role_mapping
+    valid_roles = ["app_manager"]  # Keep in sync with the backend role_mapping
 
     if role_path not in valid_roles:
-        # If invalid role path, redirect to standard registration
-        # This prevents users from using invalid role paths
+        # If invalid role path, redirect to standard registration with the value as a referral code
+        # This handles the case where a referral code is mistakenly parsed as a role path
         if settings.ENVIRONMENT == "production":
             frontend_url = os.getenv("VITE_API_BASE_URL", "https://app.peerdigital.se")
         else:
             frontend_url = "http://localhost:3000"
 
-        return RedirectResponse(url=f"{frontend_url}/register")
+        print(f"Invalid role path: {role_path}, treating as referral code")
+        # Treat the invalid role path as a potential referral code
+        return RedirectResponse(url=f"{frontend_url}/register/{role_path}")
 
     # Determine the frontend URL based on environment
     if settings.ENVIRONMENT == "production":
@@ -293,7 +298,12 @@ async def redirect_register_role_only(role_path: str):
         # Use the frontend URL (not the backend URL)
         frontend_url = "http://localhost:3000"  # Frontend runs on port 3000 in dev
 
-    # Redirect to the frontend registration page with role path
+    print(f"Valid role path: {role_path}, redirecting to role-specific registration")
+    # For app_manager role, use the explicit route we defined in the frontend
+    if role_path == "app_manager":
+        return RedirectResponse(url=f"{frontend_url}/register/app_manager")
+
+    # For other roles, use the general pattern
     return RedirectResponse(url=f"{frontend_url}/register/{role_path}")
 
 @app.get("/")

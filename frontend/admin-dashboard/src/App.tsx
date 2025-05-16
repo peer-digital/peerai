@@ -69,10 +69,11 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/login/:referralCode" element={<Login />} />
                   <Route path="/register" element={<Login initialMode="register" />} />
+                  {/* Role-specific registration routes - must come before general referral code route */}
+                  <Route path="/register/app_manager" element={<Login initialMode="register" rolePath="app_manager" />} />
+                  <Route path="/register/app_manager/:referralCode" element={<Login initialMode="register" rolePath="app_manager" />} />
+                  {/* General referral code route - must come after specific role paths */}
                   <Route path="/register/:referralCode" element={<Login initialMode="register" />} />
-                  {/* Role-specific registration routes */}
-                  <Route path="/register/:rolePath" element={<Login initialMode="register" />} />
-                  <Route path="/register/:rolePath/:referralCode" element={<Login initialMode="register" />} />
                   {/* Redirect /referral/:referralCode to /register/:referralCode */}
                   <Route path="/referral/:referralCode" element={<ReferralRedirect />} />
                   <Route path="/verify-email/:token" element={<EmailVerification />} />
@@ -353,6 +354,15 @@ function GetStartedRoute() {
 // Redirect component for referral links
 function ReferralRedirect() {
   const { referralCode } = useParams();
+
+  // Check if the referral code is actually a valid role path
+  const validRoles = ["app_manager"];
+  if (referralCode && validRoles.includes(referralCode)) {
+    // If it's a valid role path, redirect to the role-specific registration route
+    return <Navigate to={`/register/${referralCode}`} replace />;
+  }
+
+  // Otherwise, treat it as a regular referral code
   return <Navigate to={`/register/${referralCode}`} replace />;
 }
 

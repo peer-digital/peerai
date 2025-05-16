@@ -41,10 +41,13 @@ type AuthMode = 'login' | 'register';
 
 interface LoginProps {
   initialMode?: AuthMode;
+  rolePath?: string;
 }
 
-const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
-  const { referralCode: urlReferralCode, rolePath } = useParams();
+const Login: React.FC<LoginProps> = ({ initialMode = 'login', rolePath: propRolePath }) => {
+  const { referralCode: urlReferralCode, rolePath: paramRolePath } = useParams();
+  // Use the prop rolePath if provided, otherwise use the URL parameter
+  const rolePath = propRolePath || paramRolePath;
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -85,7 +88,10 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
 
   // Handle URL referral code
   useEffect(() => {
-    if (urlReferralCode) {
+    // Only treat as referral code if it's not a valid role path
+    const validRoles = ["app_manager"]; // Keep in sync with the backend role_mapping
+
+    if (urlReferralCode && !validRoles.includes(urlReferralCode)) {
       setReferralCode(urlReferralCode);
       setMode('register');
       setValue('referral_code', urlReferralCode);
@@ -117,12 +123,22 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
         setRoleFromPath(rolePath);
         console.log(`Registration with role path: ${rolePath}`);
       } else {
-        // If invalid role path, show an error and don't set the role
-        console.error(`Invalid role path: ${rolePath}`);
-        setError(`Invalid role path: ${rolePath}. Registration will proceed with default role.`);
+        // Check if this might be a referral code that was mistakenly parsed as a role path
+        // This happens when the URL is /register/XXXX without a role path
+        if (!urlReferralCode) {
+          // If we don't already have a referral code from the URL, treat this as a referral code
+          setReferralCode(rolePath);
+          setValue('referral_code', rolePath);
+          validateReferralCode(rolePath);
+          console.log(`Treating ${rolePath} as a referral code instead of a role path`);
+        } else {
+          // If we already have a referral code, this is truly an invalid role path
+          console.error(`Invalid role path: ${rolePath}`);
+          setError(`Invalid role path: ${rolePath}. Registration will proceed with default role.`);
+        }
       }
     }
-  }, [rolePath]);
+  }, [rolePath, urlReferralCode, setValue, validateReferralCode]);
 
   const onSubmit = async (credentials: LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }) => {
     try {

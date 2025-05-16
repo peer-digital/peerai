@@ -190,6 +190,10 @@ async def register_user_with_role(
         # Add more role mappings as needed
     }
 
+    # Log the role path and user data for debugging
+    print(f"Processing registration with role path: {role_path}")
+    print(f"User data: email={user.email}, has_referral={user.referral_code is not None}")
+
     # Set the role based on the path parameter if it's a valid role path
     # Use exact matching to prevent partial matches or unexpected formats
     if role_path in role_mapping:
