@@ -341,7 +341,7 @@
         // Configuration from template
         let API_KEY = '{{api_key}}';
         // Default values for model and temperature in case they're not in the configuration
-        const MODEL = '{{ai_settings.model}}' === '{{ai_settings.model}}' ? 'mistral-large-latest' : '{{ai_settings.model}}';
+        const MODEL = '{{ai_settings.model}}' === '{{ai_settings.model}}' ? 'mistral-medium-latest' : '{{ai_settings.model}}';
         const TEMPERATURE = isNaN(parseFloat('{{ai_settings.temperature}}')) ? 0.7 : parseFloat('{{ai_settings.temperature}}');
         const SYSTEM_PROMPT = `{{ai_settings.system_prompt}}`;
 

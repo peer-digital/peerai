@@ -188,7 +188,7 @@
             "title": "AI Model",
             "description": "The AI model to use for the chatbot",
             "enum": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
-            "default": "mistral-large-latest"
+            "default": "mistral-medium-latest"
           },
           "temperature": {
             "type": "number",
