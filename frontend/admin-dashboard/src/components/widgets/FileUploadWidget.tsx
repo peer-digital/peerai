@@ -31,6 +31,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/config';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import logger from '../../utils/logger';
 
 
 
@@ -106,7 +107,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       }
 
       try {
-        console.log(`Fetching app details for slug: ${appSlug}`);
+        logger.debug(`Fetching app details for slug: ${appSlug}`);
         const response = await fetch(`${api.defaults.baseURL}/deployed-apps/${appSlug}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -117,19 +118,19 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           // If we get a 404, it means the app doesn't exist yet (pre-deployment)
           // This is not an error condition for us
           if (response.status === 404) {
-            console.log('App not found - likely in pre-deployment configuration mode');
+            logger.debug('App not found - likely in pre-deployment configuration mode');
             return;
           }
           throw new Error(`Failed to fetch app details: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log(`Successfully fetched app details. App ID: ${data.id}`);
+        logger.debug(`Successfully fetched app details`, { appId: data.id });
 
         // Store the app ID in the component state
         setAppId(data.id);
       } catch (err) {
-        console.error('Error fetching app ID:', err);
+        logger.error('Error fetching app ID', err);
         // Don't set error for pre-deployment mode
         if (appSlug) {
           setError('Failed to fetch app details. Please try again later.');
@@ -153,9 +154,9 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     queryFn: async () => {
       if (!appId || !token) return [] as DocumentResponse[];
 
-      // Extremely reduced logging to avoid console spam
+      // Reduced logging to avoid console spam
       if (Math.random() < 0.01) { // Only log ~1% of the time
-        console.log(`Fetching documents for app ID: ${appId}`);
+        logger.debug(`Fetching documents for app ID: ${appId}`);
       }
       const response = await fetch(`${api.defaults.baseURL}/documents/app/${appId}`, {
         headers: {
@@ -166,7 +167,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       if (!response.ok) {
         // If we get a 404, it might mean the app ID is incorrect
         if (response.status === 404) {
-          console.error(`App ID ${appId} not found. This might be because the app was recreated with the same slug.`);
+          logger.error(`App ID ${appId} not found. This might be because the app was recreated with the same slug.`);
           // Return an empty array instead of throwing an error
           return [] as DocumentResponse[];
         }
@@ -174,9 +175,9 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       }
 
       const data = await response.json();
-      // Extremely reduced logging to avoid console spam
+      // Reduced logging to avoid console spam
       if (Math.random() < 0.01) { // Only log ~1% of the time
-        console.log(`Successfully fetched ${data.length} documents for app ID: ${appId}`);
+        logger.debug(`Successfully fetched documents`, { count: data.length, appId });
       }
       return data as DocumentResponse[];
     },
@@ -190,7 +191,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
   useEffect(() => {
     // When appId becomes available (app is deployed), refresh the document list
     if (appId) {
-      console.log(`App ID ${appId} is now available.`);
+      logger.debug(`App ID is now available`, { appId });
       // Refresh the document list to ensure we have the latest data
       refetchDocuments();
     }
@@ -223,7 +224,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
 
       const mergedFiles = [...allFiles, ...existingProcessingFiles];
 
-      console.log(`Updating UI with ${mergedFiles.length} files from database and local state`);
+      logger.debug(`Updating UI with files from database and local state`, { fileCount: mergedFiles.length });
       setFiles(mergedFiles);
     }
   }, [documents]); // Removed files from dependencies to prevent infinite loop
@@ -263,7 +264,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
 
       // If we updated any files, update the state
       if (updatedFiles) {
-        console.log('Updating file status based on knowledge base information');
+        logger.debug('Updating file status based on knowledge base information');
         setFiles(newFiles);
       }
     }
@@ -303,7 +304,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     if (!sessionId) {
       sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       localStorage.setItem('rag_chatbot_session_id', sessionId);
-      console.log(`Created new session ID: ${sessionId}`);
+      logger.debug(`Created new session ID`, { sessionId });
     }
     return sessionId;
   };
@@ -314,7 +315,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
     setError(null);
 
     const sessionId = getSessionId();
-    console.log(`Using session ID for temporary storage: ${sessionId}`);
+    logger.debug(`Using session ID for temporary storage`, { sessionId });
 
     const newFiles: UploadedFile[] = [];
     let updatedFiles = [...inMemoryFiles]; // Start with current files
@@ -330,7 +331,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         documentId: undefined
       }));
 
-      console.log(`Edit mode: Adding ${tempFiles.length} temporary files to Knowledge Base`);
+      logger.debug(`Edit mode: Adding temporary files to Knowledge Base`, { fileCount: tempFiles.length });
       setFiles(prev => {
         // Filter out any existing files with the same filename
         const filteredPrev = prev.filter(f =>
@@ -345,7 +346,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       const fileId = Date.now() + Math.random();
 
       try {
-        console.log(`Uploading file to temporary storage: ${file.name}`);
+        logger.debug(`Uploading file to temporary storage`, { filename: file.name });
 
         // Add file to UI with uploading status (not pending)
         const pendingFile: UploadedFile = {
@@ -381,7 +382,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         }
 
         const data = await response.json();
-        console.log(`File uploaded to temporary storage: ${data.filename}`);
+        logger.debug(`File uploaded to temporary storage`, { filename: data.filename });
 
         // Update file with server response - set to processing instead of success
         const fileWithMetadata: UploadedFile = {
@@ -403,9 +404,9 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
           ));
         }
 
-        console.log(`File uploaded successfully and marked as processing: ${file.name}`);
+        logger.debug(`File uploaded successfully and marked as processing`, { filename: file.name });
       } catch (err: any) {
-        console.error('Error uploading file to temporary storage:', err);
+        logger.error('Error uploading file to temporary storage', err);
 
         // Update file status with error in both local state and updatedFiles
         updatedFiles = updatedFiles.map(f => f.id === fileId ? {
@@ -433,7 +434,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
         tempStoragePath: file.tempStoragePath,
       }));
 
-      console.log(`Updating form value with ${metadataOnly.length} files`);
+      logger.debug(`Updating form value with files`, { fileCount: metadataOnly.length });
       onChange(metadataOnly);
     }
 
@@ -443,14 +444,18 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
   // Function to process temporary files after deployment
   const uploadInMemoryFilesToServer = async () => {
     if (!appId || !token || inMemoryFiles.length === 0) {
-      console.log("Cannot process temporary files: missing appId, token, or no files to process");
+      logger.debug("Cannot process temporary files: missing required data", {
+        hasAppId: !!appId,
+        hasToken: !!token,
+        fileCount: inMemoryFiles.length
+      });
       return;
     }
 
     // Get the session ID
     const sessionId = inMemoryFiles[0]?.sessionId || getSessionId();
 
-    console.log(`Processing temporary files for app ID ${appId} with session ID ${sessionId}`);
+    logger.debug(`Processing temporary files`, { appId, sessionId });
     setIsUploading(true);
     setError(null);
 
@@ -471,7 +476,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
 
     try {
       // Call the API to process all temporary files at once
-      console.log(`Calling API to process temporary files for app ID ${appId}`);
+      logger.debug(`Calling API to process temporary files`, { appId });
       const response = await fetch(`${api.defaults.baseURL}/temp-documents/process/${appId}?session_id=${sessionId}`, {
         method: 'POST',
         headers: {
@@ -485,7 +490,7 @@ const FileUploadWidget: React.FC<WidgetProps> = (props) => {
       }
 
       const processedDocuments = await response.json();
-      console.log(`Successfully processed ${processedDocuments.length} documents`);
+      logger.debug(`Successfully processed documents`, { count: processedDocuments.length });
 
       // In pre-deployment mode, update existing files
       if (isPreDeployment) {

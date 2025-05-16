@@ -43,6 +43,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../api/config';
 import ApiKeySelector from '../components/common/ApiKeySelector';
+import logger from '../utils/logger';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -203,7 +204,7 @@ function Playground() {
         try {
           currentBody = JSON.parse(requestBody);
         } catch (e) {
-          console.error('Failed to parse request body:', e);
+          logger.error('Failed to parse request body', e);
           // If parsing fails, start with a default body
           currentBody = {
             prompt: "Explain quantum computing",
@@ -225,7 +226,7 @@ function Playground() {
 
         setRequestBody(JSON.stringify(newBody, null, 2));
       } catch (e) {
-        console.error('Failed to update request body:', e);
+        logger.error('Failed to update request body', e);
         toast.error(`Failed to update request body: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -262,7 +263,9 @@ function Playground() {
     let command = `curl -X ${endpoint.method} ${API_BASE_URL}${endpoint.path}`;
 
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
-      command += ` \\\n  -H "X-API-Key: ${apiKey}"`;
+      // Mask the API key in the cURL command for security
+      const maskedKey = `${apiKey.substring(0, 3)}...${apiKey.substring(apiKey.length - 3)}`;
+      command += ` \\\n  -H "X-API-Key: ${maskedKey}"`;
     } else {
       command += ` \\\n  -H "X-API-Key: YOUR_API_KEY"`;
     }
@@ -328,7 +331,7 @@ function Playground() {
           updateRequestBody(modelNames[0], mockMode);
         }
       } catch (error: any) {
-        console.error('API error:', error);
+        logger.error('API error', error);
 
         // Check if this is an authentication error (401)
         if (error.response && error.response.status === 401) {
@@ -341,7 +344,7 @@ function Playground() {
         }
       }
     } catch (error) {
-      console.error('Error fetching models:', error);
+      logger.error('Error fetching models', error);
       setAvailableModels([]);
       const errorMessage = error instanceof Error ? error.message : String(error);
       setError(`Failed to fetch available models: ${errorMessage}`);
@@ -356,10 +359,17 @@ function Playground() {
   // Fetch models when API key changes
   useEffect(() => {
     if (apiKey && /^[a-zA-Z0-9_-]+$/.test(apiKey)) {
-      console.log('API key changed, fetching models with key:', apiKey);
+      // Log that API key changed without showing the actual key
+      logger.debug('API key changed, fetching models', {
+        keyPrefix: apiKey.substring(0, 3),
+        keyLength: apiKey.length
+      });
       fetchAvailableModels();
     } else if (apiKey) {
-      console.warn('Invalid API key format:', apiKey);
+      logger.warn('Invalid API key format', {
+        keyLength: apiKey.length,
+        valid: false
+      });
       setIsApiKeyValid(false);
     }
   }, [apiKey]);
@@ -409,7 +419,7 @@ function Playground() {
         setIsApiKeyValid(true);
         setResponse(formatResponse(response.data));
       } catch (error: any) {
-        console.error('API error:', error);
+        logger.error('API error', error);
 
         // Check if this is an authentication error (401)
         if (error.response && error.response.status === 401) {

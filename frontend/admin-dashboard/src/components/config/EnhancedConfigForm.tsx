@@ -38,6 +38,7 @@ import { IChangeEvent } from '@rjsf/core';
 import { FieldTemplateProps } from '@rjsf/utils';
 import customWidgets from '../widgets';
 import ApiKeySelector from '../common/ApiKeySelector';
+import logger from '../../utils/logger';
 
 // Custom field template with enhanced visual hierarchy
 const CustomFieldTemplate = (props: FieldTemplateProps) => {
@@ -423,7 +424,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
   // Validate schema on mount
   useEffect(() => {
     try {
-      console.log('Validating schema:', schema);
+      logger.debug('Validating schema', schema);
       if (!schema || typeof schema !== 'object') {
         throw new Error('Invalid schema: Schema must be a valid JSON object');
       }
@@ -433,21 +434,20 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
       }
 
       // Log UI schema for debugging
-      console.log('Using UI schema:', uiSchema);
+      logger.debug('Using UI schema', uiSchema);
 
       // Check if documents section is disabled
       if (uiSchema && uiSchema.documents) {
-        console.log('Documents section UI schema:', uiSchema.documents);
-        console.log('Documents section disabled:', uiSchema.documents['ui:disabled']);
-
-        if (uiSchema.documents.file_upload) {
-          console.log('File upload widget disabled:', uiSchema.documents.file_upload['ui:disabled']);
-        }
+        logger.debug('Documents section configuration', {
+          uiSchema: uiSchema.documents,
+          disabled: uiSchema.documents['ui:disabled'],
+          fileUploadDisabled: uiSchema.documents.file_upload ? uiSchema.documents.file_upload['ui:disabled'] : undefined
+        });
       }
 
       setError(null);
     } catch (err) {
-      console.error('Schema validation error:', err);
+      logger.error('Schema validation error', err);
       setError((err as Error).message || 'Invalid schema configuration');
     }
   }, [schema, uiSchema]);
@@ -482,7 +482,7 @@ const EnhancedConfigForm: React.FC<EnhancedConfigFormProps> = ({
     if (isWizardMode) {
       // For RAG chatbot template, always use our custom order regardless of ui:wizardOrder
       if (window.location.pathname.includes('deploy-app/rag-chatbot')) {
-        console.log('Using simplified wizard for RAG chatbot template');
+        logger.debug('Using simplified wizard for RAG chatbot template');
         // Only include app_settings and documents sections for RAG chatbot
         const wizardSections = ['app_settings', 'documents'];
         const filteredSections = allSections.filter(section => wizardSections.includes(section.key));

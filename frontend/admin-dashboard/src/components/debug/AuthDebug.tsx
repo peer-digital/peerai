@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Paper, Button } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import logger from '../../utils/logger';
 
 const AuthDebug: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -36,11 +37,11 @@ const AuthDebug: React.FC = () => {
           variant="outlined"
           size="small"
           onClick={() => {
-            console.log('Auth Debug:', {
+            logger.debug('Auth Debug', {
               user,
               isAuthenticated,
               isLoading,
-              token: localStorage.getItem('access_token'),
+              hasToken: !!localStorage.getItem('access_token'),
             });
           }}
         >
