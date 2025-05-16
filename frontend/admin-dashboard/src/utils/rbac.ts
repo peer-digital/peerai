@@ -13,7 +13,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     Permission.MANAGE_TEAM_BILLING,
     Permission.VIEW_TEAM_USAGE,
   ],
-  [Role.CONTENT_MANAGER]: [
+  [Role.APP_MANAGER]: [
     Permission.VIEW_DOCS,
     Permission.MANAGE_OWN_ACCOUNT,
     Permission.VIEW_APP_STORE,

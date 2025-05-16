@@ -110,7 +110,7 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
       setMode('register');
 
       // Validate the role path - only allow specific valid roles
-      const validRoles = ["content_manager"]; // Keep in sync with the backend role_mapping
+      const validRoles = ["app_manager"]; // Keep in sync with the backend role_mapping
 
       if (validRoles.includes(rolePath)) {
         // Store the role path for use during registration
@@ -144,7 +144,7 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
         // If we have a role path, use the role-specific registration endpoint
         if (roleFromPath) {
           // Validate the role path again for security
-          const validRoles = ["content_manager"]; // Keep in sync with the backend role_mapping
+          const validRoles = ["app_manager"]; // Keep in sync with the backend role_mapping
 
           if (validRoles.includes(roleFromPath)) {
             console.log(`Registering with role path: ${roleFromPath}`);

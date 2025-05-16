@@ -186,7 +186,7 @@ async def register_user_with_role(
     """Register a new user with a specific role based on URL path"""
     # Map URL path to role - only exact matches are allowed
     role_mapping = {
-        "content_manager": Role.CONTENT_MANAGER,
+        "app_manager": Role.APP_MANAGER,
         # Add more role mappings as needed
     }
 

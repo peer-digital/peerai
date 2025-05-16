@@ -32,7 +32,7 @@ const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesManagement'));
 const MyApps = React.lazy(() => import('./pages/MyApps'));
 const AppLibrary = React.lazy(() => import('./pages/AppLibrary'));
-const ContentManagerLanding = React.lazy(() => import('./pages/ContentManagerLanding'));
+const AppManagerLanding = React.lazy(() => import('./pages/AppManagerLanding'));
 const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const DeployAppView = React.lazy(() => import('./pages/DeployAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
@@ -178,10 +178,10 @@ function App() {
                       </PermissionGuard>
                     } />
 
-                    {/* Content Manager Landing */}
-                    <Route path="/content-manager" element={
+                    {/* App Manager Landing */}
+                    <Route path="/app-manager" element={
                       <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
-                        <ContentManagerLanding />
+                        <AppManagerLanding />
                       </PermissionGuard>
                     } />
 
@@ -235,18 +235,18 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
   const [shouldRender, setShouldRender] = React.useState(false);
 
   React.useEffect(() => {
-    // Only redirect content managers if they're coming from login/registration
+    // Only redirect app managers if they're coming from login/registration
     // or if they're accessing the root path
-    if (isAuthenticated && !isLoading && user?.role === Role.CONTENT_MANAGER) {
+    if (isAuthenticated && !isLoading && user?.role === Role.APP_MANAGER) {
       const isFromAuth = location.state && (
         location.state.from === '/login' ||
         location.state.from?.startsWith('/register')
       );
       const isRootPath = location.pathname === '/';
 
-      if ((isFromAuth || isRootPath) && location.pathname !== '/content-manager') {
+      if ((isFromAuth || isRootPath) && location.pathname !== '/app-manager') {
         // Use navigate instead of Navigate component for better handling
-        navigate('/content-manager', { replace: true });
+        navigate('/app-manager', { replace: true });
         return;
       }
     }
@@ -280,9 +280,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -300,9 +300,9 @@ function GuestLayout({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -324,9 +324,9 @@ function RootRedirect() {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to content-manager page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/content-manager" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -360,9 +360,9 @@ function ReferralRedirect() {
 function IndexRedirect() {
   const { user } = useAuth();
 
-  // Redirect content managers to content-manager page
-  if (user?.role === Role.CONTENT_MANAGER) {
-    return <Navigate to="/content-manager" replace />;
+  // Redirect app managers to app-manager page
+  if (user?.role === Role.APP_MANAGER) {
+    return <Navigate to="/app-manager" replace />;
   }
 
   // Redirect other users to dashboard

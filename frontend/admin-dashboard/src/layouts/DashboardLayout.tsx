@@ -224,7 +224,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Check if user has admin or super admin role
   const isAdmin = user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
   const isSuperAdmin = user?.role === Role.SUPER_ADMIN;
-  const isContentManager = user?.role === Role.CONTENT_MANAGER;
+  const isAppManager = user?.role === Role.APP_MANAGER;
 
   // Close drawer on mobile by default
   useEffect(() => {
@@ -324,13 +324,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   // @important: Menu items with required permissions grouped by category
-  const menuGroups: MenuGroup[] = isContentManager ? [
-    // Special simplified menu for Content Managers
+  const menuGroups: MenuGroup[] = isAppManager ? [
+    // Special simplified menu for App Managers
     {
-      title: 'Content Management',
+      title: 'App Management',
       items: [
-        { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS] },
-        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] }
+        { text: 'Get Started', icon: <DashboardIcon />, path: '/app-manager', requiredPermissions: [Permission.DEPLOY_APPS] },
+        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS] }
       ]
     }
   ] : [
@@ -344,8 +345,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     {
       title: 'Apps',
       items: [
-        { text: 'Get Started', icon: <DashboardIcon />, path: '/content-manager', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
+        { text: 'Get Started', icon: <DashboardIcon />, path: '/app-manager', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'App Library', icon: <DesignServicesIcon />, path: '/app-library', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
         ...(user?.role === Role.SUPER_ADMIN ? [
           {
             text: 'App Templates',
