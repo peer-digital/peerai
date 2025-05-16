@@ -235,9 +235,16 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
   const [shouldRender, setShouldRender] = React.useState(false);
 
   React.useEffect(() => {
-    // If user is a content manager and not on the content-manager page, redirect
+    // Only redirect content managers if they're coming from login/registration
+    // or if they're accessing the root path
     if (isAuthenticated && !isLoading && user?.role === Role.CONTENT_MANAGER) {
-      if (location.pathname !== '/content-manager') {
+      const isFromAuth = location.state && (
+        location.state.from === '/login' ||
+        location.state.from?.startsWith('/register')
+      );
+      const isRootPath = location.pathname === '/';
+
+      if ((isFromAuth || isRootPath) && location.pathname !== '/content-manager') {
         // Use navigate instead of Navigate component for better handling
         navigate('/content-manager', { replace: true });
         return;
@@ -246,14 +253,14 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
     // If we reach here, we should render the children
     setShouldRender(true);
-  }, [isAuthenticated, isLoading, user, location.pathname, navigate]);
+  }, [isAuthenticated, isLoading, user, location.pathname, navigate, location.state]);
 
   if (isLoading) {
     return <PageLoader />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Only render children after we've determined we should

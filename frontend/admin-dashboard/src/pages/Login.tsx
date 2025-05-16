@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate, Link as RouterLink, useParams } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useParams, useLocation } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -49,6 +49,7 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, register } = useAuth();
   const { register: registerForm, handleSubmit, setValue, formState: { errors } } = useForm<LoginCredentials & { full_name?: string; referral_code?: string; terms_accepted?: boolean }>();
   const [referralCode, setReferralCode] = useState(urlReferralCode || "");
@@ -167,7 +168,8 @@ const Login: React.FC<LoginProps> = ({ initialMode = 'login' }) => {
         }
       }
 
-      navigate('/dashboard');
+      // Pass the current path as state so PrivateRoute knows we're coming from login/registration
+      navigate('/dashboard', { state: { from: location.pathname } });
     } catch (err: any) {
       setError(err.message || `An error occurred during ${mode}`);
     } finally {
