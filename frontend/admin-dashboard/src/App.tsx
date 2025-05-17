@@ -248,9 +248,9 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
       );
       const isRootPath = location.pathname === '/';
 
-      if ((isFromAuth || isRootPath) && location.pathname !== '/get-started') {
+      if ((isFromAuth || isRootPath) && location.pathname !== '/app-manager') {
         // Use navigate instead of Navigate component for better handling
-        navigate('/get-started', { replace: true });
+        navigate('/app-manager', { replace: true });
         return;
       }
     }
@@ -284,9 +284,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect app managers to get-started page
+    // Redirect app managers to app-manager page
     if (user?.role === Role.APP_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -304,9 +304,9 @@ function GuestLayout({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect app managers to get-started page
+    // Redirect app managers to app-manager page
     if (user?.role === Role.APP_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -328,9 +328,9 @@ function RootRedirect() {
   }
 
   if (isAuthenticated) {
-    // Redirect app managers to get-started page
+    // Redirect app managers to app-manager page
     if (user?.role === Role.APP_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -373,9 +373,9 @@ function ReferralRedirect() {
 function IndexRedirect() {
   const { user } = useAuth();
 
-  // Redirect app managers to get-started page
+  // Redirect app managers to app-manager page
   if (user?.role === Role.APP_MANAGER) {
-    return <Navigate to="/get-started" replace />;
+    return <Navigate to="/app-manager" replace />;
   }
 
   // Redirect other users to dashboard

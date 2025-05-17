@@ -88,7 +88,7 @@
             gap: 10px;
             padding: 15px 20px;
             background-color: var(--light-bg-color);
-            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .quick-action {
@@ -241,6 +241,7 @@
         .input-container {
             display: flex;
             padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
             background-color: white;
         }
 
@@ -312,13 +313,6 @@
                 <div class="content-title">{{content.content_title}}</div>
             </div>
 
-            <!-- Chat container -->
-            <div class="chat-container" id="chat-container">
-                <div class="message ai-message">
-                    {{content.welcome_message}}
-                </div>
-            </div>
-
             <!-- Quick actions -->
             <div class="quick-actions">
                 <button class="quick-action">{{quick_actions.quick_action1}}</button>
@@ -326,6 +320,13 @@
                 <button class="quick-action">{{quick_actions.quick_action3}}</button>
                 <button class="quick-action">{{quick_actions.quick_action4}}</button>
                 <button class="quick-action">{{quick_actions.quick_action5}}</button>
+            </div>
+
+            <!-- Chat container -->
+            <div class="chat-container" id="chat-container">
+                <div class="message ai-message">
+                    {{content.welcome_message}}
+                </div>
             </div>
 
             <!-- Input section -->
@@ -640,12 +641,6 @@
 
             // Clear input
             userInput.value = '';
-
-            // Hide quick actions after first message
-            const quickActionsContainer = document.querySelector('.quick-actions');
-            if (quickActionsContainer) {
-                quickActionsContainer.style.display = 'none';
-            }
 
             try {
                 // Show typing indicator
