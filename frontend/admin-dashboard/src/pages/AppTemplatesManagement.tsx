@@ -26,6 +26,7 @@ import {
   useTheme,
   MenuItem,
   Select,
+  SelectChangeEvent,
   FormControl,
   InputLabel,
   FormHelperText,
@@ -199,6 +200,15 @@ const AppTemplatesManagement: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: name === 'is_active' ? checked : value,
+    }));
+  };
+
+  // Handle select input changes
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -531,7 +541,7 @@ const AppTemplatesManagement: React.FC = () => {
                     id="icon-type"
                     name="icon_type"
                     value={formData.icon_type}
-                    onChange={handleInputChange}
+                    onChange={handleSelectChange}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AppTemplateIcon iconType={selected} size="small" variant="default" />
