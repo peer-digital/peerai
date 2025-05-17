@@ -74,7 +74,8 @@ function TabPanel(props: TabPanelProps) {
       style={{
         width: '100%',
         display: sideBySide ? 'block' : (value === index ? 'block' : 'none'),
-        height: '100%'
+        height: '100%',
+        flex: 1
       }}
     >
       {(sideBySide || value === index) && (
@@ -126,12 +127,6 @@ const DeployedAppView: React.FC = () => {
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
 
-  // Set breadcrumbs for this page
-  useBreadcrumbsUpdate([
-    { label: 'Apps', href: '/my-apps' },
-    { label: app?.name || 'App Details' }
-  ]);
-
   // Fetch deployed app details
   const { data: app, isLoading, error, refetch } = useQuery({
     queryKey: ['deployed-app', slug],
@@ -162,6 +157,12 @@ const DeployedAppView: React.FC = () => {
       setIsDeleting(false);
     },
   });
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Apps', href: '/my-apps' },
+    { label: app?.name || 'App Details' }
+  ]);
 
   // Set initial form data when app data is loaded
   useEffect(() => {
@@ -389,7 +390,8 @@ const DeployedAppView: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        alignItems: 'flex-start'
       }}>
         {/* Hidden button for external control */}
         <button
@@ -464,9 +466,10 @@ const DeployedAppView: React.FC = () => {
           <DialogContent sx={{
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             p: 3,
-            height: 'calc(100vh - 64px)' // Subtract the AppBar height
+            height: 'calc(100vh - 64px)', // Subtract the AppBar height
+            overflowY: 'auto'
           }}>
             <Paper
               elevation={0}
@@ -557,44 +560,19 @@ const DeployedAppView: React.FC = () => {
 
   return (
     <Box p={3} sx={{ width: '100%', minWidth: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton
-            onClick={() => navigate('/my-apps')}
-            sx={{ mr: 1 }}
-            aria-label="back"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+
+      <Paper sx={{ mb: 3, p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Typography variant="h6" component="div">
             {app.name}
           </Typography>
           <Chip
             label={app.is_active ? 'Active' : 'Inactive'}
             color={app.is_active ? 'success' : 'default'}
             size="small"
-            sx={{ ml: 2 }}
           />
         </Box>
-        <Box>
-          {canConfigureApps && (
-            <>
-              {/* Edit button removed - using section-specific edit buttons instead */}
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleOpenDeleteConfirm}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? <CircularProgress size={24} /> : 'Delete'}
-              </Button>
-            </>
-          )}
-        </Box>
-      </Box>
-
-      <Paper sx={{ mb: 3, p: 2 }}>
+        <Divider sx={{ mb: 2 }} />
         <Typography variant="body2" color="text.secondary">
           <strong>Template:</strong> {app.template.name}
         </Typography>
@@ -637,6 +615,19 @@ const DeployedAppView: React.FC = () => {
             >
               Open
             </Button>
+            {canConfigureApps && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                sx={{ ml: 1 }}
+                onClick={handleOpenDeleteConfirm}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? <CircularProgress size={20} /> : 'Delete'}
+              </Button>
+            )}
           </Box>
         )}
       </Paper>
@@ -683,7 +674,8 @@ const DeployedAppView: React.FC = () => {
             height: isDesktop ? '100%' : 'auto',
             borderRight: isDesktop ? `1px solid ${theme.palette.divider}` : 'none',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            flex: 1
           }}>
             {isDesktop && (
               <Box sx={{
@@ -765,9 +757,6 @@ const DeployedAppView: React.FC = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography><strong>App Name:</strong> {app.name}</Typography>
                     <Typography>
-                      <strong>Status:</strong> {app.is_active ? 'Active' : 'Inactive'}
-                    </Typography>
-                    <Typography>
                       <strong>API Key:</strong> {app.configuration?.api_key ?
                         `${app.configuration.api_key.slice(0, 4)}•••••${app.configuration.api_key.slice(-4)}` :
                         'Not set'}
@@ -798,7 +787,8 @@ const DeployedAppView: React.FC = () => {
             width: isDesktop ? '50%' : '100%',
             height: isDesktop ? '100%' : 'auto',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            flex: 1
           }}>
             {isDesktop && (
               <Box sx={{

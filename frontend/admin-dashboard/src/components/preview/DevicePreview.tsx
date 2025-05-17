@@ -88,7 +88,7 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({
       case 'desktop':
       default:
         return {
-          width: fullscreen ? '100%' : '100%',
+          width: '100%',
           minWidth: fullscreen ? '800px' : '100%', // Ensure desktop is wide enough
           maxWidth: '100%', // Prevent overflow
           height: fullscreen ? '100%' : '600px',
@@ -101,7 +101,7 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({
   };
 
   const renderDevicePreview = () => (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         {title && (
           <Typography variant="subtitle1" fontWeight="medium">
@@ -155,12 +155,13 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({
           flexGrow: 1,
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           overflow: 'auto',
           backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)',
           p: 3,
           borderRadius: 1,
           minHeight: device === 'desktop' ? '600px' : 'auto',
+          width: '100%'
         }}
       >
         <Paper
@@ -241,9 +242,10 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({
       <DialogContent sx={{
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         p: 3,
-        height: 'calc(100vh - 64px)' // Subtract the AppBar height
+        height: 'calc(100vh - 64px)', // Subtract the AppBar height
+        overflowY: 'auto'
       }}>
         <Paper
           elevation={0}
