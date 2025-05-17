@@ -43,6 +43,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../api/config';
 import ApiKeySelector from '../components/common/ApiKeySelector';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 // @important: Import API base URL from config
 import { API_BASE_URL } from '../config';
@@ -160,6 +161,11 @@ function Playground() {
   const [endpointConfigs, setEndpointConfigs] = useState<Record<string, EndpointConfig>>(ENDPOINTS);
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, display_name: string}>>([]);
   const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(true);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'API Playground' }
+  ]);
 
   // We'll use the ApiKeySelector component instead of fetching API keys directly
 

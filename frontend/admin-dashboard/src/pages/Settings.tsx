@@ -30,6 +30,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import api from '../api/config';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface SystemSettings {
   rateLimit: {
@@ -86,6 +87,11 @@ const SettingSection: React.FC<{
 );
 
 const Settings: React.FC = () => {
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Settings' }
+  ]);
+
   // Initialize form with default values
   const defaultValues: SystemSettings = {
     rateLimit: {

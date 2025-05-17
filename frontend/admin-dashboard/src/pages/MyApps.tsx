@@ -39,6 +39,7 @@ import { EmptyState, PageTitle, SearchField } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
 import { useNavigate, Link } from 'react-router-dom';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 const MyApps: React.FC = () => {
   const theme = useTheme();
@@ -48,6 +49,11 @@ const MyApps: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<DeployedAppDetail | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Apps' }
+  ]);
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
@@ -124,7 +130,7 @@ const MyApps: React.FC = () => {
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ flexGrow: 1, mr: 2 }}>
           <SearchField
-            placeholder="Search my apps..."
+            placeholder="Search apps..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onClear={() => setSearchQuery('')}

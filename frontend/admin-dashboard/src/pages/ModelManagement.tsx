@@ -39,6 +39,7 @@ import PermissionGuard from '../components/PermissionGuard';
 import { apiClient } from '../api/client';
 import { toast } from 'react-toastify';
 import { PageContainer, SectionContainer, SearchField, FilterBar } from '../components/ui';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface ModelProvider {
   id: number;
@@ -71,6 +72,11 @@ const ModelManagement: React.FC = () => {
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Model Management' }
+  ]);
 
   // Filter states
   const [nameFilter, setNameFilter] = useState('');

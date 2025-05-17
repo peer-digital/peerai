@@ -44,6 +44,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import appTemplatesApi, { AppTemplate, AppTemplateCreate, AppTemplateUpdate } from '../api/appTemplates';
 import { EmptyState, PageContainer } from '../components/ui';
 import CodeEditor from '../components/editor/CodeEditor';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface TemplateFormData {
   slug: string;
@@ -100,6 +101,11 @@ const AppTemplatesManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [configJson, setConfigJson] = useState('');
   const [configJsonError, setConfigJsonError] = useState('');
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'App Templates' }
+  ]);
 
   // Fetch templates from the API
   const { data: templates, isLoading, error, refetch } = useQuery<AppTemplate[]>({

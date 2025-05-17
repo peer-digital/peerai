@@ -51,6 +51,7 @@ import DevicePreview from '../components/preview/DevicePreview';
 import EnhancedConfigForm from '../components/config/EnhancedConfigForm';
 import ApiKeySelector from '../components/common/ApiKeySelector';
 import { showToast } from '../components/ui/Toast';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -124,6 +125,12 @@ const DeployedAppView: React.FC = () => {
 
   // Check if user has permission to configure apps
   const canConfigureApps = user && hasPermission(user.permissions, Permission.CONFIGURE_APPS);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Apps', href: '/my-apps' },
+    { label: app?.name || 'App Details' }
+  ]);
 
   // Fetch deployed app details
   const { data: app, isLoading, error, refetch } = useQuery({
@@ -529,7 +536,7 @@ const DeployedAppView: React.FC = () => {
           Error loading app details. Please check your connection and try again.
         </Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/my-apps')}>
-          Back to My Apps
+          Back to Apps
         </Button>
       </Box>
     );
@@ -542,7 +549,7 @@ const DeployedAppView: React.FC = () => {
           App not found.
         </Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/my-apps')}>
-          Back to My Apps
+          Back to Apps
         </Button>
       </Box>
     );

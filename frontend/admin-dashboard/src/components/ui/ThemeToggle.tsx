@@ -46,15 +46,20 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
       arrow
     >
       <IconButton
-        onClick={toggleColorMode}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent menu from closing when toggling theme
+          toggleColorMode();
+        }}
         color={color}
         size={size}
         aria-label="toggle theme"
         sx={{
           transition: 'transform 0.3s ease-in-out',
           marginRight: marginRight,
+          padding: size === 'small' ? '4px' : undefined,
           '&:hover': {
             transform: 'rotate(12deg)',
+            backgroundColor: theme.palette.action.hover,
           },
           // Add a subtle background in dark mode for better visibility
           ...(isDarkMode && {
@@ -71,6 +76,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
             sx={{
               // Use a light color in dark mode for better contrast
               color: '#FFFFFF',
+              fontSize: size === 'small' ? '1rem' : undefined,
             }}
           />
         ) : (
@@ -78,6 +84,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
             sx={{
               // Use a dark color in light mode for better contrast
               color: theme.palette.grey[700],
+              fontSize: size === 'small' ? '1rem' : undefined,
             }}
           />
         )}

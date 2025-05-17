@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/config';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface ApiKey {
   id: string;
@@ -84,6 +85,11 @@ const ApiKeys: React.FC = () => {
   const [newKeyName, setNewKeyName] = useState('');
   const [newKey, setNewKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'API Keys' }
+  ]);
 
   // Fetch API keys
   const { data: apiKeys, isLoading, error, refetch } = useQuery<ApiKey[]>({

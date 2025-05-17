@@ -39,6 +39,7 @@ import api from '../api/config';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface UsageStats {
   totalRequests: number;
@@ -137,6 +138,11 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [viewType, setViewType] = useState<'personal' | 'team' | 'all'>('personal');
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Dashboard' }
+  ]);
 
   // Determine the view type based on user role
   useEffect(() => {

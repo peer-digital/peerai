@@ -21,6 +21,7 @@ import {
   useMediaQuery,
   Button,
   Link,
+  Breadcrumbs,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -35,6 +36,7 @@ import {
   MenuBook as MenuBookIcon,
   // NotificationsIcon removed
   ExpandLess as ExpandLessIcon,
+  NavigateNext as NavigateNextIcon,
   ExpandMore as ExpandMoreIcon,
   Help as HelpIcon,
   Logout as LogoutIcon,
@@ -58,6 +60,8 @@ import {
   Security as SecurityIcon,
   LockPerson as LockPersonIcon,
   Article as ArticleIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,6 +70,7 @@ import { hasAnyPermission } from '../utils/rbac';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { AnnouncementBanner } from '../components/ui';
 import ReferralModal from '../components/ReferralModal';
+import { useBreadcrumbs } from '../contexts/BreadcrumbContext';
 
 // Responsive drawer width
 const drawerWidth = 220; // Reduced for more compact layout
@@ -142,6 +147,12 @@ const AppBarStyled = styled(AppBar, {
   [theme.breakpoints.down('sm')]: {
     width: '100%',
   },
+  '& .MuiToolbar-root': {
+    [theme.breakpoints.down('sm')]: {
+      paddingLeft: theme.spacing(1),
+      paddingRight: theme.spacing(1),
+    },
+  },
 }));
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -204,6 +215,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const { breadcrumbs } = useBreadcrumbs();
 
   // Determine which logo to use based on theme mode
   // @important: Keep using SVG logos for the dashboard UI
@@ -330,7 +342,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       title: 'Content Management',
       items: [
         { text: 'Get Started', icon: <DashboardIcon />, path: '/get-started', requiredPermissions: [Permission.DEPLOY_APPS] },
-        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] }
+        { text: 'Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] }
       ]
     }
   ] : [
@@ -345,7 +357,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       title: 'Apps',
       items: [
         { text: 'Get Started', icon: <DashboardIcon />, path: '/get-started', requiredPermissions: [Permission.DEPLOY_APPS], adminOnly: true },
-        { text: 'My Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
+        { text: 'Apps', icon: <GridViewIcon />, path: '/my-apps', requiredPermissions: [Permission.USE_APP_STORE] },
         ...(user?.role === Role.SUPER_ADMIN ? [
           {
             text: 'App Templates',
@@ -405,66 +417,160 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             onClick={handleDrawerOpen}
             edge="start"
             sx={{
-              marginRight: 2,
+              marginRight: { xs: 1, sm: 2 },
               ...(open && { display: 'none' }),
             }}
           >
             <MenuIcon />
           </IconButton>
 
-          {/* Add logo to AppBar when drawer is closed */}
-          {!open && (
-            <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-              <img src={logoSrc} alt="PeerAI Logo" style={{ height: 24, marginRight: 6 }} />
-            </Box>
-          )}
+          {/* Logo removed from header - only visible in drawer */}
 
-          {/* Page title based on current route - more compact */}
-          <Typography
-            variant="subtitle1"
-            noWrap
-            component="div"
-            sx={{
-              flexGrow: 1,
-              fontWeight: 500,
-              fontSize: '1rem',
-              letterSpacing: '0.01em'
-            }}
-          >
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
-          </Typography>
+          {/* Breadcrumbs */}
+          <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            {/* Use breadcrumbs from context if available, otherwise fallback to page title */}
+            {breadcrumbs && breadcrumbs.length > 0 ? (
+              <>
+                {/* Mobile view: Back button + Current page */}
+                <Box
+                  sx={{
+                    display: { xs: 'flex', sm: 'none' },
+                    alignItems: 'center',
+                    width: '100%'
+                  }}
+                >
+                  {breadcrumbs.length > 1 && (
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        // Navigate to parent page if available
+                        const parentItem = breadcrumbs[breadcrumbs.length - 2];
+                        if (parentItem && parentItem.href) {
+                          navigate(parentItem.href);
+                        }
+                      }}
+                      sx={{ mr: 1, p: 0.5 }}
+                    >
+                      <NavigateNextIcon
+                        fontSize="small"
+                        sx={{
+                          transform: 'rotate(180deg)',
+                          fontSize: '1.2rem'
+                        }}
+                      />
+                    </IconButton>
+                  )}
+                  <Typography
+                    variant="subtitle1"
+                    noWrap
+                    component="div"
+                    title={breadcrumbs[breadcrumbs.length - 1].label}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 'calc(100% - 40px)', // Account for the back button
+                    }}
+                  >
+                    {breadcrumbs[breadcrumbs.length - 1].label}
+                  </Typography>
+                </Box>
 
-          {/* Theme toggle for all users */}
-          <ThemeToggle />
+                {/* Desktop view: Full breadcrumbs */}
+                <Breadcrumbs
+                  separator={<NavigateNextIcon fontSize="small" />}
+                  aria-label="breadcrumb"
+                  sx={{
+                    display: { xs: 'none', sm: 'flex' },
+                    '& .MuiBreadcrumbs-ol': {
+                      flexWrap: 'nowrap',
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
+                      overflow: 'hidden',
+                    },
+                    '& .MuiBreadcrumbs-li': {
+                      display: 'inline-flex',
+                      maxWidth: { xs: '200px', sm: '300px', md: '400px' },
+                      overflow: 'hidden',
+                    },
+                    '& .MuiBreadcrumbs-separator': {
+                      mx: 0.5,
+                    },
+                  }}
+                  maxItems={5}
+                  itemsAfterCollapse={1}
+                  itemsBeforeCollapse={1}
+                  expandText="..."
+                >
+                  {breadcrumbs.map((item, index) => {
+                    const isLast = index === breadcrumbs.length - 1;
+
+                    return isLast || !item.href ? (
+                      <Typography
+                        key={item.label}
+                        color={isLast ? 'text.primary' : 'text.secondary'}
+                        variant="subtitle1"
+                        noWrap
+                        title={item.label} // Add tooltip on hover
+                        sx={{
+                          fontWeight: isLast ? 600 : 400,
+                          fontSize: '1rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                        }}
+                      >
+                        {item.label}
+                      </Typography>
+                    ) : (
+                      <Link
+                        key={item.label}
+                        component={RouterLink}
+                        to={item.href}
+                        color="text.secondary"
+                        variant="subtitle1"
+                        underline="hover"
+                        title={item.label} // Add tooltip on hover
+                        sx={{
+                          fontSize: '1rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                          display: 'block',
+                        }}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </Breadcrumbs>
+              </>
+            ) : (
+              <Typography
+                variant="subtitle1"
+                noWrap
+                component="div"
+                sx={{
+                  fontWeight: 500,
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  letterSpacing: '0.01em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+              </Typography>
+            )}
+          </Box>
 
           {/* Only show these controls for authenticated users */}
           {!isGuestMode && (
             <>
-              {/* Refer a Friend button - show text only on larger screens */}
-              <Tooltip title="Refer a Friend">
-                <Button
-                  variant="outlined"
-                  color="inherit"
-                  startIcon={<PersonAddIcon />}
-                  onClick={() => {
-                    setIsReferralModalOpen(true);
-                    onOpenReferralModal?.();
-                  }}
-                  sx={{
-                    mr: 1,
-                    '& .MuiButton-startIcon': {
-                      mr: { xs: 0, sm: 1 }
-                    },
-                  }}
-                >
-                  <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-                    Refer a Friend
-                  </Box>
-                </Button>
-              </Tooltip>
-
-              {/* Notification bell removed */}
-
+              {/* Account button */}
               <Tooltip title="Account">
                 <IconButton
                   onClick={handleUserMenuOpen}
@@ -489,7 +595,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 anchorEl={userMenuAnchor}
                 open={Boolean(userMenuAnchor)}
                 onClose={handleUserMenuClose}
-                onClick={handleUserMenuClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                 // Use closeAfterTransition and BackdropProps instead of slotProps
@@ -509,14 +614,82 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 disablePortal={false}
                 keepMounted={false}
               >
-                {/* Profile menu item removed */}
+                {/* User info section */}
+                {user && (
+                  <Box sx={{ px: 2, py: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                      {user.name || user.email}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {user.email}
+                    </Typography>
+                  </Box>
+                )}
+                <Divider sx={{ my: 0.5 }} />
+
+                {/* Refer a Friend option */}
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUserMenuClose();
+                    setIsReferralModalOpen(true);
+                    onOpenReferralModal?.();
+                  }}
+                >
+                  <ListItemIcon>
+                    <PersonAddIcon fontSize="small" />
+                  </ListItemIcon>
+                  Refer a Friend
+                </MenuItem>
+
+                {/* Theme toggle option */}
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Don't close the menu when toggling theme
+                  }}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <ListItemIcon>
+                      {theme.palette.mode === 'dark' ? (
+                        <Brightness7Icon fontSize="small" />
+                      ) : (
+                        <Brightness4Icon fontSize="small" />
+                      )}
+                    </ListItemIcon>
+                    <Typography>
+                      {theme.palette.mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ ml: 2 }}>
+                    <ThemeToggle
+                      size="small"
+                      marginRight={0}
+                      tooltipPlacement="left"
+                    />
+                  </Box>
+                </MenuItem>
+
+                <Divider sx={{ my: 0.5 }} />
+
+                {/* Terms & Privacy */}
                 <MenuItem component={RouterLink} to="/policy" onClick={handleUserMenuClose}>
                   <ListItemIcon>
                     <ArticleIcon fontSize="small" />
                   </ListItemIcon>
                   Terms & Privacy
                 </MenuItem>
-                <Divider sx={{ my: 1 }} />
+
+                <Divider sx={{ my: 0.5 }} />
+
+                {/* Logout */}
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />

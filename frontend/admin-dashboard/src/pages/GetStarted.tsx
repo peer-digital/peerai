@@ -26,10 +26,16 @@ import {
   Chat as ChatIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 const GetStarted: React.FC = () => {
   const theme = useTheme();
   const [examplesModalOpen, setExamplesModalOpen] = useState(false);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Get Started' }
+  ]);
 
   const handleOpenExamplesModal = () => {
     setExamplesModalOpen(true);

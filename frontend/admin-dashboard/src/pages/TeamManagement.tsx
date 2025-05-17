@@ -1,8 +1,14 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { PageContainer, SectionContainer } from '../components/ui';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 const TeamManagement: React.FC = () => {
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Team Management' }
+  ]);
+
   return (
     <PageContainer>
       <SectionContainer>

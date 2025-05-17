@@ -33,6 +33,7 @@ import {
 import api from '../api/config';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role, hasPermission } from '../types/rbac';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface AnalyticsData {
   timeSeriesData: {
@@ -115,7 +116,7 @@ const calculatePercentages = (data: AnalyticsData['modelDistribution'] | undefin
       percent: 0
     }));
   }
-  
+
   const total = data.reduce((sum, item) => sum + item[key], 0);
   return data.map(item => ({
     ...item,
@@ -137,16 +138,16 @@ const normalizeAnalyticsData = (apiData: any): AnalyticsData => {
 
   // Otherwise, try to extract data or use fallback
   const result: AnalyticsData = {
-    timeSeriesData: Array.isArray(apiData?.timeSeriesData) 
-      ? apiData.timeSeriesData 
+    timeSeriesData: Array.isArray(apiData?.timeSeriesData)
+      ? apiData.timeSeriesData
       : fallbackData.timeSeriesData,
-    
-    modelDistribution: Array.isArray(apiData?.modelDistribution) 
-      ? apiData.modelDistribution 
+
+    modelDistribution: Array.isArray(apiData?.modelDistribution)
+      ? apiData.modelDistribution
       : fallbackData.modelDistribution,
-    
-    topEndpoints: Array.isArray(apiData?.topEndpoints) 
-      ? apiData.topEndpoints 
+
+    topEndpoints: Array.isArray(apiData?.topEndpoints)
+      ? apiData.topEndpoints
       : fallbackData.topEndpoints
   };
 
@@ -162,6 +163,11 @@ const Analytics: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>(fallbackData);
   const [showFallbackAlert, setShowFallbackAlert] = useState(false);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Analytics' }
+  ]);
 
   // Determine the view type based on user role
   useEffect(() => {
@@ -181,21 +187,21 @@ const Analytics: React.FC = () => {
       let endpoint = '/admin/analytics/personal';
       const params = new URLSearchParams();
       params.append('timeRange', timeRange);
-      
+
       if (viewType === 'team') {
         endpoint = '/admin/analytics/team';
       } else if (viewType === 'all') {
         endpoint = '/admin/analytics';
-        
+
         if (selectedTeam) {
           params.append('teamId', selectedTeam);
         }
-        
+
         if (selectedUser) {
           params.append('userId', selectedUser);
         }
       }
-      
+
       try {
         const response = await api.get(`${endpoint}?${params.toString()}`);
         return response.data;
@@ -510,4 +516,4 @@ const Analytics: React.FC = () => {
   );
 };
 
-export default Analytics; 
+export default Analytics;

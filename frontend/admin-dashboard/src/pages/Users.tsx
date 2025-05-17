@@ -39,6 +39,7 @@ import { PageContainer, SectionContainer, SearchField } from '../components/ui';
 import { toast } from 'react-toastify';
 import api from '../api/config';
 import { Role } from '../types/rbac';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 interface User {
   id: string;
@@ -93,6 +94,11 @@ const Users: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Users' }
+  ]);
 
   // Fetch users
   const { data: users, isLoading, error } = useQuery<User[]>({

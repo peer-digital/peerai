@@ -78,7 +78,7 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
     onChange(event.target.value);
   };
 
-  // Simply use the first active API key if no valid key is selected
+  // Always ensure a valid API key is selected
   useEffect(() => {
     // Only proceed if we have API keys
     if (apiKeys && apiKeys.length > 0) {
@@ -94,6 +94,19 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
       if (firstActiveKey) {
         console.log('Setting first active API key:', firstActiveKey.key.slice(0, 4) + '...');
         onChange(firstActiveKey.key);
+
+        // Also save to localStorage for backup
+        try {
+          const savedKeys = JSON.stringify([{
+            id: firstActiveKey.id,
+            key: firstActiveKey.key,
+            name: firstActiveKey.name
+          }]);
+          localStorage.setItem('saved_api_keys', savedKeys);
+          console.log('Saved API key to localStorage');
+        } catch (e) {
+          console.error('Error saving API key to localStorage:', e);
+        }
       }
     }
     // Only include value in the dependency array for the initial check

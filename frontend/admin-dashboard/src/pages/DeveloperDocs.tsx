@@ -15,6 +15,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import { toast } from 'react-toastify';
 import { PageContainer, SectionContainer } from '../components/ui';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 // Import code examples from separate files
 import { completionsExample, visionExample, audioExample } from '../data/examples/codeExamples';
@@ -26,6 +27,11 @@ const CookbookSection = lazy(() => import('../components/docs/CookbookSection'))
 const DeveloperDocs: React.FC = () => {
   const theme = useTheme();
   const [selectedTab, setSelectedTab] = React.useState(0);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Documentation' }
+  ]);
 
   // Loading placeholder component
   const LoadingPlaceholder = () => (

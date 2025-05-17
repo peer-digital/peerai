@@ -31,7 +31,7 @@ export const navigation: NavItem[] = [
     requiredPermissions: [Permission.VIEW_DASHBOARD],
   },
   {
-    title: 'My Apps',
+    title: 'Apps',
     path: '/my-apps',
     icon: AppsIcon,
     requiredPermissions: [Permission.USE_APP_STORE],

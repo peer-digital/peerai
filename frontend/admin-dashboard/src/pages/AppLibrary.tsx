@@ -5,7 +5,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
   Button,
   CircularProgress,
   Alert,
@@ -23,6 +22,7 @@ import appTemplatesApi, { AppTemplate } from '../api/appTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
 import { useNavigate, Link } from 'react-router-dom';
+import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
 
 const AppLibrary: React.FC = () => {
   const theme = useTheme();
@@ -30,6 +30,12 @@ const AppLibrary: React.FC = () => {
   const { user } = useAuth();
   // Check if user has permission to deploy apps
   const canDeployApps = user && hasPermission(user.permissions, Permission.DEPLOY_APPS);
+
+  // Set breadcrumbs for this page
+  useBreadcrumbsUpdate([
+    { label: 'Apps', href: '/my-apps' },
+    { label: 'App Library' }
+  ]);
 
   // Fetch templates
   const { data: templates, isLoading: isLoadingTemplates, error: templateError, refetch: refetchTemplates } = useQuery({

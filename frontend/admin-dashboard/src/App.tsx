@@ -11,6 +11,7 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardLayout from './layouts/DashboardLayout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BreadcrumbProvider } from './contexts/BreadcrumbContext';
 
 // Lazy load pages for better performance
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -61,10 +62,11 @@ function App() {
       <ThemeProvider>
         <SnackbarProvider>
           <AuthProvider>
-            <Router>
-              <CssBaseline />
-              <React.Suspense fallback={<PageLoader />}>
-                <Routes>
+            <BreadcrumbProvider>
+              <Router>
+                <CssBaseline />
+                <React.Suspense fallback={<PageLoader />}>
+                  <Routes>
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/login/:referralCode" element={<Login />} />
@@ -163,7 +165,7 @@ function App() {
 
                     {/* DeployedApps routes removed - replaced with MyApps */}
 
-                    {/* My Apps */}
+                    {/* Apps */}
                     <Route path="/my-apps" element={
                       <PermissionGuard requiredPermissions={[Permission.USE_APP_STORE]}>
                         <MyApps />
@@ -215,8 +217,9 @@ function App() {
                   <Route path="*" element={<Navigate to="/404" replace />} />
                 </Routes>
               </React.Suspense>
-              <ToastContainer />
-            </Router>
+                <ToastContainer />
+              </Router>
+            </BreadcrumbProvider>
           </AuthProvider>
         </SnackbarProvider>
       </ThemeProvider>
