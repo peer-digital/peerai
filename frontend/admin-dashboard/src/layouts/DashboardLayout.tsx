@@ -757,7 +757,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           },
         }}>
           {/* Show announcement banner if enabled or if announcementProps is provided */}
-          <Box sx={{ width: '100%', mb: 1.5 }}>
+          <Box sx={{ width: '100%', mb: 0.5 }}>
             {(announcementProps?.enabled !== false && announcementProps?.message) ? (
               <AnnouncementBanner
                 message={announcementProps.message}

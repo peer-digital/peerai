@@ -21,6 +21,12 @@ import {
   TextField,
   FormControlLabel,
   Switch,
+  useMediaQuery,
+  AppBar,
+  Toolbar,
+  Tooltip,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -28,6 +34,11 @@ import {
   Preview as PreviewIcon,
   Delete as DeleteIcon,
   Code as CodeIcon,
+  Fullscreen as FullscreenIcon,
+  Close as CloseIcon,
+  DesktopWindows as DesktopIcon,
+  PhoneAndroid as MobileIcon,
+  Tablet as TabletIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import deployedAppsApi, { DeployedAppDetail } from '../api/deployedApps';
@@ -45,22 +56,36 @@ interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
+  // New prop for side-by-side mode
+  sideBySide?: boolean;
 }
 
 function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+  const { children, value, index, sideBySide = false, ...other } = props;
 
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
+      hidden={!sideBySide && value !== index}
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
       {...other}
-      style={{ width: '100%' }}
+      style={{
+        width: '100%',
+        display: sideBySide ? 'block' : (value === index ? 'block' : 'none'),
+        height: '100%'
+      }}
     >
-      {value === index && (
-        <Box sx={{ p: 3, width: '100%', height: '100%', boxSizing: 'border-box' }}>
+      {(sideBySide || value === index) && (
+        <Box sx={{
+          p: { xs: 2, md: 3 },
+          width: '100%',
+          height: '100%',
+          boxSizing: 'border-box',
+          overflow: 'auto',
+          // Add some space at the bottom for better scrolling experience
+          pb: { xs: 4, md: 6 }
+        }}>
           {children}
         </Box>
       )}
@@ -74,6 +99,8 @@ const DeployedAppView: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Check if screen is desktop size (md and up)
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   // Initialize tab value from localStorage if available, otherwise default to 0
   const [tabValue, setTabValue] = useState(() => {
     if (slug) {
@@ -334,6 +361,8 @@ const DeployedAppView: React.FC = () => {
   // Preview component
   const PreviewComponent = () => {
     const [previewHtml, setPreviewHtml] = useState('');
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
     useEffect(() => {
       // Create a preview by replacing placeholders in the template code
@@ -344,8 +373,126 @@ const DeployedAppView: React.FC = () => {
       }
     }, [formData, app]);
 
+    const handleFullscreen = () => {
+      setIsFullscreen(true);
+    };
+
     return (
-      <DevicePreview html={previewHtml} title="App Preview" />
+      <Box sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {/* Hidden button for external control */}
+        <button
+          id="preview-fullscreen-button"
+          onClick={handleFullscreen}
+          style={{ display: 'none' }}
+        />
+
+        <DevicePreview
+          html={previewHtml}
+          hideDeviceOptions={true} // Always hide device options in regular view
+          hideFullscreenButton={true} // Hide the internal fullscreen button
+          externalFullscreenControl={true}
+          onFullscreen={handleFullscreen}
+        />
+
+        {/* Fullscreen Dialog */}
+        <Dialog
+          fullScreen
+          open={isFullscreen}
+          onClose={() => setIsFullscreen(false)}
+          sx={{
+            '& .MuiDialog-paper': {
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.95)'
+            }
+          }}
+        >
+          <AppBar position="static" color="default" elevation={0}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="h6" component="div">
+                Preview
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <ToggleButtonGroup
+                  value={device}
+                  exclusive
+                  onChange={(e, newDevice) => {
+                    if (newDevice !== null) {
+                      setDevice(newDevice);
+                    }
+                  }}
+                  aria-label="device preview"
+                  size="small"
+                >
+                  <Tooltip title="Desktop View">
+                    <ToggleButton value="desktop" aria-label="desktop view">
+                      <DesktopIcon />
+                    </ToggleButton>
+                  </Tooltip>
+                  <Tooltip title="Tablet View">
+                    <ToggleButton value="tablet" aria-label="tablet view">
+                      <TabletIcon />
+                    </ToggleButton>
+                  </Tooltip>
+                  <Tooltip title="Mobile View">
+                    <ToggleButton value="mobile" aria-label="mobile view">
+                      <MobileIcon />
+                    </ToggleButton>
+                  </Tooltip>
+                </ToggleButtonGroup>
+                <IconButton
+                  color="inherit"
+                  onClick={() => setIsFullscreen(false)}
+                  aria-label="close fullscreen"
+                  sx={{ ml: 2 }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </Toolbar>
+          </AppBar>
+          <DialogContent sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 3,
+            height: 'calc(100vh - 64px)' // Subtract the AppBar height
+          }}>
+            <Paper
+              elevation={0}
+              sx={{
+                width: device === 'mobile' ? '375px' : device === 'tablet' ? '768px' : '1000px',
+                height: device === 'mobile' ? '667px' : device === 'tablet' ? '1024px' : '800px',
+                maxHeight: '80vh', // Limit height on smaller screens
+                maxWidth: '100%', // Prevent overflow
+                borderRadius: device === 'mobile' ? '20px' : device === 'tablet' ? '12px' : '4px',
+                border: device === 'mobile'
+                  ? `12px solid ${theme.palette.mode === 'dark' ? '#333' : '#ddd'}`
+                  : device === 'tablet'
+                    ? `8px solid ${theme.palette.mode === 'dark' ? '#333' : '#ddd'}`
+                    : `1px solid ${theme.palette.divider}`,
+                boxShadow: device !== 'desktop' ? theme.shadows[4] : 'none',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <iframe
+                srcDoc={previewHtml}
+                title="App Preview"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                }}
+              />
+            </Paper>
+          </DialogContent>
+        </Dialog>
+      </Box>
     );
   };
 
@@ -494,120 +641,195 @@ const DeployedAppView: React.FC = () => {
       )}
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', mt: 3, overflow: 'hidden' }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          aria-label="app tabs"
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-            bgcolor: theme.palette.background.paper,
-          }}
-        >
-          <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
-          <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
-        </Tabs>
+        {/* Only show tabs on mobile */}
+        {!isDesktop && (
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="app tabs"
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              bgcolor: theme.palette.background.paper,
+            }}
+          >
+            <Tab icon={<SettingsIcon />} label="Configuration" id="tab-0" aria-controls="tabpanel-0" />
+            <Tab icon={<PreviewIcon />} label="Preview" id="tab-1" aria-controls="tabpanel-1" />
+          </Tabs>
+        )}
 
-        <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
-          <TabPanel value={tabValue} index={0}>
-            {/* App Settings Section */}
-            <Paper sx={{ p: 3, mb: 4 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">App Settings</Typography>
-                {canConfigureApps && (
-                  <Button
-                    variant="outlined"
-                    color={isEditingAppSettings ? "primary" : "inherit"}
-                    onClick={toggleAppSettingsEdit}
-                  >
-                    {isEditingAppSettings ? "Cancel" : "Edit"}
-                  </Button>
-                )}
+        {/* Side-by-side layout on desktop, tab-based on mobile */}
+        <Box sx={{
+          flexGrow: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: isDesktop ? 'row' : 'column',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Configuration Panel */}
+          <Box sx={{
+            width: isDesktop ? '50%' : '100%',
+            height: isDesktop ? '100%' : 'auto',
+            borderRight: isDesktop ? `1px solid ${theme.palette.divider}` : 'none',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {isDesktop && (
+              <Box sx={{
+                py: 1.5,
+                px: 2,
+                height: 48, // Fixed height to ensure consistency
+                borderBottom: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <SettingsIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Configuration</Typography>
               </Box>
-
-              <Divider sx={{ mb: 3 }} />
-
-              {isEditingAppSettings ? (
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField
-                    label="App Name"
-                    name="name"
-                    value={appSettings.name}
-                    onChange={handleAppSettingsChange}
-                    fullWidth
-                    required
-                  />
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={appSettings.is_active}
-                        onChange={handleAppSettingsChange}
-                        name="is_active"
-                        color="primary"
-                      />
-                    }
-                    label="Active"
-                  />
-
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>API Key</Typography>
-                    <ApiKeySelector
-                      value={appSettings.api_key}
-                      onChange={(value) => setAppSettings(prev => ({ ...prev, api_key: value }))}
-                      helperText="Select an API key for this application"
-                      fullWidth
-                    />
-                  </Box>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={saveAppSettings}
-                      disabled={updateMutation.isPending}
-                    >
-                      {updateMutation.isPending ? <CircularProgress size={24} /> : 'Save Changes'}
-                    </Button>
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography><strong>App Name:</strong> {app.name}</Typography>
-                  <Typography>
-                    <strong>Status:</strong> {app.is_active ? 'Active' : 'Inactive'}
-                  </Typography>
-                  <Typography>
-                    <strong>API Key:</strong> {app.configuration?.api_key ?
-                      `${app.configuration.api_key.slice(0, 4)}•••••${app.configuration.api_key.slice(-4)}` :
-                      'Not set'}
-                  </Typography>
-                </Box>
-              )}
-            </Paper>
-
-            {/* App Configuration */}
-            {app.template.template_config?.schema && (
-              <EnhancedConfigForm
-                schema={app.template.template_config.schema as JSONSchema7}
-                formData={formData}
-                onChange={handleFormChange}
-                disabled={false} // Always allow section editing
-                uiSchema={customUiSchema || app.template.template_config.uiSchema || {}}
-                onDeploy={handleSaveChanges}
-                onSectionEdit={handleSectionEdit}
-                onSectionSave={handleSectionSave}
-                editingSections={editingSections}
-              />
             )}
-          </TabPanel>
+            <TabPanel value={tabValue} index={0} sideBySide={isDesktop}>
+              {/* App Settings Section */}
+              <Paper sx={{ p: 3, mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">App Settings</Typography>
+                  {canConfigureApps && (
+                    <Button
+                      variant="outlined"
+                      color={isEditingAppSettings ? "primary" : "inherit"}
+                      onClick={toggleAppSettingsEdit}
+                    >
+                      {isEditingAppSettings ? "Cancel" : "Edit"}
+                    </Button>
+                  )}
+                </Box>
 
-          <TabPanel value={tabValue} index={1}>
-            <PreviewComponent />
-          </TabPanel>
+                <Divider sx={{ mb: 3 }} />
+
+                {isEditingAppSettings ? (
+                  <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                      label="App Name"
+                      name="name"
+                      value={appSettings.name}
+                      onChange={handleAppSettingsChange}
+                      fullWidth
+                      required
+                    />
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={appSettings.is_active}
+                          onChange={handleAppSettingsChange}
+                          name="is_active"
+                          color="primary"
+                        />
+                      }
+                      label="Active"
+                    />
+
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>API Key</Typography>
+                      <ApiKeySelector
+                        value={appSettings.api_key}
+                        onChange={(value) => setAppSettings(prev => ({ ...prev, api_key: value }))}
+                        helperText="Select an API key for this application"
+                        fullWidth
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={saveAppSettings}
+                        disabled={updateMutation.isPending}
+                      >
+                        {updateMutation.isPending ? <CircularProgress size={24} /> : 'Save Changes'}
+                      </Button>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography><strong>App Name:</strong> {app.name}</Typography>
+                    <Typography>
+                      <strong>Status:</strong> {app.is_active ? 'Active' : 'Inactive'}
+                    </Typography>
+                    <Typography>
+                      <strong>API Key:</strong> {app.configuration?.api_key ?
+                        `${app.configuration.api_key.slice(0, 4)}•••••${app.configuration.api_key.slice(-4)}` :
+                        'Not set'}
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+
+              {/* App Configuration */}
+              {app.template.template_config?.schema && (
+                <EnhancedConfigForm
+                  schema={app.template.template_config.schema as JSONSchema7}
+                  formData={formData}
+                  onChange={handleFormChange}
+                  disabled={false} // Always allow section editing
+                  uiSchema={customUiSchema || app.template.template_config.uiSchema || {}}
+                  onDeploy={handleSaveChanges}
+                  onSectionEdit={handleSectionEdit}
+                  onSectionSave={handleSectionSave}
+                  editingSections={editingSections}
+                />
+              )}
+            </TabPanel>
+          </Box>
+
+          {/* Preview Panel */}
+          <Box sx={{
+            width: isDesktop ? '50%' : '100%',
+            height: isDesktop ? '100%' : 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {isDesktop && (
+              <Box sx={{
+                py: 1.5,
+                px: 2,
+                height: 48, // Fixed height to match the Configuration panel
+                borderBottom: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <PreviewIcon sx={{ mr: 1 }} />
+                  <Typography variant="h6">Preview</Typography>
+                </Box>
+                <Tooltip title="Fullscreen Mode">
+                  <IconButton
+                    onClick={() => {
+                      // Find the PreviewComponent's handleFullscreen function and call it
+                      const previewComponent = document.getElementById('preview-fullscreen-button');
+                      if (previewComponent) {
+                        previewComponent.click();
+                      }
+                    }}
+                    size="small"
+                    aria-label="fullscreen mode"
+                    sx={{ p: 0.5 }} // Reduced padding on the icon button
+                  >
+                    <FullscreenIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
+            <TabPanel value={tabValue} index={1} sideBySide={isDesktop}>
+              <PreviewComponent />
+            </TabPanel>
+          </Box>
         </Box>
       </Box>
 

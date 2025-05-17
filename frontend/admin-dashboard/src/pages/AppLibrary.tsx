@@ -1,30 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
   Grid,
   Card,
   CardContent,
-  CardMedia,
   CardActions,
   Button,
-  Chip,
   CircularProgress,
   Alert,
-  Stack,
   Paper,
   useTheme,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Code as CodeIcon,
-  DesignServices as DesignServicesIcon,
-  Rocket as RocketIcon,
-  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { AppTemplateIcon } from '../components/ui';
 import { useQuery } from '@tanstack/react-query';
-import { EmptyState, PageContainer, SearchField } from '../components/ui';
+import { EmptyState, PageContainer } from '../components/ui';
 import appTemplatesApi, { AppTemplate } from '../api/appTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, hasPermission } from '../utils/permissions';
@@ -34,9 +28,6 @@ const AppLibrary: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-
   // Check if user has permission to deploy apps
   const canDeployApps = user && hasPermission(user.permissions, Permission.DEPLOY_APPS);
 
@@ -54,61 +45,11 @@ const AppLibrary: React.FC = () => {
     navigate(`/deploy-app/${template.slug}`);
   };
 
-  // Handle tag selection
-  const handleTagClick = (tag: string) => {
-    setSelectedTag(selectedTag === tag ? null : tag);
-  };
-
-  // Extract all unique tags from templates
-  const allTags = templates
-    ? Array.from(
-        new Set(
-          templates.flatMap((template) => template.tags || [])
-        )
-      ).sort()
-    : [];
-
-  // Filter templates based on search query, selected tag, and active status
-  const filteredTemplates = templates?.filter((template) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (template.description && template.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const matchesTag =
-      selectedTag === null || (template.tags && template.tags.includes(selectedTag));
-
-    // Only show active templates
-    const isActive = template.is_active;
-
-    return matchesSearch && matchesTag && isActive;
-  });
+  // Filter templates to only show active templates
+  const filteredTemplates = templates?.filter((template) => template.is_active);
 
   return (
     <PageContainer>
-      <Box sx={{ mb: 4 }}>
-        <SearchField
-          placeholder="Search templates..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onClear={() => setSearchQuery('')}
-          sx={{ mb: 2 }}
-        />
-
-        {allTags.length > 0 && (
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            {allTags.map((tag) => (
-              <Chip
-                key={tag}
-                label={tag}
-                onClick={() => handleTagClick(tag)}
-                color={selectedTag === tag ? 'primary' : 'default'}
-                variant={selectedTag === tag ? 'filled' : 'outlined'}
-              />
-            ))}
-          </Stack>
-        )}
-      </Box>
 
       {/* Simplified Instructions */}
       <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: theme.shadows[2] }}>
@@ -167,24 +108,6 @@ const AppLibrary: React.FC = () => {
                     overflow: 'hidden'
                   }}
                 >
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 16,
-                      left: 16,
-                      zIndex: 1
-                    }}
-                  >
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 700,
-                        color: theme.palette.text.primary
-                      }}
-                    >
-                      {template.name}
-                    </Typography>
-                  </Box>
                   <AppTemplateIcon
                     iconType={template.icon_type}
                     size="large"
@@ -192,6 +115,17 @@ const AppLibrary: React.FC = () => {
                   />
                 </Box>
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                      color: theme.palette.text.primary,
+                      mb: 2,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {template.name}
+                  </Typography>
                   <Typography
                     variant="body1"
                     color="text.secondary"
@@ -208,24 +142,6 @@ const AppLibrary: React.FC = () => {
                   >
                     {template.description || 'No description available.'}
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mt: 'auto' }}>
-                    {template.tags?.map((tag, index) => (
-                      <Chip
-                        key={index}
-                        label={tag}
-                        size="small"
-                        sx={{
-                          bgcolor:
-                            theme.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.1)'
-                              : 'rgba(0, 0, 0, 0.05)',
-                          borderRadius: '4px',
-                          fontWeight: 500,
-                          fontSize: '0.75rem'
-                        }}
-                      />
-                    ))}
-                  </Box>
                 </CardContent>
                 <Box sx={{ px: 3, pb: 1 }}>
                   <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, pt: 2, pb: 1 }}>

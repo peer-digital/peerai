@@ -26,11 +26,22 @@ import {
 interface DevicePreviewProps {
   html: string;
   title?: string;
+  hideDeviceOptions?: boolean;
+  hideFullscreenButton?: boolean;
+  onFullscreen?: () => void;
+  externalFullscreenControl?: boolean;
 }
 
 type DeviceType = 'desktop' | 'tablet' | 'mobile';
 
-const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
+const DevicePreview: React.FC<DevicePreviewProps> = ({
+  html,
+  title,
+  hideDeviceOptions = false,
+  hideFullscreenButton = false,
+  onFullscreen,
+  externalFullscreenControl = false
+}) => {
   const theme = useTheme();
   const [device, setDevice] = useState<DeviceType>('desktop');
   const [fullscreen, setFullscreen] = useState(false);
@@ -45,6 +56,14 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
     }
   };
 
+  const handleFullscreen = () => {
+    if (externalFullscreenControl && onFullscreen) {
+      onFullscreen();
+    } else {
+      setFullscreen(true);
+    }
+  };
+
   // Device frame styles
   const getDeviceStyles = () => {
     switch (device) {
@@ -52,6 +71,7 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
         return {
           width: '375px',
           height: '667px',
+          maxHeight: '80vh', // Limit height on smaller screens
           borderRadius: '20px',
           border: `12px solid ${theme.palette.mode === 'dark' ? '#333' : '#ddd'}`,
           boxShadow: theme.shadows[4],
@@ -60,6 +80,7 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
         return {
           width: '768px',
           height: '1024px',
+          maxHeight: '80vh', // Limit height on smaller screens
           borderRadius: '12px',
           border: `8px solid ${theme.palette.mode === 'dark' ? '#333' : '#ddd'}`,
           boxShadow: theme.shadows[4],
@@ -68,8 +89,11 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
       default:
         return {
           width: fullscreen ? '100%' : '100%',
+          minWidth: fullscreen ? '800px' : '100%', // Ensure desktop is wide enough
+          maxWidth: '100%', // Prevent overflow
           height: fullscreen ? '100%' : '600px',
           minHeight: fullscreen ? '100%' : '600px',
+          maxHeight: '80vh', // Limit height on smaller screens
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: '4px',
         };
@@ -85,39 +109,44 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
           </Typography>
         )}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <ToggleButtonGroup
-            value={device}
-            exclusive
-            onChange={handleDeviceChange}
-            aria-label="device preview"
-            size="small"
-          >
-            <Tooltip title="Desktop View">
-              <ToggleButton value="desktop" aria-label="desktop view">
-                <DesktopIcon />
-              </ToggleButton>
-            </Tooltip>
-            <Tooltip title="Tablet View">
-              <ToggleButton value="tablet" aria-label="tablet view">
-                <TabletIcon />
-              </ToggleButton>
-            </Tooltip>
-            <Tooltip title="Mobile View">
-              <ToggleButton value="mobile" aria-label="mobile view">
-                <MobileIcon />
-              </ToggleButton>
-            </Tooltip>
-          </ToggleButtonGroup>
-          <Tooltip title="Fullscreen Mode">
-            <IconButton
-              onClick={() => setFullscreen(true)}
+          {/* Only show device options when not hidden */}
+          {!hideDeviceOptions && (
+            <ToggleButtonGroup
+              value={device}
+              exclusive
+              onChange={handleDeviceChange}
+              aria-label="device preview"
               size="small"
-              sx={{ ml: 1 }}
-              aria-label="fullscreen mode"
             >
-              <FullscreenIcon />
-            </IconButton>
-          </Tooltip>
+              <Tooltip title="Desktop View">
+                <ToggleButton value="desktop" aria-label="desktop view">
+                  <DesktopIcon />
+                </ToggleButton>
+              </Tooltip>
+              <Tooltip title="Tablet View">
+                <ToggleButton value="tablet" aria-label="tablet view">
+                  <TabletIcon />
+                </ToggleButton>
+              </Tooltip>
+              <Tooltip title="Mobile View">
+                <ToggleButton value="mobile" aria-label="mobile view">
+                  <MobileIcon />
+                </ToggleButton>
+              </Tooltip>
+            </ToggleButtonGroup>
+          )}
+          {!hideFullscreenButton && !isMobile && (
+            <Tooltip title="Fullscreen Mode">
+              <IconButton
+                onClick={handleFullscreen}
+                size="small"
+                sx={{ ml: hideDeviceOptions ? 0 : 1 }}
+                aria-label="fullscreen mode"
+              >
+                <FullscreenIcon />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Box>
 
@@ -172,7 +201,7 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
       <AppBar position="static" color="default" elevation={0}>
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="h6" component="div">
-            {title || 'App Preview'}
+            {title || 'Preview'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <ToggleButtonGroup
@@ -182,15 +211,21 @@ const DevicePreview: React.FC<DevicePreviewProps> = ({ html, title }) => {
               aria-label="device preview"
               size="small"
             >
-              <ToggleButton value="desktop" aria-label="desktop view">
-                <DesktopIcon />
-              </ToggleButton>
-              <ToggleButton value="tablet" aria-label="tablet view">
-                <TabletIcon />
-              </ToggleButton>
-              <ToggleButton value="mobile" aria-label="mobile view">
-                <MobileIcon />
-              </ToggleButton>
+              <Tooltip title="Desktop View">
+                <ToggleButton value="desktop" aria-label="desktop view">
+                  <DesktopIcon />
+                </ToggleButton>
+              </Tooltip>
+              <Tooltip title="Tablet View">
+                <ToggleButton value="tablet" aria-label="tablet view">
+                  <TabletIcon />
+                </ToggleButton>
+              </Tooltip>
+              <Tooltip title="Mobile View">
+                <ToggleButton value="mobile" aria-label="mobile view">
+                  <MobileIcon />
+                </ToggleButton>
+              </Tooltip>
             </ToggleButtonGroup>
             <IconButton
               color="inherit"
