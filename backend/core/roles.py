@@ -8,7 +8,7 @@ class Role(str, Enum):
     USER = "user"
     USER_ADMIN = "user_admin"
     SUPER_ADMIN = "super_admin"
-    CONTENT_MANAGER = "content_manager"  # New role for content management
+    APP_MANAGER = "app_manager"  # Role for application management
 
     def __str__(self) -> str:
         return self.value
@@ -59,13 +59,13 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.VIEW_APP_STORE,
         Permission.USE_APP_STORE,
     },
-    Role.CONTENT_MANAGER: {
+    Role.APP_MANAGER: {
         Permission.VIEW_DOCS,
         Permission.MANAGE_OWN_ACCOUNT,
         Permission.VIEW_APP_STORE,
         Permission.USE_APP_STORE,
-        Permission.DEPLOY_APPS,  # Content managers can deploy apps
-        Permission.CONFIGURE_APPS,  # Content managers can configure apps
+        Permission.DEPLOY_APPS,  # App managers can deploy apps
+        Permission.CONFIGURE_APPS,  # App managers can configure apps
     },
     Role.USER_ADMIN: {
         Permission.VIEW_DOCS,

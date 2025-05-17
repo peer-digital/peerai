@@ -28,7 +28,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, SectionContainer } from '../components/ui';
 
-const ContentManagerLanding: React.FC = () => {
+const AppManagerLanding: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
 
@@ -253,212 +253,6 @@ const ContentManagerLanding: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Department Examples Section */}
-      <Box sx={{
-        mb: 6,
-        p: 4,
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-        borderRadius: '0.375rem'
-      }}>
-        <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>
-          Examples
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 4 }}>
-          See how different departments can create their own standalone chat applications with custom styling,
-          each trained on their specific documents.
-        </Typography>
-
-        <Grid container spacing={4}>
-          {/* HR Department */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              borderRadius: '0.375rem',
-              boxShadow: theme.shadows[1],
-              border: `1px solid ${theme.palette.divider}`,
-              transition: 'box-shadow 0.3s ease-in-out',
-              '&:hover': { boxShadow: theme.shadows[3] }
-            }}>
-              <Box sx={{
-                bgcolor: 'rgba(25, 118, 210, 0.7)', // slightly more muted primary
-                color: 'white',
-                p: 2,
-                borderTopLeftRadius: 'calc(0.375rem - 1px)',
-                borderTopRightRadius: 'calc(0.375rem - 1px)'
-              }}>
-                <Typography variant="h6">HR Department</Typography>
-              </Box>
-              <CardContent>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  Employee Handbook Assistant
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Create a chatbot trained on employee handbooks, HR policies, benefits information,
-                  and onboarding materials.
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                    Benefits:
-                  </Typography>
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    <Box component="li">
-                      <Typography variant="body2">Reduce repetitive HR inquiries</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Provide 24/7 access to HR information</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Streamline employee onboarding</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* IT Support */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              borderRadius: '0.375rem',
-              boxShadow: theme.shadows[1],
-              border: `1px solid ${theme.palette.divider}`,
-              transition: 'box-shadow 0.3s ease-in-out',
-              '&:hover': { boxShadow: theme.shadows[3] }
-            }}>
-              <Box sx={{
-                bgcolor: 'rgba(46, 125, 50, 0.7)', // slightly more muted green
-                color: 'white',
-                p: 2,
-                borderTopLeftRadius: 'calc(0.375rem - 1px)',
-                borderTopRightRadius: 'calc(0.375rem - 1px)'
-              }}>
-                <Typography variant="h6">IT Support</Typography>
-              </Box>
-              <CardContent>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  Technical Support Assistant
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Build a support assistant trained on troubleshooting guides, system documentation,
-                  and common IT issues.
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                    Benefits:
-                  </Typography>
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    <Box component="li">
-                      <Typography variant="body2">Decrease support ticket volume</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Enable self-service problem resolution</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Reduce time to resolution for common issues</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Legal Team */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              borderRadius: '0.375rem',
-              boxShadow: theme.shadows[1],
-              border: `1px solid ${theme.palette.divider}`,
-              transition: 'box-shadow 0.3s ease-in-out',
-              '&:hover': { boxShadow: theme.shadows[3] }
-            }}>
-              <Box sx={{
-                bgcolor: 'rgba(2, 119, 189, 0.7)', // slightly more muted blue
-                color: 'white',
-                p: 2,
-                borderTopLeftRadius: 'calc(0.375rem - 1px)',
-                borderTopRightRadius: 'calc(0.375rem - 1px)'
-              }}>
-                <Typography variant="h6">Legal Team</Typography>
-              </Box>
-              <CardContent>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  Contract Assistant
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Develop a legal assistant trained on contract templates, legal precedents,
-                  compliance documents, and internal policies.
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                    Benefits:
-                  </Typography>
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    <Box component="li">
-                      <Typography variant="body2">Accelerate contract review processes</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Ensure consistent application of legal standards</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Improve access to legal knowledge</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Sales */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              borderRadius: '0.375rem',
-              boxShadow: theme.shadows[1],
-              border: `1px solid ${theme.palette.divider}`,
-              transition: 'box-shadow 0.3s ease-in-out',
-              '&:hover': { boxShadow: theme.shadows[3] }
-            }}>
-              <Box sx={{
-                bgcolor: 'rgba(198, 40, 40, 0.7)', // slightly more muted red
-                color: 'white',
-                p: 2,
-                borderTopLeftRadius: 'calc(0.375rem - 1px)',
-                borderTopRightRadius: 'calc(0.375rem - 1px)'
-              }}>
-                <Typography variant="h6">Sales</Typography>
-              </Box>
-              <CardContent>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  Product Information Chatbot
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Design a sales assistant trained on product specifications, pricing information,
-                  competitive analyses, and frequently asked questions.
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                    Benefits:
-                  </Typography>
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    <Box component="li">
-                      <Typography variant="body2">Provide instant answers to customer inquiries</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Equip sales team with accurate product information</Typography>
-                    </Box>
-                    <Box component="li">
-                      <Typography variant="body2">Increase conversion rates with timely responses</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-
       {/* CTA Section */}
       <Box
         sx={{
@@ -500,11 +294,11 @@ const ContentManagerLanding: React.FC = () => {
             }
           }}
         >
-          Get started
+          Browse App Templates
         </Button>
       </Box>
     </PageContainer>
   );
 };
 
-export default ContentManagerLanding;
+export default AppManagerLanding;

@@ -22,6 +22,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api/config';
+import logger from '../../utils/logger';
 
 interface ApiKey {
   id: number;
@@ -61,7 +62,7 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
         const response = await api.get('/auth/api-keys');
         return response.data;
       } catch (error) {
-        console.error('Error fetching API keys:', error);
+        logger.error('Error fetching API keys', error);
         return [];
       }
     },
@@ -85,14 +86,21 @@ const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({
       // First, check if current value is valid
       const isCurrentValueValid = value && apiKeys.some(k => k.key === value && k.is_active);
       if (isCurrentValueValid) {
-        console.log('Current API key is valid, keeping it:', value?.slice(0, 4) + '...');
+        logger.debug('Current API key is valid', {
+          keyPrefix: value?.slice(0, 3),
+          keyLength: value?.length
+        });
         return;
       }
 
       // If no valid key is selected, use the first active key
       const firstActiveKey = apiKeys.find(k => k.is_active);
       if (firstActiveKey) {
-        console.log('Setting first active API key:', firstActiveKey.key.slice(0, 4) + '...');
+        logger.debug('Setting first active API key', {
+          keyName: firstActiveKey.name,
+          keyPrefix: firstActiveKey.key.slice(0, 3),
+          keyLength: firstActiveKey.key.length
+        });
         onChange(firstActiveKey.key);
 
         // Also save to localStorage for backup

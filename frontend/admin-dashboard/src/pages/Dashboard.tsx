@@ -40,6 +40,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types/rbac';
 import { hasAnyPermission } from '../utils/rbac';
 import { useBreadcrumbsUpdate } from '../hooks/useBreadcrumbsUpdate';
+import logger from '../utils/logger';
 
 interface UsageStats {
   totalRequests: number;
@@ -170,7 +171,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
       }
 
       const response = await api.get(endpoint);
-      console.log('Usage stats:', response.data);
+      logger.debug('Usage stats retrieved', response.data);
       return response.data;
     },
   });
@@ -185,8 +186,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isReferralModalOpen, onReferralMo
   // Debug log for stats
   useEffect(() => {
     if (stats) {
-      console.log('Token usage percentage:', tokenUsagePercentage);
-      console.log('Total tokens:', stats.totalTokens);
+      logger.debug('Dashboard stats summary', {
+        tokenUsagePercentage,
+        totalTokens: stats.totalTokens
+      });
     }
   }, [stats, tokenUsagePercentage]);
 

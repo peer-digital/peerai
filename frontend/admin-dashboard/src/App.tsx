@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -33,7 +33,7 @@ const ModelManagement = React.lazy(() => import('./pages/ModelManagement'));
 const AppTemplatesManagement = React.lazy(() => import('./pages/AppTemplatesManagement'));
 const MyApps = React.lazy(() => import('./pages/MyApps'));
 const AppLibrary = React.lazy(() => import('./pages/AppLibrary'));
-const ContentManagerLanding = React.lazy(() => import('./pages/ContentManagerLanding'));
+const AppManagerLanding = React.lazy(() => import('./pages/AppManagerLanding'));
 const DeployedAppView = React.lazy(() => import('./pages/DeployedAppView'));
 const DeployAppView = React.lazy(() => import('./pages/DeployAppView'));
 const Unauthorized = React.lazy(() => import('./pages/Unauthorized'));
@@ -71,6 +71,10 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/login/:referralCode" element={<Login />} />
                   <Route path="/register" element={<Login initialMode="register" />} />
+                  {/* Role-specific registration routes - must come before general referral code route */}
+                  <Route path="/register/app_manager" element={<Login initialMode="register" rolePath="app_manager" />} />
+                  <Route path="/register/app_manager/:referralCode" element={<Login initialMode="register" rolePath="app_manager" />} />
+                  {/* General referral code route - must come after specific role paths */}
                   <Route path="/register/:referralCode" element={<Login initialMode="register" />} />
                   {/* Redirect /referral/:referralCode to /register/:referralCode */}
                   <Route path="/referral/:referralCode" element={<ReferralRedirect />} />
@@ -177,10 +181,10 @@ function App() {
                       </PermissionGuard>
                     } />
 
-                    {/* Content Manager Landing */}
-                    <Route path="/content-manager" element={
+                    {/* App Manager Landing */}
+                    <Route path="/app-manager" element={
                       <PermissionGuard requiredPermissions={[Permission.DEPLOY_APPS]}>
-                        <ContentManagerLanding />
+                        <AppManagerLanding />
                       </PermissionGuard>
                     } />
 
@@ -229,14 +233,43 @@ function App() {
 
 // Route guard for authenticated users
 function PrivateRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [shouldRender, setShouldRender] = React.useState(false);
+
+  React.useEffect(() => {
+    // Only redirect app managers if they're coming from login/registration
+    // or if they're accessing the root path
+    if (isAuthenticated && !isLoading && user?.role === Role.APP_MANAGER) {
+      const isFromAuth = location.state && (
+        location.state.from === '/login' ||
+        location.state.from?.startsWith('/register')
+      );
+      const isRootPath = location.pathname === '/';
+
+      if ((isFromAuth || isRootPath) && location.pathname !== '/app-manager') {
+        // Use navigate instead of Navigate component for better handling
+        navigate('/app-manager', { replace: true });
+        return;
+      }
+    }
+
+    // If we reach here, we should render the children
+    setShouldRender(true);
+  }, [isAuthenticated, isLoading, user, location.pathname, navigate, location.state]);
 
   if (isLoading) {
     return <PageLoader />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  // Only render children after we've determined we should
+  if (!shouldRender) {
+    return <PageLoader />;
   }
 
   return children;
@@ -251,9 +284,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to get-started page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -271,9 +304,9 @@ function GuestLayout({ children }: { children: JSX.Element }) {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to get-started page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -295,9 +328,9 @@ function RootRedirect() {
   }
 
   if (isAuthenticated) {
-    // Redirect content managers to get-started page
-    if (user?.role === Role.CONTENT_MANAGER) {
-      return <Navigate to="/get-started" replace />;
+    // Redirect app managers to app-manager page
+    if (user?.role === Role.APP_MANAGER) {
+      return <Navigate to="/app-manager" replace />;
     }
     // Redirect other users to dashboard
     return <Navigate to="/dashboard" replace />;
@@ -324,6 +357,15 @@ function GetStartedRoute() {
 // Redirect component for referral links
 function ReferralRedirect() {
   const { referralCode } = useParams();
+
+  // Check if the referral code is actually a valid role path
+  const validRoles = ["app_manager"];
+  if (referralCode && validRoles.includes(referralCode)) {
+    // If it's a valid role path, redirect to the role-specific registration route
+    return <Navigate to={`/register/${referralCode}`} replace />;
+  }
+
+  // Otherwise, treat it as a regular referral code
   return <Navigate to={`/register/${referralCode}`} replace />;
 }
 
@@ -331,9 +373,9 @@ function ReferralRedirect() {
 function IndexRedirect() {
   const { user } = useAuth();
 
-  // Redirect content managers to get-started page
-  if (user?.role === Role.CONTENT_MANAGER) {
-    return <Navigate to="/get-started" replace />;
+  // Redirect app managers to app-manager page
+  if (user?.role === Role.APP_MANAGER) {
+    return <Navigate to="/app-manager" replace />;
   }
 
   // Redirect other users to dashboard

@@ -6,7 +6,7 @@ export enum Role {
     SUPER_ADMIN = 'super_admin',
     TEAM_ADMIN = 'team_admin',
     ADMIN = 'admin',
-    CONTENT_MANAGER = 'content_manager'
+    APP_MANAGER = 'app_manager'
 }
 
 // @important: Permission definitions - must match backend enum
@@ -91,7 +91,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         Permission.VIEW_APP_STORE,
         Permission.USE_APP_STORE,
     ],
-    [Role.CONTENT_MANAGER]: [
+    [Role.APP_MANAGER]: [
         Permission.VIEW_DOCS,
         Permission.MANAGE_OWN_ACCOUNT,
         Permission.VIEW_APP_STORE,

@@ -2,6 +2,7 @@ import api from '../api/config';
 import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../types/auth';
 import { Role, Permission } from '../types/rbac';
 import { getRolePermissions } from '../utils/permissions';
+import logger from '../utils/logger';
 
 // Storage keys
 const USER_DATA_KEY = 'user_data';
@@ -13,12 +14,12 @@ const ROLE_MAPPING = {
   'user': Role.USER,
   'user_admin': Role.USER_ADMIN,
   'super_admin': Role.SUPER_ADMIN,
-  'content_manager': Role.CONTENT_MANAGER,
+  'app_manager': Role.APP_MANAGER,
   'GUEST': Role.GUEST,
   'USER': Role.USER,
   'USER_ADMIN': Role.USER_ADMIN,
   'SUPER_ADMIN': Role.SUPER_ADMIN,
-  'CONTENT_MANAGER': Role.CONTENT_MANAGER
+  'APP_MANAGER': Role.APP_MANAGER
 } as const;
 
 class AuthService {
@@ -93,7 +94,7 @@ class AuthService {
         userData = await this.validateToken();
       }
 
-      console.log('Final user data:', userData); // Debug log
+      logger.debug('User authenticated successfully', userData);
 
       // Store user data in memory and storage
       this.currentUser = userData;
@@ -104,11 +105,7 @@ class AuthService {
         user: userData
       };
     } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-      }
+      logger.error('Login error', error);
       if (error.response?.status === 401) {
         throw new Error(error.response.data.detail || 'Incorrect email or password');
       }
@@ -131,7 +128,7 @@ class AuthService {
 
       // Ensure we have the required fields
       if (!validateResponse.data?.email || !validateResponse.data?.role) {
-        console.error('Missing required fields in user data');
+        logger.error('Missing required fields in user data');
         // Clear invalid auth state without making additional API calls
         this.clearAuthState();
         throw new Error('Invalid user data received from server');
@@ -156,12 +153,7 @@ class AuthService {
       this.setUser(userData);
       return userData;
     } catch (error: any) {
-      console.error('Token validation error:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      }
+      logger.error('Token validation error', error);
       // Clear invalid auth state without making additional API calls
       this.clearAuthState();
       throw this.handleError(error);
@@ -175,7 +167,7 @@ class AuthService {
     api.post('/auth/logout').catch((error) => {
       // Ignore 401 errors as they're expected if token is already invalid
       if (error.response?.status !== 401) {
-        console.warn('Error during logout:', error);
+        logger.warn('Error during logout', error);
       }
     });
   }
@@ -203,7 +195,7 @@ class AuthService {
         permissions: parsedUser.permissions || getRolePermissions(userRole)
       };
     } catch (error) {
-      console.error('Error parsing stored user data:', error);
+      logger.error('Error parsing stored user data', error);
       return null;
     }
   }
@@ -223,7 +215,7 @@ class AuthService {
   }
 
   private handleError(error: any): Error {
-    console.error('Auth service error:', error);
+    logger.error('Auth service error', error);
     if (error.response?.data?.detail) {
       return new Error(error.response.data.detail);
     }
@@ -237,8 +229,15 @@ class AuthService {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
   }
 
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+  async register(credentials: RegisterCredentials, rolePath?: string): Promise<AuthResponse> {
     try {
+      // Determine the endpoint based on whether we have a role path
+      const endpoint = rolePath
+        ? `/auth/register/${rolePath}`
+        : '/auth/register';
+
+      logger.debug(`Registering user with endpoint: ${endpoint}`);
+
       const response = await api.post<{
         access_token: string;
         token_type: string;
@@ -253,7 +252,7 @@ class AuthService {
           default_api_key?: string;
         };
       }>(
-        '/auth/register',
+        endpoint,
         credentials
       );
 
@@ -291,11 +290,7 @@ class AuthService {
         user: userData
       };
     } catch (error: any) {
-      console.error('Registration error:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-      }
+      logger.error('Registration error', error);
       if (error.response?.status === 400) {
         throw new Error(error.response.data.detail || 'Registration failed');
       }

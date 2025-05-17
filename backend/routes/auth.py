@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Path
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -15,6 +15,7 @@ from backend.config import settings
 from backend.core.security import verify_password, get_password_hash
 from backend.services.referral import ReferralService
 from backend.services.email import EmailService
+from backend.core.roles import Role
 
 router = APIRouter(tags=["authentication"])
 
@@ -41,6 +42,7 @@ class UserCreate(BaseModel):
     password: str
     full_name: Optional[str] = None
     referral_code: Optional[str] = None
+    role: Optional[Role] = None
 
 
 class APIKeyCreate(BaseModel):
@@ -172,6 +174,44 @@ def ensure_default_api_key(db: Session, user: User) -> Tuple[bool, Optional[APIK
 @router.post("/api/v1/auth/register", response_model=Token)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
+    return await _register_user(user, db)
+
+
+@router.post("/api/v1/auth/register/{role_path}", response_model=Token)
+async def register_user_with_role(
+    user: UserCreate,
+    role_path: str = Path(..., description="Role path parameter that determines user role"),
+    db: Session = Depends(get_db)
+):
+    """Register a new user with a specific role based on URL path"""
+    # Map URL path to role - only exact matches are allowed
+    role_mapping = {
+        "app_manager": Role.APP_MANAGER,
+        # Add more role mappings as needed
+    }
+
+    # Log the role path and user data for debugging
+    print(f"Processing registration with role path: {role_path}")
+    print(f"User data: email={user.email}, has_referral={user.referral_code is not None}")
+
+    # Set the role based on the path parameter if it's a valid role path
+    # Use exact matching to prevent partial matches or unexpected formats
+    if role_path in role_mapping:
+        user.role = role_mapping[role_path]
+        print(f"Setting user role to {user.role} based on registration URL path")
+    else:
+        # If the role path is not valid, return an error instead of defaulting to USER role
+        # This prevents users from registering with invalid role paths
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role path: {role_path}. Valid options are: {', '.join(role_mapping.keys())}"
+        )
+
+    return await _register_user(user, db)
+
+
+async def _register_user(user: UserCreate, db: Session = Depends(get_db)):
+    """Internal function to handle user registration logic"""
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(
@@ -181,13 +221,19 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     hashed_password = get_password_hash(user.password)
     verification_token = generate_verification_token()
 
+    # Create user with specified role if provided, otherwise use default (Role.USER)
     db_user = User(
         email=user.email,
         hashed_password=hashed_password,
         full_name=user.full_name,
         email_verification_token=verification_token,
-        email_verification_sent_at=datetime.now(timezone.utc)
+        email_verification_sent_at=datetime.now(timezone.utc),
+        role=user.role if user.role else Role.USER
     )
+
+    # Log the role assignment
+    print(f"Creating user with role: {db_user.role}")
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
